@@ -39,7 +39,7 @@ const NO_GATEWAY_AUTH = {
   VERCEL_OIDC_TOKEN: undefined,
 };
 const MISSING_AUTH_MESSAGE =
-  "chassis needs access to Vercel AI Gateway. Run chassis login to sign in, chassis setup to use an API key, or set AI_GATEWAY_API_KEY.";
+  "chassis needs a model provider. Run chassis login to sign in (Vercel AI Gateway, Codex, or Grok), chassis setup to use an API key, or set AI_GATEWAY_API_KEY.";
 const MODERN_MCP_FIXTURE = join(
   import.meta.dirname,
   "fixtures",

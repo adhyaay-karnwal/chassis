@@ -1572,7 +1572,7 @@ tmuxTest("pending Gateway prompt waits for valid saved preferences and a repaire
   writeFileSync(settingsPath, settings);
   await session.sendKeys("Enter");
   await session.waitForPane(
-    (pane) => pane.lastIndexOf("chassis needs access to Vercel AI Gateway") > pane.lastIndexOf("Could not load authentication settings"),
+    (pane) => pane.lastIndexOf("chassis needs a model provider") > pane.lastIndexOf("Could not load authentication settings"),
     TIMEOUT,
   );
   expect(gateway.requests).toHaveLength(0);
@@ -2892,7 +2892,7 @@ tmuxTest(
 );
 
 for (const [provider, help] of [
-  ["gateway", "chassis needs access to Vercel AI Gateway."],
+  ["gateway", "chassis needs a model provider."],
   ["codex", "Codex needs a subscription login."],
   ["grok", "Grok needs a subscription login."],
 ] as const) {
@@ -2916,7 +2916,7 @@ for (const [provider, help] of [
     expect(scrollback).toContain(`auth_help=${help}`);
     if (provider !== "gateway") {
       expect(scrollback).toContain(`model_source=${provider === "codex" ? "Codex" : "Grok"} subscription`);
-      expect(scrollback).not.toContain("auth_help=chassis needs access to Vercel AI Gateway");
+      expect(scrollback).not.toContain("auth_help=chassis needs a model provider");
     }
     expect(scrollback).toContain("auth=missing");
     expect(scrollback).toContain("auth_refreshable=false");
@@ -6188,7 +6188,7 @@ tmuxTest(
     await session.sendText(" preserve this exact prompt");
     const blocked = await session.waitForPane(
       (pane) =>
-        pane.includes("chassis needs access to Vercel AI Gateway") &&
+        pane.includes("chassis needs a model provider") &&
         pane.includes("preserve this exact prompt") &&
         pane.includes("Image 1"),
       TIMEOUT,
