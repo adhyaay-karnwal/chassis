@@ -71,7 +71,7 @@ The native kernel installs host-stream and host model-catalog providers. It does
 
 | Export | Purpose |
 | --- | --- |
-| `libfxApiVersion` | Checks compatibility with the JavaScript loader. Currently `3`. Low-level `createCore` backends must declare this exact version. |
+| `libchassisApiVersion` | Checks compatibility with the JavaScript loader. Currently `3`. Low-level `createCore` backends must declare this exact version. |
 | `createCore(options)` | Allocates a runtime and readiness socketpair, then starts its ACP thread. |
 | `takeCoreReadyFd(handle)` | Transfers the readiness reader descriptor to JavaScript exactly once. The caller owns its close. |
 | `writeCore(handle, buffer)` | Appends bytes to the bounded input queue. |
@@ -227,7 +227,7 @@ Consequently:
 The JavaScript loader uses literal references to the four packaged
 `libchassis.<platform>-<arch>.node` names and selects the matching supported tuple.
 Local package assembly renames `zig-out/lib/libchassis.node` to that tuple's package
-name. The loader validates `libfxApiVersion` and the expected export shape
+name. The loader validates `libchassisApiVersion` and the expected export shape
 before use. `backend: "native"` fails closed if a compatible addon is
 unavailable. `backend: "auto"` may fall back to WebAssembly when JSPI is
 available. Explicit `nativeAddon` objects, paths, and URLs remain separate from

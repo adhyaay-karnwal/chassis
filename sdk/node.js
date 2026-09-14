@@ -119,8 +119,8 @@ function validateNativeBackend(backend) {
   if (!backend) return null;
   const hasLowLevelCore = typeof backend.createCore === "function";
   const expectedVersion = hasLowLevelCore ? nativeCoreApiVersion : libfxApiVersion;
-  if ((hasLowLevelCore || backend.libfxApiVersion !== undefined) && backend.libfxApiVersion !== expectedVersion) {
-    const actualVersion = backend.libfxApiVersion ?? "missing";
+  if ((hasLowLevelCore || backend.libchassisApiVersion !== undefined) && backend.libchassisApiVersion !== expectedVersion) {
+    const actualVersion = backend.libchassisApiVersion ?? "missing";
     throw new Error(`native addon API version ${actualVersion} is incompatible with expected API version ${expectedVersion}`);
   }
   if (typeof backend.createCore !== "function" && typeof backend.createChassisTerminal !== "function") {
