@@ -1,0 +1,32 @@
+{
+  "name": "@chassis/mcp-datasheet",
+  "version": "0.1.0",
+  "description": "Local-first MCP server providing grounded full-text (and optional semantic) search over ingested hardware datasheets, reference manuals, and errata sheets for firmware engineering",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "chassis-mcp-datasheet": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "smoke-test": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "pdf-parse": "^1.1.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pdf-parse": "^1.1.4",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

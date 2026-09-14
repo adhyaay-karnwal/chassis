@@ -1,0 +1,31 @@
+{
+  "name": "@chassis/mcp-serial",
+  "version": "0.1.0",
+  "description": "MCP server exposing serial-port tools (list/monitor/send/history) for firmware and embedded debugging",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "chassis-mcp-serial": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "smoke-test": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "serialport": "^12.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

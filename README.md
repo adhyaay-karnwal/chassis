@@ -67,6 +67,23 @@ The SDK is published to npm as [libchassis](https://www.npmjs.com/package/libcha
 - MCP: connect external tools and servers
 - Subagents: delegate independent work
 
+## Embedded / hardware firmware work
+
+chassis started as a general-purpose fork, but the goal is to build it out into an open alternative to closed embedded/firmware coding agents (e.g. Embedder) — grounded, local-first, and usable from any MCP-compatible client, not locked to one CLI.
+
+Shipped so far:
+
+| Capability | How |
+| --- | --- |
+| Serial monitor / send commands / read history | [`mcp-servers/serial`](mcp-servers/serial) — MCP server wrapping `serialport` |
+| Local, offline-by-default datasheet grounding with page citations | [`mcp-servers/datasheet`](mcp-servers/datasheet) — MCP server, lexical (BM25) search out of the box, optional embeddings if you configure an API key. Datasheets never leave your machine unless you opt in. |
+| Build / flash | Already covered by chassis's built-in `shell` tool — run `west build`, `idf.py flash`, `make`, or whatever your project uses, no special-cased tool needed |
+| Firmware engineering workflow standards | [`skills/embedded-firmware`](skills/embedded-firmware) — codebase archaeology, datasheet-grounded register values, RTOS discipline, hardware verify loop |
+
+To enable, add both servers to `.mcp.json` in your firmware project (see each server's README for the exact snippet and build steps), and the `embedded-firmware` skill is auto-discovered from the workspace `skills/` directory once you copy or symlink it into your project.
+
+Roadmap (not yet built): GDB/debug-probe integration, logic analyzer / oscilloscope capture, schematic ingestion (Altium/KiCad/Eagle), SIL/HIL test orchestration. Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Documentation
 
 chassis does not yet have a hosted documentation site. Run `/help` inside an
@@ -95,5 +112,7 @@ Third-party licenses and attributions are listed in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Credits
+
+chassis is a fork of [vercel-labs/fx](https://github.com/vercel-labs/fx), generalized away from Vercel AI Gateway as a default and extended toward embedded/firmware use cases. All credit for the original agent core, TUI, and MCP/skills/subagent infrastructure goes to the fx authors.
 
 Interface sounds by [cuelume](https://github.com/Danilaa1/cuelume).

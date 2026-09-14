@@ -13,7 +13,8 @@ zig-pkg/
 sdk/dist/
 
 # Workspace-local runtime state
-/skills/
+/skills/*
+!/skills/embedded-firmware/
 
 # Local environment files
 .env
