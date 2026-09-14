@@ -3814,7 +3814,7 @@ test "root init rejects symlinked durable and sessions roots" {
         tmp.dir.symLink(
             io_mod.getIo(),
             "../outside",
-            "home/.fx",
+            "home/.chassis",
             .{ .is_directory = true },
         ) catch |err| switch (err) {
             error.AccessDenied => return error.SkipZigTest,
@@ -3832,12 +3832,12 @@ test "root init rejects symlinked durable and sessions roots" {
     {
         var tmp = std.testing.tmpDir(.{});
         defer tmp.cleanup();
-        try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
+        try tmp.dir.createDirPath(io_mod.getIo(), "home/.chassis");
         try tmp.dir.createDirPath(io_mod.getIo(), "outside");
         tmp.dir.symLink(
             io_mod.getIo(),
             "../../outside",
-            "home/.fx/sessions",
+            "home/.chassis/sessions",
             .{ .is_directory = true },
         ) catch |err| switch (err) {
             error.AccessDenied => return error.SkipZigTest,
@@ -3856,8 +3856,8 @@ test "root init rejects symlinked durable and sessions roots" {
 fn testState(alloc: Allocator, id: []const u8, updated_at_ms: i64) !session_codec.DurableSessionState {
     return .{
         .id = try alloc.dupe(u8, id),
-        .origin_workspace_root = try alloc.dupe(u8, "/tmp/fx-plan-03"),
-        .workspace_root = try alloc.dupe(u8, "/tmp/fx-plan-03"),
+        .origin_workspace_root = try alloc.dupe(u8, "/tmp/chassis-plan-03"),
+        .workspace_root = try alloc.dupe(u8, "/tmp/chassis-plan-03"),
         .created_at_ms = 10,
         .updated_at_ms = updated_at_ms,
         .conversation_language = session.ConversationLanguage.literal("en"),
@@ -4263,7 +4263,7 @@ test "conversation writer flattens a canonical history turn" {
         .stored_output_bytes = 4,
         .permission_feedback = &feedback,
         .command_output_replay = .{ .available = .{
-            .handle = @constCast("fx-command-replay-test.bin"),
+            .handle = @constCast("chassis-command-replay-test.bin"),
             .framed_bytes = 42,
         } },
     }};
@@ -5786,7 +5786,7 @@ test "cache-free resume rebuilds tool calls and external result references" {
             .lifecycle_id = .{ .turn_id = 7, .call_id = "call-shell" },
         },
         .command_output_replay = .{ .available = .{
-            .handle = @constCast("fx-command-replay-test.bin"),
+            .handle = @constCast("chassis-command-replay-test.bin"),
             .framed_bytes = 42,
         } },
         .command_process_presentation = .{ .exit_code = 7 },
@@ -5880,7 +5880,7 @@ test "cache-free resume rebuilds tool calls and external result references" {
     switch (replay) {
         .available => |descriptor| {
             try std.testing.expectEqualStrings(
-                "fx-command-replay-test.bin",
+                "chassis-command-replay-test.bin",
                 descriptor.handle,
             );
             try std.testing.expectEqual(@as(usize, 42), descriptor.framed_bytes);

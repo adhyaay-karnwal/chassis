@@ -12,14 +12,14 @@ import { serializeError } from "./package-report.mjs";
 const input = process.argv[2];
 const next15 = process.argv.includes("--next15");
 const webpack = next15 || process.argv.includes("--webpack");
-assert.ok(input, "provide a published libfx version or local tarball");
+assert.ok(input, "provide a published libchassis version or local tarball");
 const projectId = process.env.LIBFX_VERCEL_PROJECT_ID;
 const orgId = process.env.LIBFX_VERCEL_ORG_ID;
 assert.ok(projectId && orgId, "LIBFX_VERCEL_PROJECT_ID and LIBFX_VERCEL_ORG_ID are required");
 assert.ok(process.env.AI_GATEWAY_API_KEY, "AI_GATEWAY_API_KEY is required for live verification");
 const artifactRoot = process.env.LIBFX_TEST_ARTIFACT_ROOT || tmpdir();
 await mkdir(artifactRoot, { recursive: true });
-const directory = await mkdtemp(resolve(artifactRoot, "libfx-vercel-"));
+const directory = await mkdtemp(resolve(artifactRoot, "libchassis-vercel-"));
 const app = resolve(directory, "app");
 const secret = randomUUID();
 const tokenArgs = process.env.LIBFX_VERCEL_TOKEN ? ["--token", process.env.LIBFX_VERCEL_TOKEN] : [];
@@ -55,11 +55,11 @@ try {
   });
   const manifest = JSON.parse(await readFile(resolve(app, "package.json"), "utf8"));
   if (input.endsWith(".tgz")) {
-    await cp(resolve(input), resolve(app, "libfx.tgz"));
-    manifest.dependencies.libfx = "file:./libfx.tgz";
+    await cp(resolve(input), resolve(app, "libchassis.tgz"));
+    manifest.dependencies.libchassis = "file:./libchassis.tgz";
   } else {
     assert.match(input, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/, "pin an immutable version, not a tag");
-    manifest.dependencies.libfx = input;
+    manifest.dependencies.libchassis = input;
   }
   if (next15) manifest.dependencies.next = "15.5.25";
   if (webpack && !next15) manifest.scripts.build = "next build --webpack";
@@ -83,12 +83,12 @@ try {
   assert.ok(deployment, `No deployment URL returned; see ${directory}/deploy.log`);
   deploymentRef ??= deployment;
   await vercel(["inspect", deploymentRef, "--wait", "--timeout", "5m"], "inspect");
-  const unauthorized = await fetch(`${deployment}/api/fx`);
+  const unauthorized = await fetch(`${deployment}/api/chassis`);
   assert.equal(unauthorized.status, 401, "live tool endpoint must require its verification token");
   for (let round = 0; round < 3; round++) {
     for (const backend of ["native", "auto"]) {
       for (const scenario of ["host", "mcp"]) {
-        const response = await fetch(`${deployment}/api/fx?backend=${backend}&scenario=${scenario}`, {
+        const response = await fetch(`${deployment}/api/chassis?backend=${backend}&scenario=${scenario}`, {
           headers: { authorization: `Bearer ${secret}` }, signal: AbortSignal.timeout(60_000),
         });
         const result = await response.json();

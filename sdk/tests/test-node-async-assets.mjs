@@ -12,8 +12,8 @@ const entries = [
   ["cjs", createRequire(import.meta.url)(join(directory, "node.cjs"))],
 ];
 const assets = {
-  agent: await readFile(join(directory, "fx-core.wasm")),
-  terminal: await readFile(join(directory, "fx-term.wasm")),
+  agent: await readFile(join(directory, "chassis-core.wasm")),
+  terminal: await readFile(join(directory, "chassis-term.wasm")),
 };
 const requests = new Map();
 const corrupt = new Set();
@@ -41,7 +41,7 @@ watchdog.unref();
 
 async function exercise(sdk, surface, options) {
   if (surface === "agent") {
-    const agent = await sdk.createFxAgent({ ...options, apiKey: "async-asset-key", model: "async/model", fetch: modelFetch });
+    const agent = await sdk.createChassisAgent({ ...options, apiKey: "async-asset-key", model: "async/model", fetch: modelFetch });
     try {
       const turn = agent.prompt("hello");
       let text = "";
@@ -65,8 +65,8 @@ async function exercise(sdk, surface, options) {
   };
   let runtime;
   try {
-    runtime = await sdk.createFxTerminal({ ...options, terminal, fetch: modelFetch,
-      env: { AI_GATEWAY_API_KEY: "async-asset-key", FX_SOUND: "0" } });
+    runtime = await sdk.createChassisTerminal({ ...options, terminal, fetch: modelFetch,
+      env: { AI_GATEWAY_API_KEY: "async-asset-key", CHASSIS_SOUND: "0" } });
     await runtime.interactive;
     assert.ok(output > 0);
   }

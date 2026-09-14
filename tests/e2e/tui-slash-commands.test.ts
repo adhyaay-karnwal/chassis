@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, HAS_API_KEY } from "../evals/eval-helpers";
+import { CHASSIS_BIN, HAS_API_KEY } from "../evals/eval-helpers";
 import {
   FAKE_GATEWAY_MODEL,
   fakeGatewayFinalText,
@@ -37,7 +37,7 @@ afterEach(async () => {
 });
 
 async function launchAndWait(): Promise<TmuxSession> {
-  const root = mkdtempSync(join(tmpdir(), "fx-slash-commands-"));
+  const root = mkdtempSync(join(tmpdir(), "chassis-slash-commands-"));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   mkdirSync(home);
@@ -56,7 +56,7 @@ async function launchNoKeyAndWait(record = false): Promise<{
   stderrPath: string;
   root: string;
 }> {
-  const root = mkdtempSync(join(tmpdir(), "fx-slash-commands-no-key-"));
+  const root = mkdtempSync(join(tmpdir(), "chassis-slash-commands-no-key-"));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const stderrPath = join(root, "stderr.log");
@@ -69,13 +69,13 @@ async function launchNoKeyAndWait(record = false): Promise<{
     isolated: true,
     env: {
       HOME: home,
-      FX_SOUND: "0",
-      ...(record ? { FX_RECORD: join(root, "terminal.fxtape"), FX_DEBUG_RECORD_SILENT_BANNER: "1" } : {}),
+      CHASSIS_SOUND: "0",
+      ...(record ? { CHASSIS_RECORD: join(root, "terminal.fxtape"), CHASSIS_DEBUG_RECORD_SILENT_BANNER: "1" } : {}),
       AI_GATEWAY_API_KEY: undefined,
-      FX_AUTO_UPGRADE: "0",
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_PERMISSION_MODE: undefined,
-      FX_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_PERMISSION_MODE: undefined,
+      CHASSIS_SKIP_ONBOARDING: "1",
       VERCEL_OIDC_TOKEN: undefined,
     },
   });
@@ -156,7 +156,7 @@ describe.skipIf(TMUX_SKIP)("tui: no-key slash commands", () => {
   test(
     "compact status notice preserves native scrollback",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-status-compact-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-status-compact-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const stderrPath = join(root, "stderr.log");
@@ -174,11 +174,11 @@ describe.skipIf(TMUX_SKIP)("tui: no-key slash commands", () => {
         env: {
           HOME: home,
           AI_GATEWAY_API_KEY: "status-compact-key",
-          FX_AUTO_UPGRADE: "0",
-          FX_DISABLE_KEYCHAIN: "1",
-          FX_PERMISSION_MODE: "auto",
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
+          CHASSIS_PERMISSION_MODE: "auto",
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
           VERCEL_OIDC_TOKEN: undefined,
           NO_COLOR: "1",
         },
@@ -205,7 +205,7 @@ describe.skipIf(TMUX_SKIP)("tui: no-key slash commands", () => {
       expect(await session.waitForSessionEnd(5_000)).toBe(true);
       session = null;
 
-      const replay = JSON.parse(execFileSync(FX_BIN, ["replay", tapePath, "--json"], {
+      const replay = JSON.parse(execFileSync(CHASSIS_BIN, ["replay", tapePath, "--json"], {
         encoding: "utf8",
       }));
       expect(replay.frame_count).toBeGreaterThan(0);

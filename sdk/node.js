@@ -8,16 +8,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { CoreOutput } from "./core-output.js";
 import { loadModule, withModuleFailure } from "./wasm-module.js";
 import {
-  createFxAgent as createWasmAgent,
-  createFxTerminal as createWasmTerminal,
+  createChassisAgent as createWasmAgent,
+  createChassisTerminal as createWasmTerminal,
   encodeXtermKeyEvent,
-  fxSdkApiVersion,
+  chassisSdkApiVersion,
   listModels,
   supportsJspi,
   xtermAdapter,
-} from "./fx-sdk.js";
+} from "./chassis-sdk.js";
 
-export { encodeXtermKeyEvent, fxSdkApiVersion, listModels, supportsJspi, xtermAdapter };
+export { encodeXtermKeyEvent, chassisSdkApiVersion, listModels, supportsJspi, xtermAdapter };
 export const libfxApiVersion = 2;
 const nativeCoreApiVersion = 3;
 
@@ -26,8 +26,8 @@ const fetchOperationApplied = 1;
 const fetchOperationBackpressure = 2;
 
 const nodeRequire = createRequire(import.meta.url);
-const defaultCoreWasm = new URL("./fx-core.wasm", import.meta.url);
-const defaultTermWasm = new URL("./fx-term.wasm", import.meta.url);
+const defaultCoreWasm = new URL("./chassis-core.wasm", import.meta.url);
+const defaultTermWasm = new URL("./chassis-term.wasm", import.meta.url);
 let nativeBackendPromise;
 const wasmFilePromises = new Map();
 
@@ -55,9 +55,9 @@ function bundledAssetUrl(asset) {
 function jspiFallbackError(surface, nativeError) {
   const nativeDetail = nativeError ? ` Native loading failed: ${nativeError.message}.` : " No compatible native addon was found.";
   const error = new Error(
-    `libfx could not start the ${surface} backend.${nativeDetail} ` +
+    `libchassis could not start the ${surface} backend.${nativeDetail} ` +
     "The WebAssembly fallback requires JavaScript Promise Integration (JSPI). " +
-    "Run Node with --experimental-wasm-jspi or install a libfx package containing a compatible native addon.",
+    "Run Node with --experimental-wasm-jspi or install a libchassis package containing a compatible native addon.",
   );
   error.code = "LIBFX_JSPI_REQUIRED";
   error.cause = nativeError;
@@ -89,25 +89,25 @@ async function loadNativeCandidate(candidate) {
 function defaultNativeCandidate() {
   // Local path bindings let deployment tracers retain these assets in the generated CommonJS entry.
   if (process.platform === "linux" && process.arch === "x64") {
-    const asset = new URL("./libfx.linux-x64.node", import.meta.url);
+    const asset = new URL("./libchassis.linux-x64.node", import.meta.url);
     if (asset.protocol === "") return fileURLToPath(bundledAssetUrl(asset));
     const path = fileURLToPath(asset);
     return path;
   }
   if (process.platform === "linux" && process.arch === "arm64") {
-    const asset = new URL("./libfx.linux-arm64.node", import.meta.url);
+    const asset = new URL("./libchassis.linux-arm64.node", import.meta.url);
     if (asset.protocol === "") return fileURLToPath(bundledAssetUrl(asset));
     const path = fileURLToPath(asset);
     return path;
   }
   if (process.platform === "darwin" && process.arch === "x64") {
-    const asset = new URL("./libfx.darwin-x64.node", import.meta.url);
+    const asset = new URL("./libchassis.darwin-x64.node", import.meta.url);
     if (asset.protocol === "") return fileURLToPath(bundledAssetUrl(asset));
     const path = fileURLToPath(asset);
     return path;
   }
   if (process.platform === "darwin" && process.arch === "arm64") {
-    const asset = new URL("./libfx.darwin-arm64.node", import.meta.url);
+    const asset = new URL("./libchassis.darwin-arm64.node", import.meta.url);
     if (asset.protocol === "") return fileURLToPath(bundledAssetUrl(asset));
     const path = fileURLToPath(asset);
     return path;
@@ -123,8 +123,8 @@ function validateNativeBackend(backend) {
     const actualVersion = backend.libfxApiVersion ?? "missing";
     throw new Error(`native addon API version ${actualVersion} is incompatible with expected API version ${expectedVersion}`);
   }
-  if (typeof backend.createCore !== "function" && typeof backend.createFxTerminal !== "function") {
-    throw new Error("native addon must export createCore() or createFxTerminal()");
+  if (typeof backend.createCore !== "function" && typeof backend.createChassisTerminal !== "function") {
+    throw new Error("native addon must export createCore() or createChassisTerminal()");
   }
   return backend;
 }
@@ -301,7 +301,7 @@ export async function getBackendInfo(value = {}) {
   const attempts = [];
   if (backend !== "wasm") {
     const native = await resolveNativeBackend(nativeAddon);
-    const nativeMethod = surface === "agent" ? "createCore" : "createFxTerminal";
+    const nativeMethod = surface === "agent" ? "createCore" : "createChassisTerminal";
     if (typeof native.backend?.[nativeMethod] === "function") {
       attempts.push({ backend: "native", available: true, reason: null });
       return { surface, backend: "native", attempts };
@@ -545,9 +545,9 @@ async function createWithFallback(surface, nativeMethod, wasmFactory, defaultWas
   return wasmFactory({ ...runtimeOptions, wasm: await wasmInput(wasmSource) });
 }
 
-export async function createFxAgent(options = {}) {
+export async function createChassisAgent(options = {}) {
   if (options != null && Object.hasOwn(Object(options), "env")) {
-    throw new TypeError("createFxAgent() does not accept env; pass apiKey and model directly");
+    throw new TypeError("createChassisAgent() does not accept env; pass apiKey and model directly");
   }
   return createWithFallback(
     "agent",
@@ -558,6 +558,6 @@ export async function createFxAgent(options = {}) {
   );
 }
 
-export function createFxTerminal(options = {}) {
-  return createWithFallback("terminal", "createFxTerminal", createWasmTerminal, defaultTermWasm, options);
+export function createChassisTerminal(options = {}) {
+  return createWithFallback("terminal", "createChassisTerminal", createWasmTerminal, defaultTermWasm, options);
 }

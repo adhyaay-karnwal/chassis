@@ -41,7 +41,7 @@ const Allocator = std.mem.Allocator;
 const ErrorCode = jsonrpc.ErrorCode;
 const writeJsonStr = jsonrpc.writeJsonStr;
 
-pub fn handleNewLibfxSession(
+pub fn handleNewLibchassisSession(
     state: *server.ServerState,
     alloc: Allocator,
     msg: *jsonrpc.Message,
@@ -2271,7 +2271,7 @@ test "ACP project MCP loading expands workspace environment templates" {
     const alloc = std.testing.allocator;
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.chassis");
     try tmp.dir.createDirPath(io_mod.getIo(), "workspace");
     try tmp.dir.writeFile(io_mod.getIo(), .{
         .sub_path = "workspace/.mcp.json",
@@ -2314,7 +2314,7 @@ test "ACP host-disabled new load and resume skip project MCP effects" {
     var arena_state = std.heap.ArenaAllocator.init(alloc);
     defer arena_state.deinit();
     const arena = arena_state.allocator();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.chassis");
     try tmp.dir.createDirPath(io_mod.getIo(), "workspace");
 
     const home_path = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home");
@@ -2341,7 +2341,7 @@ test "ACP host-disabled new load and resume skip project MCP effects" {
         .data = project_json,
     });
     try tmp.dir.writeFile(io_mod.getIo(), .{
-        .sub_path = "home/.fx/settings.json",
+        .sub_path = "home/.chassis/settings.json",
         .data = "{}",
     });
     const test_home = try AcpSessionTestHome.install(alloc, home_path);
@@ -2448,7 +2448,7 @@ test "ACP new and loaded sessions provide a writable subagent host" {
     var arena_state = std.heap.ArenaAllocator.init(alloc);
     defer arena_state.deinit();
     const arena = arena_state.allocator();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.chassis");
     try tmp.dir.createDirPath(io_mod.getIo(), "workspace");
 
     const home_path = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home");
@@ -2572,7 +2572,7 @@ test "ACP same-session restore retires the replaced MCP runtime after active use
     var arena_state = std.heap.ArenaAllocator.init(alloc);
     defer arena_state.deinit();
     const arena = arena_state.allocator();
-    try tmp.dir.createDirPath(io_mod.getIo(), "home/.fx");
+    try tmp.dir.createDirPath(io_mod.getIo(), "home/.chassis");
     try tmp.dir.createDirPath(io_mod.getIo(), "workspace");
 
     const home_path = try io_mod.dirRealpathAlloc(alloc, tmp.dir, "home");

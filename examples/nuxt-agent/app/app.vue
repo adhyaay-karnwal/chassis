@@ -7,7 +7,7 @@ const status = ref('')
 const busy = ref(false)
 const ready = ref(false)
 onMounted(() => { ready.value = true })
-useHead({ title: 'Nuxt agent · fx examples', htmlAttrs: { lang: 'en' } })
+useHead({ title: 'Nuxt agent · chassis examples', htmlAttrs: { lang: 'en' } })
 
 async function send() {
   busy.value = true
@@ -32,7 +32,7 @@ async function send() {
 <template>
   <main>
     <h1>Nuxt agent</h1>
-    <p>A native libfx agent in a Nitro route. Each request starts a new conversation.</p>
+    <p>A native libchassis agent in a Nitro route. Each request starts a new conversation.</p>
     <form @submit.prevent="send">
       <label for="prompt">Prompt</label><br>
       <textarea id="prompt" v-model="prompt" name="prompt" rows="3" cols="30" required maxlength="2000" /><br>
@@ -41,6 +41,6 @@ async function send() {
     <p role="status">{{ status }}</p>
     <label for="reply">Reply</label><br>
     <textarea id="reply" :value="reply" rows="12" cols="30" readonly />
-    <p><a href="https://github.com/vercel-labs/fx/blob/b9f8b733803f170d1a09cadf1bf5033e04bf44ed/examples/README.md#run-an-example">Code and setup</a></p>
+    <p><a href="https://github.com/adhyaay-karnwal/chassis/blob/b9f8b733803f170d1a09cadf1bf5033e04bf44ed/examples/README.md#run-an-example">Code and setup</a></p>
   </main>
 </template>

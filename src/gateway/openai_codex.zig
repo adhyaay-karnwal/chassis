@@ -13,7 +13,7 @@ const model_tool_schema = @import("../core/tooling/model_tool_schema.zig");
 
 const Allocator = std.mem.Allocator;
 const endpoint = "https://chatgpt.com/backend-api/codex/responses";
-const e2e_endpoint_env = "FX_E2E_OPENAI_CODEX_RESPONSES_URL";
+const e2e_endpoint_env = "CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL";
 const max_error_body_bytes: usize = 1024 * 1024;
 const max_sse_line_bytes: usize = 32 * 1024 * 1024;
 const max_sse_aggregate_bytes: usize = 64 * 1024 * 1024;
@@ -285,7 +285,7 @@ pub fn streamPrepared(
         extra_headers_buf[extra_count] = .{ .name = "chatgpt-account-id", .value = account_id };
         extra_count += 1;
     }
-    extra_headers_buf[extra_count] = .{ .name = "originator", .value = "fx" };
+    extra_headers_buf[extra_count] = .{ .name = "originator", .value = "chassis" };
     extra_count += 1;
     extra_headers_buf[extra_count] = .{ .name = "OpenAI-Beta", .value = "responses=experimental" };
     extra_count += 1;

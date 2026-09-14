@@ -240,23 +240,23 @@ pub const AutoUpgrade = struct {
         var rand_buf: [8]u8 = undefined;
         io_mod.getIo().random(&rand_buf);
         const rand_hex = std.fmt.bytesToHex(rand_buf, .lower);
-        const tmp_dir = std.fmt.allocPrint(alloc, "{s}/fx-auto-upgrade-{s}", .{ tmp_base, rand_hex }) catch return error.AllocFailed;
+        const tmp_dir = std.fmt.allocPrint(alloc, "{s}/chassis-auto-upgrade-{s}", .{ tmp_base, rand_hex }) catch return error.AllocFailed;
         defer alloc.free(tmp_dir);
         defer std.Io.Dir.cwd().deleteTree(io_mod.getIo(), tmp_dir) catch {};
 
         std.Io.Dir.createDirAbsolute(io_mod.getIo(), tmp_dir, .default_dir) catch return error.ExtractionFailed;
 
-        const archive_path = std.fmt.allocPrint(alloc, "{s}/fx.tar.gz", .{tmp_dir}) catch return error.AllocFailed;
+        const archive_path = std.fmt.allocPrint(alloc, "{s}/chassis.tar.gz", .{tmp_dir}) catch return error.AllocFailed;
         defer alloc.free(archive_path);
 
-        const archive_url = std.fmt.allocPrint(alloc, "{s}/{s}/fx-{s}.tar.gz", .{ cdn_base, target.artifactRef(), helpers.platform }) catch return error.AllocFailed;
+        const archive_url = std.fmt.allocPrint(alloc, "{s}/{s}/chassis-{s}.tar.gz", .{ cdn_base, target.artifactRef(), helpers.platform }) catch return error.AllocFailed;
         defer alloc.free(archive_url);
 
         helpers.downloadFileStreaming(&client, archive_url, archive_path) catch return error.DownloadFailed;
 
         if (self.should_stop.load(.acquire)) return error.Cancelled;
 
-        const checksum_url = std.fmt.allocPrint(alloc, "{s}/{s}/fx-{s}.tar.gz.sha256", .{ cdn_base, target.artifactRef(), helpers.platform }) catch return error.AllocFailed;
+        const checksum_url = std.fmt.allocPrint(alloc, "{s}/{s}/chassis-{s}.tar.gz.sha256", .{ cdn_base, target.artifactRef(), helpers.platform }) catch return error.AllocFailed;
         defer alloc.free(checksum_url);
 
         helpers.verifyChecksum(&client, archive_path, checksum_url) catch return error.ChecksumFailed;
@@ -267,7 +267,7 @@ pub const AutoUpgrade = struct {
 
         if (self.should_stop.load(.acquire)) return error.Cancelled;
 
-        const extracted_bin = std.fmt.allocPrint(alloc, "{s}/fx", .{tmp_dir}) catch return error.AllocFailed;
+        const extracted_bin = std.fmt.allocPrint(alloc, "{s}/chassis", .{tmp_dir}) catch return error.AllocFailed;
         defer alloc.free(extracted_bin);
 
         var self_exe_buf: [std.fs.max_path_bytes]u8 = undefined;
@@ -301,9 +301,9 @@ test "selected release channel is owned by the upgrade runtime" {
 }
 
 test "development build paths disable auto upgrade" {
-    try std.testing.expect(isDevelopmentBuildPath("/repo/zig-out/bin/fx"));
-    try std.testing.expect(isDevelopmentBuildPath("C:\\repo\\zig-out\\bin\\fx.exe"));
-    try std.testing.expect(!isDevelopmentBuildPath("/Users/me/.local/bin/fx"));
+    try std.testing.expect(isDevelopmentBuildPath("/repo/zig-out/bin/chassis"));
+    try std.testing.expect(isDevelopmentBuildPath("C:\\repo\\zig-out\\bin\\chassis.exe"));
+    try std.testing.expect(!isDevelopmentBuildPath("/Users/me/.local/bin/chassis"));
 }
 
 test "statusLabel downloading shows ellipsis" {
@@ -334,7 +334,7 @@ test "setLatestVersion stores normalized version" {
 
 test "relaunch request owns its path and previous revision and is consumed once" {
     var au = AutoUpgrade{};
-    var path = [_]u8{ '/', 't', 'm', 'p', '/', 'f', 'x' };
+    var path = [_]u8{ '/', 't', 'm', 'p', '/', 'c', 'h', 'a', 's', 's', 'i', 's' };
     var revision = [_]u8{'1'} ** 40;
     au.configure_channel(.dev);
     au.setPreviousRevision(&revision);
@@ -344,7 +344,7 @@ test "relaunch request owns its path and previous revision and is consumed once"
 
     const request = au.takeRelaunchRequest() orelse
         return error.TestExpectedRelaunchRequest;
-    try std.testing.expectEqualStrings("/tmp/fx", request.executablePath());
+    try std.testing.expectEqualStrings("/tmp/chassis", request.executablePath());
     try std.testing.expectEqualStrings(
         "1111111111111111111111111111111111111111",
         request.previousRevision().?,

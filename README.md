@@ -4,78 +4,85 @@
  ⠀⠀⠀⣠⣶⣿⣿⣷⣶⡶⣶⣶⣆⠀⠀⠀⣴⣶⣶⠆
  ⠀⠀⠀⠉⢹⣿⣿⠉⠉⠀⠘⢿⣿⣧⣀⣾⣿⡿⠃⠀             Tiny, open, embeddable, native coding agent.
  ⠀⠀⠀⠀⣼⣿⡏⠀⠀⠀⠀⠀⠻⣿⣿⣿⠟⠀⠀⠀
- ⠀⠀⠀⢀⣿⣿⠃⠀⠀⠀⠀⢠⣦⠘⢿⣿⣷⡀⠀⠀             curl -fsSL https://fx.sh/setup.sh | bash
+ ⠀⠀⠀⢀⣿⣿⠃⠀⠀⠀⠀⢠⣦⠘⢿⣿⣷⡀⠀⠀             git clone https://github.com/adhyaay-karnwal/chassis && cd chassis && zig build
  ⠀⠀⠀⣸⣿⡟⠀⠀⠀⠀⣰⣿⣿⠗⠀⠻⣿⣿⣄⠀
  ⠀⠀⠀⣿⣿⠇⠀⠀⠀⠾⠿⠿⠋⠀⠀⠀⠘⠿⠿⠦             ⚠ Status: Experimental. Use at your own risk.
   ⠀⣸⣿⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
  ⣿⣿⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ```
 
-fx is a coding agent CLI written in Zig: a 6.17 MiB native binary that is open source (Apache-2.0), model-agnostic, and embeddable as a harness in larger systems. Its interface stays closer to a Unix shell than an IDE in the terminal.
+chassis is a coding agent CLI written in Zig: a 6.17 MiB native binary that is open source (Apache-2.0), model-agnostic, and embeddable as a harness in larger systems. Its interface stays closer to a Unix shell than an IDE in the terminal.
 
 ## Install
 
+chassis does not yet have a hosted install script or CDN. Build from source
+(see [Build from source](#build-from-source) below); a proper install script
+is future work.
+
 ```bash
-curl -fsSL https://fx.sh/setup.sh | bash
+git clone https://github.com/adhyaay-karnwal/chassis && cd chassis && zig build
 ```
 
 ## Get started
 
 Sign in with one of:
 
-- `fx login`: Vercel AI Gateway
-- `fx login codex`: ChatGPT subscription (OpenAI Codex OAuth)
-- `fx login grok`: Grok subscription (xAI OAuth)
-- `fx setup`: AI Gateway API key
+- `chassis login`: Vercel AI Gateway
+- `chassis login codex`: ChatGPT subscription (OpenAI Codex OAuth)
+- `chassis login grok`: Grok subscription (xAI OAuth)
+- `chassis setup`: AI Gateway API key
 
 Then start the interactive shell from a project:
 
 ```bash
 cd your_project
-fx
+chassis
 ```
 
 Or make a one-shot request:
 
 ```bash
-fx ask "explain the changes in this repository"
+chassis ask "explain the changes in this repository"
 ```
 
 Inside the shell, run `/help` to browse interactive commands.
 
-## Embed fx
+## Embed chassis
 
-fx builds as a native binary or WebAssembly. Applications embedding fx can provide network transport, session storage, configuration, permission handling, and terminal I/O.
+chassis builds as a native binary or WebAssembly. Applications embedding chassis can provide network transport, session storage, configuration, permission handling, and terminal I/O.
 
 | Surface | Use |
 | --- | --- |
-| `fx acp` | Connect the native agent to editors and other Agent Client Protocol clients. |
-| `createFxAgent()` | Embed the agent core in a JavaScript host with `fx-core.wasm`. |
-| `createFxTerminal()` | Embed the interactive terminal with `fx-term.wasm`. |
+| `chassis acp` | Connect the native agent to editors and other Agent Client Protocol clients. |
+| `createChassisAgent()` | Embed the agent core in a JavaScript host with `chassis-core.wasm`. |
+| `createChassisTerminal()` | Embed the interactive terminal with `chassis-term.wasm`. |
 
-The WebAssembly SDK is experimental. See the [WebAssembly SDK](sdk/README.md) and [ACP documentation](https://fx.sh/docs/using-fx/acp).
+The WebAssembly SDK is experimental. See the [WebAssembly SDK](sdk/README.md).
 
-The SDK is published to npm as [libfx](https://www.npmjs.com/package/libfx). For runnable Node.js, browser, Next.js, and Nuxt applications, see the [libfx examples](examples/README.md).
+The SDK is published to npm as [libchassis](https://www.npmjs.com/package/libchassis). For runnable Node.js, browser, Next.js, and Nuxt applications, see the [libchassis examples](examples/README.md).
 
-## Extend fx
+## Extend chassis
 
-- [Skills](https://fx.sh/docs/capabilities/skills): reusable instructions the agent loads when invoked
-- [MCP](https://fx.sh/docs/capabilities/mcp): connect external tools and servers
-- [Subagents](https://fx.sh/docs/capabilities/subagents): delegate independent work
+- Skills: reusable instructions the agent loads when invoked
+- MCP: connect external tools and servers
+- Subagents: delegate independent work
 
 ## Documentation
 
-Read the [fx documentation](https://fx.sh/docs) for sessions, models, permissions, configuration, and the full CLI and slash command references.
+chassis does not yet have a hosted documentation site. Run `/help` inside an
+interactive session, or `chassis <command> --help`, for CLI and slash command
+references. See `AGENTS.md` and `CONTRIBUTING.md` for architecture and
+contribution details.
 
 ## Build from source
 
-Building fx requires [Zig 0.16.0+](https://ziglang.org/download/):
+Building chassis requires [Zig 0.16.0+](https://ziglang.org/download/):
 
 ```bash
-git clone https://github.com/vercel-labs/fx.git
-cd fx
+git clone https://github.com/adhyaay-karnwal/chassis.git
+cd chassis
 zig build -Doptimize=ReleaseSafe
-./zig-out/bin/fx
+./zig-out/bin/chassis
 ```
 
 Run the test suite with `zig build test`. See [CONTRIBUTING.md](CONTRIBUTING.md) for development and contribution guidelines.

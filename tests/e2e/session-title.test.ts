@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, runFx } from "../evals/eval-helpers";
 import {
   fakeGatewayFinalText,
   startDynamicFakeGateway,
@@ -21,12 +21,12 @@ type FixtureRoot = {
 };
 
 function createFixtureRoot(label: string, settings: string = "{}"): FixtureRoot {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), `fx-session-title-${label}-`)));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), `chassis-session-title-${label}-`)));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
-  writeFileSync(join(home, ".fx", "settings.json"), settings);
+  writeFileSync(join(home, ".chassis", "settings.json"), settings);
   return { root, home, workspace: realpathSync(workspace) };
 }
 
@@ -42,23 +42,23 @@ function baseEnv(root: FixtureRoot, gateway: { baseUrl: string; chatUrl: string 
     PATH: process.env.PATH ?? "/usr/bin:/bin",
     HOME: root.home,
     AI_GATEWAY_API_KEY: "synthetic-title",
-    FX_DISABLE_KEYCHAIN: "1",
-    FX_E2E_DISABLE_DOTENV: "1",
-    FX_AUTO_UPGRADE: "0",
-    FX_SOUND: "0",
-    FX_SKIP_ONBOARDING: "1",
-    FX_MODEL: MAIN_MODEL,
-    FX_PERMISSION_MODE: "full-access",
-    FX_MAX_AGENT_STEPS: "2",
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+    CHASSIS_DISABLE_KEYCHAIN: "1",
+    CHASSIS_E2E_DISABLE_DOTENV: "1",
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_SOUND: "0",
+    CHASSIS_SKIP_ONBOARDING: "1",
+    CHASSIS_MODEL: MAIN_MODEL,
+    CHASSIS_PERMISSION_MODE: "full-access",
+    CHASSIS_MAX_AGENT_STEPS: "2",
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
   };
 }
 
 function sessionTitles(root: FixtureRoot): string[] {
-  const sessionsDir = join(root.home, ".fx", "sessions");
+  const sessionsDir = join(root.home, ".chassis", "sessions");
   if (!existsSync(sessionsDir)) return [];
   const titles: string[] = [];
   for (const id of readdirSync(sessionsDir)) {
@@ -74,7 +74,7 @@ function titleRequests(gateway: ReturnType<typeof startTitleAwareGateway>) {
   return gateway.titleRequests;
 }
 
-test("fx ask generates a model title for a fresh session", async () => {
+test("chassis ask generates a model title for a fresh session", async () => {
   const root = createFixtureRoot("ask");
   const gateway = startTitleAwareGateway();
   try {
@@ -105,7 +105,7 @@ test("fx ask generates a model title for a fresh session", async () => {
   }
 });
 
-test("fx ask keeps the derived title when session_titles is off", async () => {
+test("chassis ask keeps the derived title when session_titles is off", async () => {
   const root = createFixtureRoot("disabled", JSON.stringify({ session_titles: false }));
   const gateway = startTitleAwareGateway();
   try {
@@ -123,7 +123,7 @@ test("fx ask keeps the derived title when session_titles is off", async () => {
   }
 });
 
-test("fx ask keeps the derived title when the title model output is unusable", async () => {
+test("chassis ask keeps the derived title when the title model output is unusable", async () => {
   const root = createFixtureRoot("unusable");
   const gateway = startDynamicFakeGateway(_raw => fakeGatewayFinalText("MAIN_ANSWER_OK"), {
     models: [{ id: MAIN_MODEL, type: "language", tags: ["tool-use"] }],
@@ -156,7 +156,7 @@ function traceTmpDir(root: FixtureRoot): string {
 
 function traceReports(root: FixtureRoot): string[] {
   return readdirSync(traceTmpDir(root))
-    .filter(name => name.startsWith("fx-trace-") && name.endsWith(".md"))
+    .filter(name => name.startsWith("chassis-trace-") && name.endsWith(".md"))
     .sort();
 }
 
@@ -184,7 +184,7 @@ test.skipIf(SKIP_TMUX)("tui trace report shows an installed session title", asyn
   let tui: TmuxSession | undefined;
   try {
     tui = await TmuxSession.create({
-      cmd: JSON.stringify(FX_BIN),
+      cmd: JSON.stringify(CHASSIS_BIN),
       cwd: root.workspace,
       isolated: true,
       remainOnExit: true,
@@ -216,7 +216,7 @@ test.skipIf(SKIP_TMUX)("tui trace report explains why no session title was gener
   let tui: TmuxSession | undefined;
   try {
     tui = await TmuxSession.create({
-      cmd: JSON.stringify(FX_BIN),
+      cmd: JSON.stringify(CHASSIS_BIN),
       cwd: root.workspace,
       isolated: true,
       remainOnExit: true,
@@ -251,7 +251,7 @@ test.skipIf(SKIP_TMUX)("tui shows the generated session title", async () => {
   let tui: TmuxSession | undefined;
   try {
     tui = await TmuxSession.create({
-      cmd: JSON.stringify(FX_BIN),
+      cmd: JSON.stringify(CHASSIS_BIN),
       cwd: root.workspace,
       isolated: true,
       remainOnExit: true,

@@ -21,7 +21,7 @@ import { join, sep } from "node:path";
 import {
   cleanupIsolatedTestHome,
   createIsolatedTestHome,
-  FX_BIN,
+  CHASSIS_BIN,
   HAS_API_KEY,
   REPO_ROOT,
   runFx,
@@ -39,14 +39,14 @@ const NO_GATEWAY_AUTH = {
   VERCEL_OIDC_TOKEN: undefined,
 };
 const MISSING_AUTH_MESSAGE =
-  "fx needs access to Vercel AI Gateway. Run fx login to sign in, fx setup to use an API key, or set AI_GATEWAY_API_KEY.";
+  "chassis needs access to Vercel AI Gateway. Run chassis login to sign in, chassis setup to use an API key, or set AI_GATEWAY_API_KEY.";
 const MODERN_MCP_FIXTURE = join(
   import.meta.dirname,
   "fixtures",
   "mcp-modern-stdio.mjs",
 );
 
-const KEYCHAIN_SERVICE = "FX_AI_GATEWAY_API_KEY";
+const KEYCHAIN_SERVICE = "CHASSIS_AI_GATEWAY_API_KEY";
 
 function maxLineWidth(text: string): number {
   return Math.max(...text.split(/\r?\n/).map((line) => Bun.stringWidth(line)));
@@ -77,7 +77,7 @@ function writeSeededFxAuth(
   issuer = "https://vercel.com",
   expiresAtMs = Date.now() + 60 * 60 * 1000,
 ): void {
-  const fxDir = join(home, ".fx");
+  const fxDir = join(home, ".chassis");
   mkdirSync(fxDir, { recursive: true, mode: 0o700 });
   chmodSync(fxDir, 0o700);
   const authPath = join(fxDir, "auth.json");
@@ -224,10 +224,10 @@ function writeLegacySession(
     historyLen?: number;
   } = {},
 ): void {
-  const sessionDir = join(home, ".fx", "sessions", sessionId);
+  const sessionDir = join(home, ".chassis", "sessions", sessionId);
   mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
-  chmodSync(join(home, ".fx"), 0o700);
-  chmodSync(join(home, ".fx", "sessions"), 0o700);
+  chmodSync(join(home, ".chassis"), 0o700);
+  chmodSync(join(home, ".chassis", "sessions"), 0o700);
   chmodSync(sessionDir, 0o700);
   const historyLen = opts.historyLen ?? 0;
   writeFileSync(
@@ -260,10 +260,10 @@ function writeConversationSession(
     turns?: string[];
   } = {},
 ): void {
-  const sessionDir = join(home, ".fx", "sessions", sessionId);
+  const sessionDir = join(home, ".chassis", "sessions", sessionId);
   mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
-  chmodSync(join(home, ".fx"), 0o700);
-  chmodSync(join(home, ".fx", "sessions"), 0o700);
+  chmodSync(join(home, ".chassis"), 0o700);
+  chmodSync(join(home, ".chassis", "sessions"), 0o700);
   chmodSync(sessionDir, 0o700);
   writeFileSync(
     join(sessionDir, "session.json"),
@@ -333,7 +333,7 @@ describe("cli: help", () => {
         `𝒇x v${sourceVersion()}\nFast, native coding agent for the terminal.\n`,
       );
       expect(stdout.match(/𝒇x/g) ?? []).toHaveLength(1);
-      expect(stdout).toContain("fx starts an interactive session by default.");
+      expect(stdout).toContain("chassis starts an interactive session by default.");
       expect(stdout).toContain("Commands:\n");
       expect(stdout).toContain("Run one noninteractive request");
       expect(stdout).toContain("Sign in to a model provider");
@@ -356,38 +356,38 @@ describe("cli: help", () => {
       expect(stdout).toContain("--resume-last");
       expect(stdout).toContain("session resume [last|id]");
       expect(stdout).toContain("-v, --version");
-      expect(stdout).toContain("Print the fx version and exit");
+      expect(stdout).toContain("Print the chassis version and exit");
       expect(stdout).not.toContain("Must appear before the command");
       expect(stdout).toContain("Examples:\n");
-      expect(stdout).toContain("https://fx.sh/docs");
-      expect(stdout).toContain("run `/feedback` inside fx");
+      expect(stdout).toContain("https://chassis.sh/docs");
+      expect(stdout).toContain("run `/feedback` inside chassis");
       expect(stdout).toContain(
-        "Run `fx <command> --help` for command-specific usage and options.",
+        "Run `chassis <command> --help` for command-specific usage and options.",
       );
       expect(stdout).not.toContain("command-specific options and examples");
       expect(stdout).not.toContain("  Work      ");
-      expect(stdout).not.toContain("\n\n\nRun `fx <command> --help`");
+      expect(stdout).not.toContain("\n\n\nRun `chassis <command> --help`");
     },
     TIMEOUT,
   );
 
   test(
-    "fx ask help renders documented options through both aliases",
+    "chassis ask help renders documented options through both aliases",
     async () => {
       const env = {
         ...NO_GATEWAY_AUTH,
-        FX_DISABLE_KEYCHAIN: "1",
+        CHASSIS_DISABLE_KEYCHAIN: "1",
       };
-      const expected = `fx ask
+      const expected = `chassis ask
 
 Run one noninteractive request
 
 Usage:
-  fx ask [--auto|--full-access] [--image PATH] [--system TEXT] [--json] [--quiet] [--prompt-permissions] [--no-save] [--no-color] [--resume <last|id>|--resume-id <id>] [--continue-recovery] [--] <prompt>
+  chassis ask [--auto|--full-access] [--image PATH] [--system TEXT] [--json] [--quiet] [--prompt-permissions] [--no-save] [--no-color] [--resume <last|id>|--resume-id <id>] [--continue-recovery] [--] <prompt>
 
 Options:
   --auto                Automatically review unresolved permission requests
-  --full-access         Disable fx permission checks
+  --full-access         Disable chassis permission checks
   --yolo                Alias for --full-access
   --image PATH          Attach an image file; repeat for multiple images
   --system TEXT         Replace the built-in system prompt for this request
@@ -420,7 +420,7 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   );
 
   test(
-    "fx session help documents inspect resume migrate and recover",
+    "chassis session help documents inspect resume migrate and recover",
     async () => {
       for (const args of [
         ["session", "--help"],
@@ -440,14 +440,14 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   );
 
   test(
-    "fx acp help documents accepted options",
+    "chassis acp help documents accepted options",
     async () => {
       for (const alias of ["--help", "-h"]) {
         const r = await runFx(["acp", alias]);
         expect(r.code).toBe(0);
         expect(r.stderr).toBe("");
         expect(r.stdout).toContain(
-          "Usage:\n  fx acp [--model <id>] [--log-file <path>]",
+          "Usage:\n  chassis acp [--model <id>] [--log-file <path>]",
         );
         expect(r.stdout).toContain("--model <id>");
         expect(r.stdout).toContain("--log-file <path>");
@@ -457,7 +457,7 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   );
 
   test(
-    "fx replay help describes golden output",
+    "chassis replay help describes golden output",
     async () => {
       const r = await runFx(["replay", "--help"]);
       expect(r.code).toBe(0);
@@ -470,14 +470,14 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   );
 
   test(
-    "fx acp rejects unknown options and missing option values",
+    "chassis acp rejects unknown options and missing option values",
     async () => {
       for (const args of [["--bogus"], ["--model"], ["--log-file"]]) {
         const result = await runFx(["acp", ...args]);
         expect(result.code).toBe(1);
         expect(result.stdout).toBe("");
         expect(result.stderr).toBe(
-          "usage: fx acp [--model <id>] [--log-file <path>]\n",
+          "usage: chassis acp [--model <id>] [--log-file <path>]\n",
         );
       }
     },
@@ -486,7 +486,7 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
 
   for (const alias of ["help", "--help", "-h"]) {
     test(
-      `fx ${alias} respects COLUMNS=60`,
+      `chassis ${alias} respects COLUMNS=60`,
       async () => {
         const r = await runFx([alias], { env: { COLUMNS: "60" } });
         expect(r.code).toBe(0);
@@ -504,7 +504,7 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
 
   for (const alias of ["help", "--help", "-h"]) {
     test(
-      `fx ${alias} hides developer recording surfaces`,
+      `chassis ${alias} hides developer recording surfaces`,
       async () => {
         const r = await runFx([alias]);
         expect(r.code).toBe(0);
@@ -517,11 +517,11 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
   }
 
   test(
-    "fx rejects the removed record flag as unknown input",
+    "chassis rejects the removed record flag as unknown input",
     async () => {
       const r = await runFx(["--record"]);
       expect(r.code).not.toBe(0);
-      expect(r.stderr).toContain("fx: unknown subcommand: --record");
+      expect(r.stderr).toContain("chassis: unknown subcommand: --record");
       expect(r.stderr).not.toContain("visual terminal capture:");
     },
     TIMEOUT,
@@ -531,7 +531,7 @@ With --prompt-permissions, JSON and quiet requests may prompt on stderr only whe
 describe("cli: version", () => {
   for (const alias of ["--version", "-v"]) {
     test(
-      `fx ${alias} prints the source version`,
+      `chassis ${alias} prints the source version`,
       async () => {
         const r = await runFx([alias]);
         expect(r.code).toBe(0);
@@ -547,10 +547,10 @@ describe("cli: status", () => {
   test(
     "status and doctor expose the MCP profile error that blocks ask startup",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-mcp-config-diagnostic-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-mcp-config-diagnostic-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const fxDir = join(home, ".fx");
+      const fxDir = join(home, ".chassis");
       mkdirSync(fxDir, { recursive: true, mode: 0o700 });
       mkdirSync(workspace);
       writeFileSync(join(fxDir, "mcp.json"), "{invalid json", { mode: 0o600 });
@@ -561,10 +561,10 @@ describe("cli: status", () => {
           HOME: realpathSync(home),
           AI_GATEWAY_API_KEY: "mcp-config-diagnostic-key",
           VERCEL_OIDC_TOKEN: undefined,
-          FX_DISABLE_KEYCHAIN: "1",
-          FX_AUTO_UPGRADE: "0",
-          FX_MODEL: FAKE_GATEWAY_MODEL,
-          FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_DISABLE_KEYCHAIN: "1",
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+          CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
         };
         const cwd = realpathSync(workspace);
         const before = snapshotTree(home);
@@ -590,7 +590,7 @@ describe("cli: status", () => {
           mcp_config_error: "McpConfigInvalidJson",
         });
         expect(doctorText.stdout).toContain(
-          "[fail] mcp_config: failed to load ~/.fx/mcp.json: McpConfigInvalidJson\n",
+          "[fail] mcp_config: failed to load ~/.chassis/mcp.json: McpConfigInvalidJson\n",
         );
         const doctorJson = JSON.parse(doctorJsonResult.stdout);
         expect(doctorJson.fail_count).toBe(1);
@@ -602,7 +602,7 @@ describe("cli: status", () => {
           {
             name: "mcp_config",
             status: "fail",
-            detail: "failed to load ~/.fx/mcp.json: McpConfigInvalidJson",
+            detail: "failed to load ~/.chassis/mcp.json: McpConfigInvalidJson",
           },
         ]);
         expect(ask.code).toBe(1);
@@ -661,12 +661,12 @@ describe("cli: status", () => {
   test(
     "status and doctor share the missing auth snapshot",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-status-noauth-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-status-noauth-"));
       try {
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(root),
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
         const status = await runFx(["status", "--json"], { env });
         const doctor = await runFx(["doctor", "--json"], { env });
@@ -701,23 +701,23 @@ describe("cli: status", () => {
     { name: "automatic Gateway", provider: "gateway", source: undefined, help: MISSING_AUTH_MESSAGE },
     { name: "Gateway with a stale Codex preference", provider: "gateway", source: "chatgpt_subscription", help: MISSING_AUTH_MESSAGE },
     { name: "Gateway with a stale Grok preference", provider: "gateway", source: "grok_subscription", help: MISSING_AUTH_MESSAGE },
-    { name: "an exact Gateway login", provider: "gateway", source: "fx_login", help: "fx login is selected but unavailable. Run fx login to reconnect; no other credential was selected." },
-    { name: "an exact OIDC token", provider: "gateway", source: "vercel_oidc_token", help: "VERCEL_OIDC_TOKEN is selected but unavailable. Set VERCEL_OIDC_TOKEN before starting fx; no other credential was selected." },
-    { name: "an exact environment key", provider: "gateway", source: "ai_gateway_api_key", help: "AI_GATEWAY_API_KEY is selected but unavailable. Set AI_GATEWAY_API_KEY before starting fx; no other credential was selected." },
-    { name: "an exact stored key", provider: "gateway", source: "stored_key", help: "A stored API key is selected but unavailable. Start fx and open /provider to choose an available credential; no other credential was selected." },
-    { name: "Codex", provider: "codex", source: undefined, help: "fx needs a Codex subscription login for this model. Run fx login codex." },
-    { name: "Grok", provider: "grok", source: undefined, help: "fx needs a Grok subscription login for this model. Run fx login grok." },
+    { name: "an exact Gateway login", provider: "gateway", source: "chassis_login", help: "chassis login is selected but unavailable. Run chassis login to reconnect; no other credential was selected." },
+    { name: "an exact OIDC token", provider: "gateway", source: "vercel_oidc_token", help: "VERCEL_OIDC_TOKEN is selected but unavailable. Set VERCEL_OIDC_TOKEN before starting chassis; no other credential was selected." },
+    { name: "an exact environment key", provider: "gateway", source: "ai_gateway_api_key", help: "AI_GATEWAY_API_KEY is selected but unavailable. Set AI_GATEWAY_API_KEY before starting chassis; no other credential was selected." },
+    { name: "an exact stored key", provider: "gateway", source: "stored_key", help: "A stored API key is selected but unavailable. Start chassis and open /provider to choose an available credential; no other credential was selected." },
+    { name: "Codex", provider: "codex", source: undefined, help: "chassis needs a Codex subscription login for this model. Run chassis login codex." },
+    { name: "Grok", provider: "grok", source: undefined, help: "chassis needs a Grok subscription login for this model. Run chassis login grok." },
   ]) {
     test(
       `status and doctor respect ${scenario.name} when credentials are missing`,
       async () => {
-        const root = mkdtempSync(join(tmpdir(), "fx-e2e-provider-diagnostics-"));
+        const root = mkdtempSync(join(tmpdir(), "chassis-e2e-provider-diagnostics-"));
         try {
           const home = join(root, "home");
           const workspace = join(root, "workspace");
-          mkdirSync(join(home, ".fx"), { recursive: true });
+          mkdirSync(join(home, ".chassis"), { recursive: true });
           mkdirSync(workspace);
-          const settingsPath = join(home, ".fx", "settings.json");
+          const settingsPath = join(home, ".chassis", "settings.json");
           const settings = JSON.stringify({
             provider: scenario.provider,
             models: { [scenario.provider]: "test-model" },
@@ -726,7 +726,7 @@ describe("cli: status", () => {
           writeFileSync(settingsPath, settings);
           const options = {
             cwd: realpathSync(workspace),
-            env: { ...NO_GATEWAY_AUTH, HOME: realpathSync(home), FX_DISABLE_KEYCHAIN: "1" },
+            env: { ...NO_GATEWAY_AUTH, HOME: realpathSync(home), CHASSIS_DISABLE_KEYCHAIN: "1" },
           };
 
           for (const command of ["status", "doctor"]) {
@@ -763,7 +763,7 @@ describe("cli: status", () => {
   }
 
   test("fresh and resumed asks retain an unavailable exact login with an environment key", async () => {
-    const root = mkdtempSync(join(tmpdir(), "fx-ask-exact-source-"));
+    const root = mkdtempSync(join(tmpdir(), "chassis-ask-exact-source-"));
     const gateway = startFakeGateway([
       fakeGatewayFinalText("SESSION_SEEDED"),
       fakeGatewayFinalText("AUTOMATIC_KEY_WORKS"),
@@ -771,9 +771,9 @@ describe("cli: status", () => {
     try {
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".chassis"), { recursive: true });
       mkdirSync(workspace);
-      const settingsPath = join(home, ".fx", "settings.json");
+      const settingsPath = join(home, ".chassis", "settings.json");
       const settings = { provider: "gateway", models: { gateway: FAKE_GATEWAY_MODEL } };
       writeFileSync(settingsPath, JSON.stringify(settings));
       const options = {
@@ -782,11 +782,11 @@ describe("cli: status", () => {
           HOME: realpathSync(home),
           AI_GATEWAY_API_KEY: "exact-source-control-key",
           VERCEL_OIDC_TOKEN: undefined,
-          FX_MODEL: undefined,
-          FX_DISABLE_KEYCHAIN: "1",
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+          CHASSIS_MODEL: undefined,
+          CHASSIS_DISABLE_KEYCHAIN: "1",
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
         },
       };
       const seeded = await runFx(["ask", "--json", "Create a short greeting."], options);
@@ -795,11 +795,11 @@ describe("cli: status", () => {
       expect(sessionId.length).toBeGreaterThan(0);
       expect(gateway.requests).toHaveLength(1);
 
-      const pinned = JSON.stringify({ ...settings, credential_source: "fx_login" });
+      const pinned = JSON.stringify({ ...settings, credential_source: "chassis_login" });
       writeFileSync(settingsPath, pinned);
       const status = await runFx(["status", "--json"], options);
       const help = JSON.parse(status.stdout).auth_help;
-      expect(help).toContain("fx login is selected but unavailable");
+      expect(help).toContain("chassis login is selected but unavailable");
       for (const resumed of [false, true]) {
         for (const json of [false, true]) {
           const result = await runFx([
@@ -828,9 +828,9 @@ describe("cli: status", () => {
   }, TIMEOUT);
 
   test(
-    "status and doctor share fx login source, team, and refreshability",
+    "status and doctor share chassis login source, team, and refreshability",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-status-auth-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-status-auth-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -840,7 +840,7 @@ describe("cli: status", () => {
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(home),
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
         const cwd = realpathSync(workspace);
 
@@ -854,14 +854,14 @@ describe("cli: status", () => {
         expect(doctorText.code).toBe(0);
         expect(doctorJsonResult.code).toBe(0);
         const expectedAuth = {
-          auth: "fx login",
+          auth: "chassis login",
           auth_refreshable: true,
           team: "vercel-labs",
         };
         expect(JSON.parse(statusJsonResult.stdout.trim())).toMatchObject(expectedAuth);
         expect(JSON.parse(doctorJsonResult.stdout.trim())).toMatchObject(expectedAuth);
         for (const output of [statusText.stdout, doctorText.stdout]) {
-          expect(output).toContain("auth=fx login");
+          expect(output).toContain("auth=chassis login");
           expect(output).toContain("auth_refreshable=true");
           expect(output).toContain("team=vercel-labs");
         }
@@ -884,7 +884,7 @@ describe("cli: status", () => {
   test(
     "status and doctor inspect an expired login without refreshing it",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-status-expired-auth-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-status-expired-auth-"));
       const requestCatcher = startRequestCatcher();
       try {
         const home = join(root, "home");
@@ -900,8 +900,8 @@ describe("cli: status", () => {
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(home),
-          FX_DISABLE_KEYCHAIN: "1",
-          FX_E2E_OAUTH_ISSUER_URL: requestCatcher.issuerUrl,
+          CHASSIS_DISABLE_KEYCHAIN: "1",
+          CHASSIS_E2E_OAUTH_ISSUER_URL: requestCatcher.issuerUrl,
         };
         const cwd = realpathSync(workspace);
 
@@ -911,7 +911,7 @@ describe("cli: status", () => {
         expect(status.code).toBe(0);
         expect(doctor.code).toBe(0);
         const expectedAuth = {
-          auth: "fx login",
+          auth: "chassis login",
           auth_refreshable: true,
           team: "vercel-labs",
         };
@@ -929,7 +929,7 @@ describe("cli: status", () => {
   test(
     "a new status process keeps normal credential precedence",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-status-precedence-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-status-precedence-"));
       try {
         writeSeededFxAuth(root, "team_123");
         const envToken = "preferred-environment-token";
@@ -937,7 +937,7 @@ describe("cli: status", () => {
           HOME: realpathSync(root),
           VERCEL_OIDC_TOKEN: undefined,
           AI_GATEWAY_API_KEY: envToken,
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
 
         const status = await runFx(["status", "--json"], { env });
@@ -959,7 +959,7 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx status --json returns valid status JSON",
+    "chassis status --json returns valid status JSON",
     async () => {
       const r = await runFx(["status", "--json"]);
       expect(r.code).toBe(0);
@@ -978,16 +978,16 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx status reports a persisted dev update channel",
+    "chassis status reports a persisted dev update channel",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-update-channel-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-update-channel-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+        mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
         writeFileSync(
-          join(home, ".fx", "settings.json"),
+          join(home, ".chassis", "settings.json"),
           '{"update_channel":"dev"}\n',
           { mode: 0o600 },
         );
@@ -1010,7 +1010,7 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx upgrade help documents release channels",
+    "chassis upgrade help documents release channels",
     async () => {
       const result = await runFx(["upgrade", "--help"]);
       expect(result.code).toBe(0);
@@ -1021,9 +1021,9 @@ describe("cli: status", () => {
   );
 
   test(
-    "fx status --json defaults permission mode to auto",
+    "chassis status --json defaults permission mode to auto",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-permission-default-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-permission-default-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -1035,7 +1035,7 @@ describe("cli: status", () => {
           env: {
             ...NO_GATEWAY_AUTH,
             HOME: realpathSync(home),
-            FX_PERMISSION_MODE: undefined,
+            CHASSIS_PERMISSION_MODE: undefined,
           },
         });
         expect(r.code).toBe(0);
@@ -1049,9 +1049,9 @@ describe("cli: status", () => {
   );
 
   test(
-    "status and doctor apply an exact FX_MAX_AGENT_STEPS override",
+    "status and doctor apply an exact CHASSIS_MAX_AGENT_STEPS override",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-agent-step-limit-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-agent-step-limit-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -1060,7 +1060,7 @@ describe("cli: status", () => {
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(home),
-          FX_MAX_AGENT_STEPS: "3",
+          CHASSIS_MAX_AGENT_STEPS: "3",
         };
 
         const status = await runFx(["status", "--json"], {
@@ -1091,31 +1091,31 @@ describe("cli: status", () => {
   test(
     "project profile-only settings are ignored before parsing and profile overrides win",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-profile-config-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-profile-config-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        mkdirSync(join(home, ".fx"), { recursive: true });
+        mkdirSync(join(home, ".chassis"), { recursive: true });
         mkdirSync(workspace);
         const homeRoot = realpathSync(home);
         const workspaceRoot = realpathSync(workspace);
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: homeRoot,
-          FX_MODEL: undefined,
-          FX_PERMISSION_MODE: undefined,
-          FX_MAX_AGENT_STEPS: undefined,
+          CHASSIS_MODEL: undefined,
+          CHASSIS_PERMISSION_MODE: undefined,
+          CHASSIS_MAX_AGENT_STEPS: undefined,
         };
 
         writeFileSync(
-          join(home, ".fx", "settings.json"),
+          join(home, ".chassis", "settings.json"),
           JSON.stringify({
             model: "anthropic/claude-sonnet-4.6",
             permission_mode: "auto",
           }) + "\n",
         );
         writeFileSync(
-          join(workspace, ".fx.json"),
+          join(workspace, ".chassis.json"),
           JSON.stringify({
             model: 123,
             permission_mode: "danger",
@@ -1136,21 +1136,21 @@ describe("cli: status", () => {
         expect(first.permission_mode).toBe("auto");
         expect(first.agent_step_limit).toBe(7);
         expect(status.stderr).toContain(
-          "fx: config project: ignored_project_user_only_setting; key=model",
+          "chassis: config project: ignored_project_user_only_setting; key=model",
         );
         expect(status.stderr).toContain(
-          "fx: config project: ignored_project_user_only_setting; key=permission_mode",
+          "chassis: config project: ignored_project_user_only_setting; key=permission_mode",
         );
         expect(status.stderr).toContain(
-          "fx: config project: ignored_project_user_only_setting; key=permission",
+          "chassis: config project: ignored_project_user_only_setting; key=permission",
         );
         expect(status.stderr).toContain(
-          "fx: config project: ignored_project_user_only_setting; key=statusLine",
+          "chassis: config project: ignored_project_user_only_setting; key=statusLine",
         );
         expect(status.stderr).not.toContain("danger");
 
         writeFileSync(
-          join(home, ".fx", "settings.json"),
+          join(home, ".chassis", "settings.json"),
           JSON.stringify({
             model: "anthropic/claude-sonnet-4.6",
             permission_mode: "auto",
@@ -1183,11 +1183,11 @@ describe("cli: status", () => {
     "special settings files fail closed without blocking CLI startup",
     async () => {
       if (platform() === "win32") return;
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-config-special-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-config-special-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".chassis");
         mkdirSync(fxDir, { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
         chmodSync(fxDir, 0o700);
@@ -1195,9 +1195,9 @@ describe("cli: status", () => {
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: home,
-          FX_DISABLE_KEYCHAIN: "1",
-          FX_SKIP_ONBOARDING: "1",
-          FX_SOUND: "0",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
+          CHASSIS_SKIP_ONBOARDING: "1",
+          CHASSIS_SOUND: "0",
         };
 
         expect(spawnSync("mkfifo", [join(fxDir, "settings.json")]).status).toBe(0);
@@ -1210,10 +1210,10 @@ describe("cli: status", () => {
         expect(Date.now() - userStartedAt).toBeLessThan(3_000);
         expect(user.code).toBe(0);
         expect(JSON.parse(user.stdout)).toMatchObject({ kind: "status" });
-        expect(user.stderr).toContain("fx: config user: durable_path_unsafe");
+        expect(user.stderr).toContain("chassis: config user: durable_path_unsafe");
 
         rmSync(join(fxDir, "settings.json"));
-        expect(spawnSync("mkfifo", [join(workspace, ".fx.json")]).status).toBe(0);
+        expect(spawnSync("mkfifo", [join(workspace, ".chassis.json")]).status).toBe(0);
         const projectStartedAt = Date.now();
         const project = await runFx(["status", "--json"], {
           cwd: workspace,
@@ -1223,7 +1223,7 @@ describe("cli: status", () => {
         expect(Date.now() - projectStartedAt).toBeLessThan(3_000);
         expect(project.code).toBe(0);
         expect(JSON.parse(project.stdout)).toMatchObject({ kind: "status" });
-        expect(project.stderr).toContain("fx: config project: durable_path_unsafe");
+        expect(project.stderr).toContain("chassis: config project: durable_path_unsafe");
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -1234,12 +1234,12 @@ describe("cli: status", () => {
 
 describe("cli: usage", () => {
   test(
-    "fx usage reads rolling local facts without credentials or profile mutation",
+    "chassis usage reads rolling local facts without credentials or profile mutation",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-usage-"));
       try {
         const home = join(root, "home");
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".chassis");
         mkdirSync(fxDir, { recursive: true, mode: 0o700 });
         chmodSync(fxDir, 0o700);
         const now = Date.now();
@@ -1292,7 +1292,7 @@ describe("cli: usage", () => {
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(home),
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
 
         const text = await runFx(["usage"], { env });
@@ -1335,12 +1335,12 @@ describe("cli: usage", () => {
   );
 
   test(
-    "fx usage preserves known totals when the ledger is incomplete",
+    "chassis usage preserves known totals when the ledger is incomplete",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-incomplete-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-usage-incomplete-"));
       try {
         const home = join(root, "home");
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".chassis");
         mkdirSync(fxDir, { recursive: true, mode: 0o700 });
         const now = Date.now();
         const records = [
@@ -1380,7 +1380,7 @@ describe("cli: usage", () => {
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(home),
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
 
         const text = await runFx(["usage"], { env });
@@ -1402,19 +1402,19 @@ describe("cli: usage", () => {
   );
 
   test(
-    "fx usage distinguishes empty, invalid, corrupt, and unsafe local state",
+    "chassis usage distinguishes empty, invalid, corrupt, and unsafe local state",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-states-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-usage-states-"));
       try {
         const home = realpathSync(root);
-        const env = { ...NO_GATEWAY_AUTH, HOME: home, FX_DISABLE_KEYCHAIN: "1" };
+        const env = { ...NO_GATEWAY_AUTH, HOME: home, CHASSIS_DISABLE_KEYCHAIN: "1" };
         const empty = await runFx(["usage", "--json"], { env });
         expect(empty.code).toBe(0);
         expect(JSON.parse(empty.stdout)).toMatchObject({
           coverage: { status: "not_started" },
           totals: null,
         });
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".chassis"))).toBe(false);
 
         const invalid = await runFx(
           ["usage", "--period", "session", "--json"],
@@ -1426,7 +1426,7 @@ describe("cli: usage", () => {
           code: "InvalidUsageArgs",
         });
 
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".chassis");
         mkdirSync(fxDir, { mode: 0o700 });
         chmodSync(fxDir, 0o700);
         writeFileSync(
@@ -1502,12 +1502,12 @@ describe("cli: usage", () => {
   );
 
   test(
-    "fx usage preserves known totals but fails closed when recovery storage is unsafe",
+    "chassis usage preserves known totals but fails closed when recovery storage is unsafe",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-usage-recovery-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-usage-recovery-"));
       try {
         const home = join(root, "home");
-        const fxDir = join(home, ".fx");
+        const fxDir = join(home, ".chassis");
         mkdirSync(fxDir, { recursive: true, mode: 0o700 });
         chmodSync(fxDir, 0o700);
         writeFileSync(
@@ -1545,7 +1545,7 @@ describe("cli: usage", () => {
           env: {
             ...NO_GATEWAY_AUTH,
             HOME: realpathSync(home),
-            FX_DISABLE_KEYCHAIN: "1",
+            CHASSIS_DISABLE_KEYCHAIN: "1",
           },
         });
         expect(result.code).toBe(0);
@@ -1566,7 +1566,7 @@ describe("cli: usage", () => {
 
 describe("cli: permissions", () => {
   test(
-    "fx permissions --json returns valid permissions JSON",
+    "chassis permissions --json returns valid permissions JSON",
     async () => {
       const r = await runFx(["permissions", "--json"]);
       expect(r.code).toBe(0);
@@ -1586,9 +1586,9 @@ describe("cli: permissions", () => {
 
 describe("cli: doctor", () => {
   test(
-    "fx doctor --json returns valid doctor JSON",
+    "chassis doctor --json returns valid doctor JSON",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-doctor-json-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-doctor-json-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -1629,9 +1629,9 @@ describe("cli: doctor", () => {
   );
 
   test(
-    "fx doctor --json leaves an empty home unchanged",
+    "chassis doctor --json leaves an empty home unchanged",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-doctor-no-create-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-doctor-no-create-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -1649,7 +1649,7 @@ describe("cli: doctor", () => {
 
         expect(r.code).toBe(0);
         expect(JSON.parse(r.stdout.trim()).kind).toBe("doctor");
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".chassis"))).toBe(false);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -1658,9 +1658,9 @@ describe("cli: doctor", () => {
   );
 
   test(
-    "fx doctor --json bounds diagnostics while reporting the cache-free session count",
+    "chassis doctor --json bounds diagnostics while reporting the cache-free session count",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-doctor-bounded-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-doctor-bounded-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -1678,7 +1678,7 @@ describe("cli: doctor", () => {
           );
         }
 
-        expect(existsSync(join(home, ".fx", "sessions", "summary.json"))).toBe(false);
+        expect(existsSync(join(home, ".chassis", "sessions", "summary.json"))).toBe(false);
 
         const r = await runFx(["doctor", "--json"], {
           cwd: workspaceRoot,
@@ -1723,10 +1723,10 @@ describe("cli: doctor", () => {
 
 describe("cli: logout", () => {
   test(
-    "fx logout revokes refresh and access tokens after local deletion",
+    "chassis logout revokes refresh and access tokens after local deletion",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-logout-revocation-"));
-      const authPath = join(home, ".fx", "auth.json");
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-logout-revocation-"));
+      const authPath = join(home, ".chassis", "auth.json");
       const issuer = startLogoutIssuer([200, 200], authPath);
       try {
         writeSeededFxAuth(home, undefined, issuer.issuerUrl);
@@ -1735,12 +1735,12 @@ describe("cli: logout", () => {
           env: {
             ...NO_GATEWAY_AUTH,
             HOME: realpathSync(home),
-            FX_DISABLE_KEYCHAIN: "1",
+            CHASSIS_DISABLE_KEYCHAIN: "1",
           },
         });
 
         expect(logout.code).toBe(0);
-        expect(logout.stdout).toBe("Signed out of fx.\n");
+        expect(logout.stdout).toBe("Signed out of chassis.\n");
         expect(logout.stderr).toBe("");
         expect(existsSync(authPath)).toBe(false);
         expect(issuer.requests).toEqual([
@@ -1777,10 +1777,10 @@ describe("cli: logout", () => {
   );
 
   test(
-    "fx logout warns once and sends no tokens without a revocation endpoint",
+    "chassis logout warns once and sends no tokens without a revocation endpoint",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-logout-no-revocation-"));
-      const authPath = join(home, ".fx", "auth.json");
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-logout-no-revocation-"));
+      const authPath = join(home, ".chassis", "auth.json");
       const issuer = startLogoutIssuer([], authPath, null);
       try {
         writeSeededFxAuth(home, undefined, issuer.issuerUrl);
@@ -1789,12 +1789,12 @@ describe("cli: logout", () => {
           env: {
             ...NO_GATEWAY_AUTH,
             HOME: realpathSync(home),
-            FX_DISABLE_KEYCHAIN: "1",
+            CHASSIS_DISABLE_KEYCHAIN: "1",
           },
         });
 
         expect(logout.code).toBe(0);
-        expect(logout.stdout).toBe("Signed out of fx.\n");
+        expect(logout.stdout).toBe("Signed out of chassis.\n");
         expect(logout.stderr).toBe(
           "Warning: signed out locally, but the remote session could not be revoked.\n",
         );
@@ -1811,10 +1811,10 @@ describe("cli: logout", () => {
   );
 
   test(
-    "fx logout warns once and sends no tokens to an invalid revocation endpoint",
+    "chassis logout warns once and sends no tokens to an invalid revocation endpoint",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-logout-invalid-revocation-"));
-      const authPath = join(home, ".fx", "auth.json");
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-logout-invalid-revocation-"));
+      const authPath = join(home, ".chassis", "auth.json");
       const catcher = startRequestCatcher();
       const issuer = startLogoutIssuer([], authPath, catcher.endpoint);
       try {
@@ -1824,12 +1824,12 @@ describe("cli: logout", () => {
           env: {
             ...NO_GATEWAY_AUTH,
             HOME: realpathSync(home),
-            FX_DISABLE_KEYCHAIN: "1",
+            CHASSIS_DISABLE_KEYCHAIN: "1",
           },
         });
 
         expect(logout.code).toBe(0);
-        expect(logout.stdout).toBe("Signed out of fx.\n");
+        expect(logout.stdout).toBe("Signed out of chassis.\n");
         expect(catcher.requests).toEqual([]);
         expect(logout.stderr).toBe(
           "Warning: signed out locally, but the remote session could not be revoked.\n",
@@ -1848,11 +1848,11 @@ describe("cli: logout", () => {
   );
 
   test(
-    "fx logout removes an unsafe saved login and warns that it could not revoke it",
+    "chassis logout removes an unsafe saved login and warns that it could not revoke it",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-logout-rejected-login-"));
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-logout-rejected-login-"));
       const issuer = startLogoutIssuer([200, 200]);
-      const authPath = join(home, ".fx", "auth.json");
+      const authPath = join(home, ".chassis", "auth.json");
       try {
         writeSeededFxAuth(home, undefined, issuer.issuerUrl);
         chmodSync(authPath, 0o644);
@@ -1861,12 +1861,12 @@ describe("cli: logout", () => {
           env: {
             ...NO_GATEWAY_AUTH,
             HOME: realpathSync(home),
-            FX_DISABLE_KEYCHAIN: "1",
+            CHASSIS_DISABLE_KEYCHAIN: "1",
           },
         });
 
         expect(logout.code).toBe(0);
-        expect(logout.stdout).toBe("Signed out of fx.\n");
+        expect(logout.stdout).toBe("Signed out of chassis.\n");
         expect(logout.stderr).toBe(
           "Warning: signed out locally, but the remote session could not be revoked.\n",
         );
@@ -1889,11 +1889,11 @@ describe("cli: logout", () => {
   );
 
   test(
-    "fx logout fails when the saved login cannot be deleted",
+    "chassis logout fails when the saved login cannot be deleted",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-logout-delete-failure-"));
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-logout-delete-failure-"));
       const issuer = startLogoutIssuer([200, 200]);
-      const fxDir = join(home, ".fx");
+      const fxDir = join(home, ".chassis");
       const authPath = join(fxDir, "auth.json");
       try {
         writeSeededFxAuth(home, undefined, issuer.issuerUrl);
@@ -1902,7 +1902,7 @@ describe("cli: logout", () => {
         const env = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(home),
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
         const logout = await runFx(["logout"], { env });
         const status = await runFx(["status", "--json"], { env });
@@ -1910,10 +1910,10 @@ describe("cli: logout", () => {
         expect(logout.code).toBe(1);
         expect(logout.stdout).toBe("");
         expect(logout.stderr).toBe(
-          "fx logout: failed to durably remove saved fx login\n",
+          "chassis logout: failed to durably remove saved chassis login\n",
         );
         expect(existsSync(authPath)).toBe(true);
-        expect(JSON.parse(status.stdout).auth).toBe("fx login");
+        expect(JSON.parse(status.stdout).auth).toBe("chassis login");
         expect(issuer.requests).toEqual([]);
       } finally {
         chmodSync(fxDir, 0o700);
@@ -1925,10 +1925,10 @@ describe("cli: logout", () => {
   );
 
   test(
-    "fx logout deletes only the saved login and keeps environment credentials available",
+    "chassis logout deletes only the saved login and keeps environment credentials available",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-logout-env-"));
-      const authPath = join(home, ".fx", "auth.json");
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-logout-env-"));
+      const authPath = join(home, ".chassis", "auth.json");
       const issuer = startLogoutIssuer([500, 200], authPath);
       const oidcToken = "logout-oidc-token";
       const apiToken = "logout-api-key-token";
@@ -1938,16 +1938,16 @@ describe("cli: logout", () => {
           HOME: realpathSync(home),
           VERCEL_OIDC_TOKEN: oidcToken,
           AI_GATEWAY_API_KEY: apiToken,
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
 
         const logout = await runFx(["logout"], { env });
         expect(logout.code).toBe(0);
-        expect(logout.stdout).toBe("Signed out of fx.\n");
+        expect(logout.stdout).toBe("Signed out of chassis.\n");
         expect(logout.stderr).toBe(
           "Warning: signed out locally, but the remote session could not be revoked.\n",
         );
-        expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+        expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
         expect(issuer.requests).toEqual([
           { method: "GET", path: "/.well-known/openid-configuration" },
           {
@@ -2009,22 +2009,22 @@ describe("cli: logout", () => {
   );
 
   test(
-    "fx logout leaves an active API key unchanged when no login exists",
+    "chassis logout leaves an active API key unchanged when no login exists",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-logout-no-login-"));
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-logout-no-login-"));
       const apiToken = "logout-existing-api-key";
       try {
         const env = {
           HOME: realpathSync(home),
           VERCEL_OIDC_TOKEN: undefined,
           AI_GATEWAY_API_KEY: apiToken,
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
         const logout = await runFx(["logout"], { env });
         const status = await runFx(["status", "--json"], { env });
 
         expect(logout.code).toBe(0);
-        expect(logout.stdout).toBe("No fx login session found.\n");
+        expect(logout.stdout).toBe("No chassis login session found.\n");
         expect(logout.stderr).toBe("");
         expect(JSON.parse(status.stdout)).toMatchObject({
           auth: "AI_GATEWAY_API_KEY",
@@ -2040,12 +2040,12 @@ describe("cli: logout", () => {
   );
 
   test.skipIf(platform() !== "darwin")(
-    "fx logout leaves the macOS Keychain API key untouched",
+    "chassis logout leaves the macOS Keychain API key untouched",
     async () => {
       const runId = `${process.pid}-${Date.now()}`;
-      const account = `fx-e2e-logout-${runId}`;
+      const account = `chassis-e2e-logout-${runId}`;
       const keychainToken = `vca_fake_logout_key_${runId}`;
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-logout-keychain-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-logout-keychain-"));
       const home = join(root, "home");
       mkdirSync(join(home, "Library"), { recursive: true });
       symlinkSync(
@@ -2079,10 +2079,10 @@ describe("cli: logout", () => {
 
         expect(logout.code).toBe(0);
         expect(logout.stderr).toBe("");
-        expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+        expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
         expect(stored.status).toBe(0);
         expect(stored.stdout.trim()).toBe(keychainToken);
-        expect(JSON.parse(status.stdout).auth).not.toBe("fx login");
+        expect(JSON.parse(status.stdout).auth).not.toBe("chassis login");
         expect(logout.stdout).not.toContain(keychainToken);
         expect(status.stdout).not.toContain(keychainToken);
       } finally {
@@ -2101,10 +2101,10 @@ describe("cli: logout", () => {
 
 describe("cli: setup", () => {
   test(
-    "fx setup is a top-level command and fails cleanly when Keychain is disabled",
+    "chassis setup is a top-level command and fails cleanly when Keychain is disabled",
     async () => {
       const r = await runFx(["setup"], {
-        env: { ...NO_GATEWAY_AUTH, FX_DISABLE_KEYCHAIN: "1" },
+        env: { ...NO_GATEWAY_AUTH, CHASSIS_DISABLE_KEYCHAIN: "1" },
       });
       expect(r.code).toBe(1);
       expect(r.stdout).toBe("");
@@ -2114,10 +2114,10 @@ describe("cli: setup", () => {
   );
 
   test(
-    "fx setup never invokes the configured Vercel CLI",
+    "chassis setup never invokes the configured Vercel CLI",
     async () => {
       const runId = `${process.pid}-${Date.now()}`;
-      const fakeDir = mkdtempSync(join(tmpdir(), "fx-e2e-vercel-cli-"));
+      const fakeDir = mkdtempSync(join(tmpdir(), "chassis-e2e-vercel-cli-"));
       const fakeCli = join(fakeDir, "vc");
       const invocationLog = join(fakeDir, "invoked");
 
@@ -2135,8 +2135,8 @@ exit 99
         const r = await runFx(["setup"], {
           env: {
             ...NO_GATEWAY_AUTH,
-            USER: `fx-e2e-setup-${runId}`,
-            FX_VERCEL_CLI_PATH: fakeCli,
+            USER: `chassis-e2e-setup-${runId}`,
+            CHASSIS_VERCEL_CLI_PATH: fakeCli,
           },
           timeoutMs: TIMEOUT,
         });
@@ -2157,8 +2157,8 @@ describe("cli: stored key file backend", () => {
   test.skipIf(platform() === "darwin")(
     "a 0600 key file resolves, and a loosened one is refused rather than reported absent",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-stored-key-file-"));
-      const fxDir = join(home, ".fx");
+      const home = mkdtempSync(join(tmpdir(), "chassis-stored-key-file-"));
+      const fxDir = join(home, ".chassis");
       mkdirSync(fxDir, { recursive: true, mode: 0o700 });
       chmodSync(fxDir, 0o700);
       const keyPath = join(fxDir, "api-key");
@@ -2198,12 +2198,12 @@ describe("cli: stored key file backend", () => {
 
 describe("cli: Keychain authentication", () => {
   test.skipIf(platform() !== "darwin")(
-    "fx ask reads an existing Keychain credential without onboarding",
+    "chassis ask reads an existing Keychain credential without onboarding",
     async () => {
       const runId = `${process.pid}-${Date.now()}`;
-      const account = `fx-e2e-ask-${runId}`;
+      const account = `chassis-e2e-ask-${runId}`;
       const fakeKey = `vca_fake_ask_key_${runId}`;
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-keychain-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-keychain-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       mkdirSync(join(home, "Library"), { recursive: true });
@@ -2270,11 +2270,11 @@ describe("cli: Keychain authentication", () => {
               ...NO_GATEWAY_AUTH,
               HOME: realpathSync(home),
               USER: account,
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_MODEL: FAKE_GATEWAY_MODEL,
-              FX_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+              CHASSIS_AUTO_UPGRADE: "0",
             },
             timeoutMs: TIMEOUT,
           },
@@ -2286,7 +2286,7 @@ describe("cli: Keychain authentication", () => {
           "Keychain ask complete",
         );
         expect(result.stdout).not.toContain(fakeKey);
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".chassis"))).toBe(false);
         expect(gateway.requests).toHaveLength(1);
         expect(gateway.requests[0]!.headers.get("authorization")).toBe(
           `Bearer ${fakeKey}`,
@@ -2324,7 +2324,7 @@ describe("cli: read-only no-create matrix", () => {
     test(
       `${probe.args.join(" ")} leaves an empty home unchanged`,
       async () => {
-        const root = mkdtempSync(join(tmpdir(), "fx-e2e-no-create-"));
+        const root = mkdtempSync(join(tmpdir(), "chassis-e2e-no-create-"));
         try {
           const home = join(root, "home");
           const workspace = join(root, "workspace");
@@ -2337,7 +2337,7 @@ describe("cli: read-only no-create matrix", () => {
             env: {
               ...NO_GATEWAY_AUTH,
               HOME: realpathSync(home),
-              FX_E2E_FAIL_ON_DURABLE_MUTATION: "1",
+              CHASSIS_E2E_FAIL_ON_DURABLE_MUTATION: "1",
             },
             timeoutMs: TIMEOUT,
           });
@@ -2353,7 +2353,7 @@ describe("cli: read-only no-create matrix", () => {
             expect(result.stderr).toBe("");
           }
           expect(snapshotTree(home)).toEqual(before);
-          expect(existsSync(join(home, ".fx"))).toBe(false);
+          expect(existsSync(join(home, ".chassis"))).toBe(false);
         } finally {
           rmSync(root, { recursive: true, force: true });
         }
@@ -2367,7 +2367,7 @@ describe("cli: missing durable home", () => {
   test(
     "read-only commands tolerate a nonexistent HOME and saved ask bootstraps it",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-missing-home-path-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-missing-home-path-"));
       const home = join(root, "missing-home");
       const workspace = join(root, "workspace");
       const gateway = startFakeGateway([
@@ -2379,8 +2379,8 @@ describe("cli: missing durable home", () => {
         const baseEnv = {
           HOME: home,
           VERCEL_OIDC_TOKEN: undefined,
-          FX_AUTO_UPGRADE: "0",
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         };
 
         const status = await runFx(["status", "--json"], {
@@ -2413,9 +2413,9 @@ describe("cli: missing durable home", () => {
             env: {
               ...baseEnv,
               AI_GATEWAY_API_KEY: "missing-home-key",
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_MODEL: FAKE_GATEWAY_MODEL,
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
             },
             timeoutMs: TIMEOUT,
           },
@@ -2424,7 +2424,7 @@ describe("cli: missing durable home", () => {
         expect(JSON.parse(asked.stdout).output.trim()).toBe(
           "missing home persisted",
         );
-        expect(existsSync(join(home, ".fx", "sessions"))).toBe(true);
+        expect(existsSync(join(home, ".chassis", "sessions"))).toBe(true);
         expect(gateway.requests).toHaveLength(1);
       } finally {
         gateway.stop();
@@ -2437,7 +2437,7 @@ describe("cli: missing durable home", () => {
   test(
     "session commands fail precisely while doctor remains available without HOME",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-no-home-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-no-home-"));
       try {
         const workspace = join(root, "workspace");
         mkdirSync(workspace);
@@ -2487,9 +2487,9 @@ describe("cli: missing durable home", () => {
 
 describe("cli: sessions", () => {
   test(
-    "fx sessions --json returns valid sessions JSON",
+    "chassis sessions --json returns valid sessions JSON",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-sessions-empty-"));
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-sessions-empty-"));
       try {
         const r = await runFx(["sessions", "--json"], { env: { HOME: home } });
         expect(r.code).toBe(0);
@@ -2505,16 +2505,16 @@ describe("cli: sessions", () => {
   );
 
   test(
-    "fx sessions text shows named, unnamed, and renamed sessions",
+    "chassis sessions text shows named, unnamed, and renamed sessions",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-session-names-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-session-names-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        const sessionsDir = join(home, ".fx", "sessions");
+        const sessionsDir = join(home, ".chassis", "sessions");
         mkdirSync(sessionsDir, { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
-        chmodSync(join(home, ".fx"), 0o700);
+        chmodSync(join(home, ".chassis"), 0o700);
         chmodSync(sessionsDir, 0o700);
         const workspaceRoot = realpathSync(workspace);
         writeConversationSession(home, workspaceRoot, "named-session", {
@@ -2591,14 +2591,14 @@ describe("cli: sessions", () => {
   test(
     "session listing pages direct metadata without an index",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-session-pages-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-session-pages-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        const sessionsDir = join(home, ".fx", "sessions");
+        const sessionsDir = join(home, ".chassis", "sessions");
         mkdirSync(sessionsDir, { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
-        chmodSync(join(home, ".fx"), 0o700);
+        chmodSync(join(home, ".chassis"), 0o700);
         chmodSync(sessionsDir, 0o700);
         const workspaceRoot = realpathSync(workspace);
         for (let index = 0; index < 201; index += 1) {
@@ -2680,7 +2680,7 @@ describe("cli: sessions", () => {
   test(
     "session lists use projections without opening unreadable event logs",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-session-projections-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-session-projections-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -2705,7 +2705,7 @@ describe("cli: sessions", () => {
         );
         expect(fixture.status).toBe(0);
 
-        const before = snapshotTree(join(home, ".fx"));
+        const before = snapshotTree(join(home, ".chassis"));
         const listed = await runFx(["sessions", "--json"], {
           cwd: workspaceRoot,
           env: { HOME: home },
@@ -2740,7 +2740,7 @@ describe("cli: sessions", () => {
             },
           ],
         });
-        expect(snapshotTree(join(home, ".fx"))).toEqual(before);
+        expect(snapshotTree(join(home, ".chassis"))).toEqual(before);
 
         const latest = await runFx(["session", "last", "--json"], {
           cwd: workspaceRoot,
@@ -2760,7 +2760,7 @@ describe("cli: sessions", () => {
           history_len: 1,
           conversation_language: "en",
         });
-        expect(snapshotTree(join(home, ".fx"))).toEqual(before);
+        expect(snapshotTree(join(home, ".chassis"))).toEqual(before);
 
         const detail = await runFx(
           ["session", "--id", "benchmark-session-00", "--json"],
@@ -2772,7 +2772,7 @@ describe("cli: sessions", () => {
         );
         expect(detail.code).not.toBe(0);
         expect(detail.stderr).toContain("AccessDenied");
-        expect(snapshotTree(join(home, ".fx"))).toEqual(before);
+        expect(snapshotTree(join(home, ".chassis"))).toEqual(before);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -2783,7 +2783,7 @@ describe("cli: sessions", () => {
   test(
     "workspace-scoped session discovery filters list and last by cwd",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-workspace-sessions-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-workspace-sessions-"));
       try {
         const home = join(root, "home");
         const workspaceA = join(root, "workspace-a");
@@ -2855,7 +2855,7 @@ describe("cli: sessions", () => {
   test(
     "session discovery reports corrupt records and distinguishes an unreadable latest session",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-corrupt-sessions-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-corrupt-sessions-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -2869,7 +2869,7 @@ describe("cli: sessions", () => {
           ["invalid-json", "{"],
           ["truncated", '{"schema_version":2,"id":"truncated"}'],
         ] as const) {
-          const directory = join(home, ".fx", "sessions", id);
+          const directory = join(home, ".chassis", "sessions", id);
           mkdirSync(directory, { recursive: true, mode: 0o700 });
           writeFileSync(join(directory, "session.json"), contents, {
             mode: 0o600,
@@ -2889,7 +2889,7 @@ describe("cli: sessions", () => {
           sessions: [{ id: "readable-session" }],
         });
 
-        rmSync(join(home, ".fx", "sessions", "readable-session"), {
+        rmSync(join(home, ".chassis", "sessions", "readable-session"), {
           recursive: true,
           force: true,
         });
@@ -2913,7 +2913,7 @@ describe("cli: sessions", () => {
   test(
     "profile-wide session discovery recovers sessions after a workspace rename",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-renamed-workspace-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-renamed-workspace-"));
       try {
         const home = join(root, "home");
         const original = join(root, "workspace-before");
@@ -2957,16 +2957,16 @@ describe("cli: sessions", () => {
   );
 
   test(
-    "fx sessions --json ignores malformed and oversized list caches",
+    "chassis sessions --json ignores malformed and oversized list caches",
     async () => {
       for (const cached of ["{", "x".repeat(4 * 1024 * 1024 + 1)]) {
-        const root = mkdtempSync(join(tmpdir(), "fx-e2e-sessions-cache-"));
+        const root = mkdtempSync(join(tmpdir(), "chassis-e2e-sessions-cache-"));
         try {
           const home = join(root, "home");
           const workspace = join(root, "workspace");
-          mkdirSync(join(home, ".fx", "sessions"), { recursive: true });
+          mkdirSync(join(home, ".chassis", "sessions"), { recursive: true });
           mkdirSync(workspace, { recursive: true });
-          writeFileSync(join(home, ".fx", "sessions", "list.json"), cached);
+          writeFileSync(join(home, ".chassis", "sessions", "list.json"), cached);
 
           const r = await runFx(["sessions", "--json"], {
             cwd: realpathSync(workspace),
@@ -2990,7 +2990,7 @@ describe("cli: sessions", () => {
   test(
     "exact session flags address special-token and 255-byte IDs literally",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-session-exact-ids-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-session-exact-ids-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -3028,7 +3028,7 @@ describe("cli: sessions", () => {
   test(
     "expected json failures emit machine-readable stdout",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-json-errors-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-json-errors-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -3076,7 +3076,7 @@ describe("cli: sessions", () => {
 
 describe("cli: removed task and background commands", () => {
   test(
-    "fx task, fx tasks, and fx background are unknown commands",
+    "chassis task, chassis tasks, and chassis background are unknown commands",
     async () => {
       for (const command of ["task", "tasks", "background"]) {
         const result = await runFx([command], { env: NO_GATEWAY_AUTH });
@@ -3090,7 +3090,7 @@ describe("cli: removed task and background commands", () => {
   test(
     "legacy tasks files are ignored by ordinary session loading",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-legacy-tasks-ignored-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-legacy-tasks-ignored-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -3098,7 +3098,7 @@ describe("cli: removed task and background commands", () => {
         mkdirSync(workspace, { recursive: true });
         const workspaceRoot = realpathSync(workspace);
         writeLegacySession(home, workspaceRoot, "legacy-tasks-session");
-        const tasksDir = join(home, ".fx", "sessions", "legacy-tasks-session", "tasks");
+        const tasksDir = join(home, ".chassis", "sessions", "legacy-tasks-session", "tasks");
         mkdirSync(tasksDir, { recursive: true });
         writeFileSync(join(tasksDir, "unreadable-legacy-shape.json"), "not json\n");
 
@@ -3126,9 +3126,9 @@ function modelsGatewayEnv(home: string, modelsUrl: string) {
     AI_GATEWAY_API_KEY: SEEDED_GATEWAY_TOKEN,
     VERCEL_OIDC_TOKEN: undefined,
     HOME: home,
-    FX_DISABLE_KEYCHAIN: "1",
-    FX_AUTO_UPGRADE: "0",
-    FX_E2E_GATEWAY_MODELS_URL: modelsUrl,
+    CHASSIS_DISABLE_KEYCHAIN: "1",
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_E2E_GATEWAY_MODELS_URL: modelsUrl,
   };
 }
 
@@ -3154,7 +3154,7 @@ describe("cli: models", () => {
     },
   ]) {
     test(
-      `fx models renders exact text for ${scenario.name}`,
+      `chassis models renders exact text for ${scenario.name}`,
       async () => {
         const home = createIsolatedTestHome();
         const gateway = startFakeGateway([], {
@@ -3194,7 +3194,7 @@ describe("cli: models", () => {
   }
 
   test(
-    "fx models retries a rejected API key exactly once without authentication",
+    "chassis models retries a rejected API key exactly once without authentication",
     async () => {
       for (const rejectedStatus of [401, 403]) {
         const home = createIsolatedTestHome();
@@ -3212,8 +3212,8 @@ describe("cli: models", () => {
           const result = await runFx(["models", "--json"], {
             env: {
               ...modelsGatewayEnv(home, `${gateway.baseUrl}/coding-agent/v1/models`),
-              FX_TRACE_LOG: tracePath,
-              FX_TRACE_SCOPES: "catalog",
+              CHASSIS_TRACE_LOG: tracePath,
+              CHASSIS_TRACE_SCOPES: "catalog",
             },
           });
 
@@ -3252,7 +3252,7 @@ describe("cli: models", () => {
   );
 
   test(
-    "fx models preserves network and 5xx failures without anonymous retry",
+    "chassis models preserves network and 5xx failures without anonymous retry",
     async () => {
       const unavailableHome = createIsolatedTestHome();
       const gateway = startFakeGateway([], {
@@ -3329,7 +3329,7 @@ describe("cli: models", () => {
     },
   ]) {
     test(
-      `fx models preserves ${scenario.name} without anonymous retry`,
+      `chassis models preserves ${scenario.name} without anonymous retry`,
       async () => {
         const home = createIsolatedTestHome();
         const gateway = startFakeGateway([], { models: scenario.response });
@@ -3353,13 +3353,13 @@ describe("cli: models", () => {
   }
 
   test(
-    "cancelling fx models does not retry anonymously",
+    "cancelling chassis models does not retry anonymously",
     async () => {
       const home = createIsolatedTestHome();
       const gateway = startFakeGateway([], {
         models: () => new Promise<Response>(() => {}),
       });
-      const proc = Bun.spawn([FX_BIN, "models", "--json"], {
+      const proc = Bun.spawn([CHASSIS_BIN, "models", "--json"], {
         cwd: REPO_ROOT,
         env: {
           ...process.env,
@@ -3393,7 +3393,7 @@ describe("cli: models", () => {
   );
 
   test(
-    "fx models rejects E2E gateway redirects without contacting the target",
+    "chassis models rejects E2E gateway redirects without contacting the target",
     async () => {
       const home = createIsolatedTestHome();
       const captureRequests: string[] = [];
@@ -3419,10 +3419,10 @@ describe("cli: models", () => {
         const r = await runFx(["models", "--json"], {
           env: {
             HOME: home,
-            FX_DISABLE_KEYCHAIN: "1",
+            CHASSIS_DISABLE_KEYCHAIN: "1",
             AI_GATEWAY_API_KEY: "redirect-proof-key",
             VERCEL_OIDC_TOKEN: undefined,
-            FX_E2E_GATEWAY_MODELS_URL: `http://127.0.0.1:${redirectServer.port}/v1/models`,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: `http://127.0.0.1:${redirectServer.port}/v1/models`,
           },
         });
 
@@ -3456,7 +3456,7 @@ describe("cli: models", () => {
         "requested_access=public_only credential_source=none effective_access=public_only public_only_reason=no_credential anonymous_fallback=false outcome=loaded failure_category=none http_status=none retryable=none",
     },
     {
-      name: "uses the selected fx login team catalog",
+      name: "uses the selected chassis login team catalog",
       seedFxLogin: true,
       expiredFxLogin: false,
       authEnv: {},
@@ -3464,10 +3464,10 @@ describe("cli: models", () => {
       expectPrivate: true,
       expectedTeamQuery: "team_123",
       expectedTrace:
-        "requested_access=authenticated credential_source=fx_login effective_access=authenticated public_only_reason=none anonymous_fallback=false outcome=loaded failure_category=none http_status=none retryable=none",
+        "requested_access=authenticated credential_source=chassis_login effective_access=authenticated public_only_reason=none anonymous_fallback=false outcome=loaded failure_category=none http_status=none retryable=none",
     },
     {
-      name: "refreshes an expired fx login before loading the selected team catalog",
+      name: "refreshes an expired chassis login before loading the selected team catalog",
       seedFxLogin: true,
       expiredFxLogin: true,
       authEnv: {},
@@ -3475,7 +3475,7 @@ describe("cli: models", () => {
       expectPrivate: true,
       expectedTeamQuery: "team_123",
       expectedTrace:
-        "requested_access=authenticated credential_source=fx_login effective_access=authenticated public_only_reason=none anonymous_fallback=false outcome=loaded failure_category=none http_status=none retryable=none",
+        "requested_access=authenticated credential_source=chassis_login effective_access=authenticated public_only_reason=none anonymous_fallback=false outcome=loaded failure_category=none http_status=none retryable=none",
     },
     {
       name: "sends an API key so the catalog includes team-private models",
@@ -3499,9 +3499,9 @@ describe("cli: models", () => {
     },
   ]) {
     test(
-      `fx models --json ${scenario.name}`,
+      `chassis models --json ${scenario.name}`,
       async () => {
-        const root = mkdtempSync(join(tmpdir(), "fx-e2e-team-models-"));
+        const root = mkdtempSync(join(tmpdir(), "chassis-e2e-team-models-"));
         const requests: Array<{ headers: Headers; teamId: string | null }> = [];
         const oauthRequests: string[] = [];
         const server = Bun.serve({
@@ -3568,12 +3568,12 @@ describe("cli: models", () => {
               ...NO_GATEWAY_AUTH,
               ...scenario.authEnv,
               HOME: realpathSync(home),
-              FX_DISABLE_KEYCHAIN: "1",
-              FX_AUTO_UPGRADE: "0",
-              FX_GATEWAY_BASE_URL: `http://127.0.0.1:${server.port}`,
-              FX_E2E_GATEWAY_MODELS_URL: undefined,
-              FX_TRACE_LOG: tracePath,
-              FX_TRACE_SCOPES: "catalog",
+              CHASSIS_DISABLE_KEYCHAIN: "1",
+              CHASSIS_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: `http://127.0.0.1:${server.port}`,
+              CHASSIS_E2E_GATEWAY_MODELS_URL: undefined,
+              CHASSIS_TRACE_LOG: tracePath,
+              CHASSIS_TRACE_SCOPES: "catalog",
             },
             timeoutMs: TIMEOUT,
           });
@@ -3628,7 +3628,7 @@ describe("cli: models", () => {
   }
 
   test.skipIf(!HAS_API_KEY)(
-    "fx models --json returns valid models JSON",
+    "chassis models --json returns valid models JSON",
     async () => {
       const r = await runFx(["models", "--json"], { timeoutMs: 30_000 });
       expect(r.code).toBe(0);
@@ -3644,7 +3644,7 @@ describe("cli: models", () => {
 
 describe("cli: credits", () => {
   test(
-    "fx credits --json preserves Gateway HTTP denial details",
+    "chassis credits --json preserves Gateway HTTP denial details",
     async () => {
       const home = createIsolatedTestHome();
       const requests: Array<{
@@ -3676,8 +3676,8 @@ describe("cli: credits", () => {
             AI_GATEWAY_API_KEY: "credits-fake-key",
             VERCEL_OIDC_TOKEN: undefined,
             HOME: realpathSync(home),
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_E2E_GATEWAY_CREDITS_URL: `http://127.0.0.1:${server.port}/v1/credits`,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_E2E_GATEWAY_CREDITS_URL: `http://127.0.0.1:${server.port}/v1/credits`,
             HOME: home,
           },
         });
@@ -3703,7 +3703,7 @@ describe("cli: credits", () => {
   );
 
   test.skipIf(!HAS_API_KEY)(
-    "fx credits --json returns credits JSON or exits non-zero",
+    "chassis credits --json returns credits JSON or exits non-zero",
     async () => {
       const r = await runFx(["credits", "--json"], { timeoutMs: 30_000 });
       if (r.code === 0 && r.stdout.trim()) {
@@ -3719,9 +3719,9 @@ describe("cli: credits", () => {
 
 describe("cli: replay failures", () => {
   test(
-    "fx replay --json preserves structured failures for missing and malformed tapes",
+    "chassis replay --json preserves structured failures for missing and malformed tapes",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-replay-json-errors-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-replay-json-errors-"));
       try {
         const missing = await runFx(["replay", join(root, "missing.fxtape"), "--json"]);
         expect(missing.code).toBe(1);
@@ -3749,9 +3749,9 @@ describe("cli: replay failures", () => {
 
 describe("cli: ask input validation", () => {
   test(
-    "fx ask rejects invalid UTF-8 stdin before Gateway or session effects",
+    "chassis ask rejects invalid UTF-8 stdin before Gateway or session effects",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-invalid-utf8-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-invalid-utf8-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       mkdirSync(home);
@@ -3773,8 +3773,8 @@ describe("cli: ask input validation", () => {
             ...NO_GATEWAY_AUTH,
             HOME: realpathSync(home),
             AI_GATEWAY_API_KEY: "invalid-utf8-proof-key",
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_E2E_GATEWAY_CHAT_URL: `http://127.0.0.1:${server.port}/ai/v1/chat/completions`,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_E2E_GATEWAY_CHAT_URL: `http://127.0.0.1:${server.port}/ai/v1/chat/completions`,
           },
           stdin: Uint8Array.from([0xff, 0xfe, 0x80, 0x68, 0x69]),
           timeoutMs: TIMEOUT,
@@ -3787,7 +3787,7 @@ describe("cli: ask input validation", () => {
           error: "InvalidPromptText",
         });
         expect(requests).toEqual([]);
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".chassis"))).toBe(false);
       } finally {
         server.stop(true);
         rmSync(root, { recursive: true, force: true });
@@ -3799,7 +3799,7 @@ describe("cli: ask input validation", () => {
 
 describe("cli: session", () => {
   test(
-    "fx session with no id exits non-zero or shows usage",
+    "chassis session with no id exits non-zero or shows usage",
     async () => {
       const r = await runFx(["session"]);
       expect(r.code).not.toBe(0);
@@ -3808,13 +3808,13 @@ describe("cli: session", () => {
   );
 
   test(
-    "fx session exact id hides managed child detail",
+    "chassis session exact id hides managed child detail",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-private-child-detail-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-private-child-detail-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
-        mkdirSync(join(home, ".fx", "sessions"), {
+        mkdirSync(join(home, ".chassis", "sessions"), {
           recursive: true,
           mode: 0o700,
         });
@@ -3827,7 +3827,7 @@ describe("cli: session", () => {
         writeLegacySession(home, workspaceRoot, childId);
         const childControl = join(
           home,
-          ".fx",
+          ".chassis",
           "sessions",
           childId,
           "subagent",
@@ -3843,7 +3843,7 @@ describe("cli: session", () => {
           ["session", "--id", parentId, "--json"],
           {
             cwd: workspaceRoot,
-            env: { HOME: home, FX_DISABLE_KEYCHAIN: "1" },
+            env: { HOME: home, CHASSIS_DISABLE_KEYCHAIN: "1" },
           },
         );
         expect(parent).toMatchObject({ code: 0, stderr: "" });
@@ -3856,7 +3856,7 @@ describe("cli: session", () => {
           ["session", "--id", childId, "--json"],
           {
             cwd: workspaceRoot,
-            env: { HOME: home, FX_DISABLE_KEYCHAIN: "1" },
+            env: { HOME: home, CHASSIS_DISABLE_KEYCHAIN: "1" },
           },
         );
         expect(child.code).toBe(1);
@@ -3888,12 +3888,12 @@ describe("cli: interactive startup", () => {
       ];
 
       for (const args of cases) {
-        const home = realpathSync(mkdtempSync(join(tmpdir(), "fx-e2e-no-tty-")));
+        const home = realpathSync(mkdtempSync(join(tmpdir(), "chassis-e2e-no-tty-")));
         try {
           const r = await runFx(args, { env: { HOME: home } });
           expect(r.code).toBe(1);
           expect(r.stdout).toBe("");
-          expect(r.stderr).toBe("fx requires an interactive terminal (TTY).\n");
+          expect(r.stderr).toBe("chassis requires an interactive terminal (TTY).\n");
           expect(readdirSync(home)).toEqual([]);
         } finally {
           rmSync(home, { recursive: true, force: true });
@@ -3906,12 +3906,12 @@ describe("cli: interactive startup", () => {
 
 describe("cli: pr", () => {
   test(
-    "fx pr without gateway auth exits non-zero",
+    "chassis pr without gateway auth exits non-zero",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-noauth-"));
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-noauth-"));
       try {
         const r = await runFx(["pr"], {
-          env: { ...NO_GATEWAY_AUTH, HOME: home, FX_DISABLE_KEYCHAIN: "1" },
+          env: { ...NO_GATEWAY_AUTH, HOME: home, CHASSIS_DISABLE_KEYCHAIN: "1" },
         });
         expect(r.code).not.toBe(0);
         expect(r.stderr).toContain(MISSING_AUTH_MESSAGE);
@@ -3925,12 +3925,12 @@ describe("cli: pr", () => {
 
 describe("cli: issue", () => {
   test(
-    "fx issue without gateway auth exits non-zero",
+    "chassis issue without gateway auth exits non-zero",
     async () => {
-      const home = mkdtempSync(join(tmpdir(), "fx-e2e-noauth-"));
+      const home = mkdtempSync(join(tmpdir(), "chassis-e2e-noauth-"));
       try {
         const r = await runFx(["issue"], {
-          env: { ...NO_GATEWAY_AUTH, HOME: home, FX_DISABLE_KEYCHAIN: "1" },
+          env: { ...NO_GATEWAY_AUTH, HOME: home, CHASSIS_DISABLE_KEYCHAIN: "1" },
         });
         expect(r.code).not.toBe(0);
         expect(r.stderr).toContain(MISSING_AUTH_MESSAGE);
@@ -3944,12 +3944,12 @@ describe("cli: issue", () => {
 
 describe("cli: ask success", () => {
   test(
-    "fx ask binds an explicitly invoked skill into the prompt",
+    "chassis ask binds an explicitly invoked skill into the prompt",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-explicit-skill-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-explicit-skill-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
-      const skillDirectory = join(home, ".fx", "skills", "cli-explicit");
+      const skillDirectory = join(home, ".chassis", "skills", "cli-explicit");
       const skillBody = "CLI_EXPLICIT_SKILL_BODY";
       const gateway = startFakeGateway([
         fakeGatewayFinalText("explicit skill ask complete"),
@@ -3976,10 +3976,10 @@ describe("cli: ask success", () => {
               HOME: realpathSync(home),
               AI_GATEWAY_API_KEY: "fake-explicit-skill-key",
               VERCEL_OIDC_TOKEN: undefined,
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_MODEL: FAKE_GATEWAY_MODEL,
-              FX_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+              CHASSIS_AUTO_UPGRADE: "0",
             },
             timeoutMs: TIMEOUT,
           },
@@ -4010,9 +4010,9 @@ describe("cli: ask success", () => {
   );
 
   test(
-    "fx ask stdin prompts above the old 1 MiB limit reach Gateway byte-for-byte",
+    "chassis ask stdin prompts above the old 1 MiB limit reach Gateway byte-for-byte",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-large-stdin-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-large-stdin-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const sizes = [1024 * 1024 - 1, 1024 * 1024, 1024 * 1024 + 1, 3 * 1024 * 1024];
@@ -4028,9 +4028,9 @@ describe("cli: ask success", () => {
         }] },
       );
       try {
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+        mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
-        writeFileSync(join(home, ".fx", "settings.json"), "{}\n");
+        writeFileSync(join(home, ".chassis", "settings.json"), "{}\n");
 
         for (const [index, size] of sizes.entries()) {
           const prompt = `B${"x".repeat(size - 2)}E`;
@@ -4042,10 +4042,10 @@ describe("cli: ask success", () => {
                 HOME: home,
                 AI_GATEWAY_API_KEY: "fake-large-stdin-key",
                 VERCEL_OIDC_TOKEN: undefined,
-                FX_GATEWAY_BASE_URL: gateway.baseUrl,
-                FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-                FX_MODEL: FAKE_GATEWAY_MODEL,
-                FX_AUTO_UPGRADE: "0",
+                CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+                CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+                CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+                CHASSIS_AUTO_UPGRADE: "0",
               },
               stdin: prompt,
               timeoutMs: 60_000,
@@ -4072,23 +4072,23 @@ describe("cli: ask success", () => {
   );
 
   test(
-    "fx ask stdin resource overflow has distinct text and JSON errors",
+    "chassis ask stdin resource overflow has distinct text and JSON errors",
     async () => {
       const oversized = Buffer.alloc(8 * 1024 * 1024 + 1, 0x78);
 
       const textResult = await runFx(["ask", "--auto", "--no-save"], {
-        env: { ...NO_GATEWAY_AUTH, FX_DISABLE_KEYCHAIN: "1" },
+        env: { ...NO_GATEWAY_AUTH, CHASSIS_DISABLE_KEYCHAIN: "1" },
         stdin: oversized,
         timeoutMs: 60_000,
       });
       expect(textResult.code).toBe(1);
       expect(textResult.stdout).toBe("");
       expect(textResult.stderr).toBe(
-        "fx ask: prompt exceeds the local input safety limit\n",
+        "chassis ask: prompt exceeds the local input safety limit\n",
       );
 
       const jsonResult = await runFx(["ask", "--json", "--auto", "--no-save"], {
-        env: { ...NO_GATEWAY_AUTH, FX_DISABLE_KEYCHAIN: "1" },
+        env: { ...NO_GATEWAY_AUTH, CHASSIS_DISABLE_KEYCHAIN: "1" },
         stdin: oversized,
         timeoutMs: 60_000,
       });
@@ -4102,9 +4102,9 @@ describe("cli: ask success", () => {
   );
 
   test(
-    "fx ask sends catalog-backed portable reasoning",
+    "chassis ask sends catalog-backed portable reasoning",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-portable-reasoning-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-portable-reasoning-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const model = "provider/new-reasoning-model";
@@ -4122,10 +4122,10 @@ describe("cli: ask success", () => {
         },
       );
       try {
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+        mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
         writeFileSync(
-          join(home, ".fx", "settings.json"),
+          join(home, ".chassis", "settings.json"),
           `${JSON.stringify({ model, effort: "high" })}\n`,
         );
 
@@ -4137,9 +4137,9 @@ describe("cli: ask success", () => {
               HOME: home,
               AI_GATEWAY_API_KEY: "fake-portable-ask-key",
               VERCEL_OIDC_TOKEN: undefined,
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
             },
             timeoutMs: 60_000,
           },
@@ -4149,11 +4149,11 @@ describe("cli: ask success", () => {
         expect(
           result.stderr
             .replace(
-              /fx ask: warning: skipped \d+ invalid or unreadable skill candidates?; relaunch with FX_TRACE=1 to write a trace log\n/g,
+              /chassis ask: warning: skipped \d+ invalid or unreadable skill candidates?; relaunch with CHASSIS_TRACE=1 to write a trace log\n/g,
               "",
             )
             .replace(
-              /\[notice\] skill discovery warning: [^\n]*; relaunch with FX_TRACE=1 to write a trace log\n/g,
+              /\[notice\] skill discovery warning: [^\n]*; relaunch with CHASSIS_TRACE=1 to write a trace log\n/g,
               "",
             ),
         ).toBe("");
@@ -4182,15 +4182,15 @@ describe("cli: ask success", () => {
   test.skipIf(!HAS_API_KEY)(
     "live Gateway accepts catalog-backed portable reasoning",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-live-portable-reasoning-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-live-portable-reasoning-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const tracePath = join(root, "trace.log");
       try {
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+        mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
         mkdirSync(workspace);
         writeFileSync(
-          join(home, ".fx", "settings.json"),
+          join(home, ".chassis", "settings.json"),
           `${JSON.stringify({
             model: "openai/gpt-5.6-sol",
             effort: "high",
@@ -4203,18 +4203,18 @@ describe("cli: ask success", () => {
             "--json",
             "--auto",
             "--no-save",
-            "Reply with exactly: FX_PORTABLE_REASONING_LIVE_OK",
+            "Reply with exactly: CHASSIS_PORTABLE_REASONING_LIVE_OK",
           ],
           {
             cwd: realpathSync(workspace),
             env: {
               HOME: home,
-              FX_MODEL: undefined,
-              FX_TRACE: "1",
-              FX_TRACE_LOG: tracePath,
-              FX_GATEWAY_BASE_URL: undefined,
-              FX_GATEWAY_CHAT_URL: undefined,
-              FX_E2E_GATEWAY_MODELS_URL: undefined,
+              CHASSIS_MODEL: undefined,
+              CHASSIS_TRACE: "1",
+              CHASSIS_TRACE_LOG: tracePath,
+              CHASSIS_GATEWAY_BASE_URL: undefined,
+              CHASSIS_GATEWAY_CHAT_URL: undefined,
+              CHASSIS_E2E_GATEWAY_MODELS_URL: undefined,
               VERCEL_OIDC_TOKEN: undefined,
             },
             timeoutMs: 120_000,
@@ -4223,7 +4223,7 @@ describe("cli: ask success", () => {
 
         expect(result.code).toBe(0);
         expect(JSON.parse(result.stdout).output).toContain(
-          "FX_PORTABLE_REASONING_LIVE_OK",
+          "CHASSIS_PORTABLE_REASONING_LIVE_OK",
         );
         expect(readFileSync(tracePath, "utf8")).toContain(
           "reasoning=selected",
@@ -4265,9 +4265,9 @@ describe("cli: ask success", () => {
       json: false,
     },
   ])(
-    "fx ask usage $name",
+    "chassis ask usage $name",
     async ({ reportedUsage, expectedUsage, toolLoop, json }) => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-usage-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-usage-"));
       const answer = "Usage fixture complete.\n";
       const gateway = startFakeGateway([
         fakeGatewaySse([
@@ -4310,13 +4310,13 @@ describe("cli: ask success", () => {
               HOME: realpathSync(home),
               AI_GATEWAY_API_KEY: "fake-ask-usage-key",
               VERCEL_OIDC_TOKEN: undefined,
-              FX_DISABLE_KEYCHAIN: "1",
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-              FX_MODEL: FAKE_GATEWAY_MODEL,
-              FX_AUTO_UPGRADE: "0",
+              CHASSIS_DISABLE_KEYCHAIN: "1",
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+              CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+              CHASSIS_AUTO_UPGRADE: "0",
             },
             timeoutMs: 60_000,
           },
@@ -4344,7 +4344,7 @@ describe("cli: ask success", () => {
         }
         expect(gateway.requests).toHaveLength(toolLoop ? 2 : 1);
         expect(gateway.classifierRequests).toHaveLength(0);
-        expect(existsSync(join(home, ".fx"))).toBe(false);
+        expect(existsSync(join(home, ".chassis"))).toBe(false);
       } finally {
         gateway.stop();
         rmSync(root, { recursive: true, force: true });
@@ -4356,7 +4356,7 @@ describe("cli: ask success", () => {
   test(
     "saved ask resumes the exact session while no-save creates no durable state",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-persistence-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-persistence-"));
       const gateway = startFakeGateway([
         fakeGatewayFinalText("orange triangle"),
         fakeGatewayFinalText("blue circle"),
@@ -4379,11 +4379,11 @@ describe("cli: ask success", () => {
               HOME: realpathSync(savedHome),
               AI_GATEWAY_API_KEY: "fake-ask-persistence-key",
               VERCEL_OIDC_TOKEN: undefined,
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_MODEL: FAKE_GATEWAY_MODEL,
-              FX_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+              CHASSIS_AUTO_UPGRADE: "0",
             },
             timeoutMs: 60_000,
           },
@@ -4405,7 +4405,7 @@ describe("cli: ask success", () => {
         ).toBe("true");
         expect(
           existsSync(
-            join(savedHome, ".fx", "sessions", firstJson.session_id),
+            join(savedHome, ".chassis", "sessions", firstJson.session_id),
           ),
         ).toBe(true);
 
@@ -4424,11 +4424,11 @@ describe("cli: ask success", () => {
               HOME: realpathSync(savedHome),
               AI_GATEWAY_API_KEY: "fake-ask-persistence-key",
               VERCEL_OIDC_TOKEN: undefined,
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_MODEL: FAKE_GATEWAY_MODEL,
-              FX_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+              CHASSIS_AUTO_UPGRADE: "0",
             },
             timeoutMs: 60_000,
           },
@@ -4463,11 +4463,11 @@ describe("cli: ask success", () => {
               HOME: realpathSync(noSaveHome),
               AI_GATEWAY_API_KEY: "fake-ask-persistence-key",
               VERCEL_OIDC_TOKEN: undefined,
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-              FX_MODEL: FAKE_GATEWAY_MODEL,
-              FX_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+              CHASSIS_AUTO_UPGRADE: "0",
             },
             timeoutMs: 60_000,
           },
@@ -4479,7 +4479,7 @@ describe("cli: ask success", () => {
         expect(noSaveJson.usage).toEqual({ input_tokens: 3, output_tokens: 5 });
         expect(gateway.requests[2]?.headers.get("x-session-id")).toBeNull();
         expect(gateway.requests[2]?.headers.get("x-session-affinity")).toBeNull();
-        expect(existsSync(join(noSaveHome, ".fx"))).toBe(false);
+        expect(existsSync(join(noSaveHome, ".chassis"))).toBe(false);
         expect(gateway.requests).toHaveLength(3);
       } finally {
         gateway.stop();
@@ -4492,7 +4492,7 @@ describe("cli: ask success", () => {
   test(
     "saved ask converts a legacy session once and continues after restart",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-legacy-convert-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-legacy-convert-"));
       const gateway = startFakeGateway([
         fakeGatewayFinalText("LEGACY_CONVERTED_OK"),
         fakeGatewayFinalText("LEGACY_RESTART_OK"),
@@ -4505,7 +4505,7 @@ describe("cli: ask success", () => {
         const workspaceRoot = realpathSync(workspace);
         const sessionId = "legacy-ask-convert";
         writeLegacySession(home, workspaceRoot, sessionId);
-        const sessionDir = join(home, ".fx", "sessions", sessionId);
+        const sessionDir = join(home, ".chassis", "sessions", sessionId);
         const legacyPath = join(sessionDir, "session.json");
         const legacy = JSON.parse(readFileSync(legacyPath, "utf8"));
         const legacyOutput = "LEGACY_AVAILABLE_RESULT_BYTES";
@@ -4543,11 +4543,11 @@ describe("cli: ask success", () => {
           HOME: home,
           AI_GATEWAY_API_KEY: "fake-legacy-convert-key",
           VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_MODEL: FAKE_GATEWAY_MODEL,
-          FX_AUTO_UPGRADE: "0",
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+          CHASSIS_AUTO_UPGRADE: "0",
         };
 
         const first = await runFx(
@@ -4621,7 +4621,7 @@ describe("cli: ask success", () => {
   test(
     "saved asks remain discoverable and resumable without session caches",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-session-cache-free-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-session-cache-free-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const unrelatedReply = `unrelated saved turn ${"x".repeat(64 * 1024)}`;
@@ -4642,11 +4642,11 @@ describe("cli: ask success", () => {
           HOME: realpathSync(home),
           AI_GATEWAY_API_KEY: "fake-session-cache-free-key",
           VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_MODEL: FAKE_GATEWAY_MODEL,
-          FX_AUTO_UPGRADE: "0",
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+          CHASSIS_AUTO_UPGRADE: "0",
         };
 
         const unrelated = await runFx(
@@ -4666,7 +4666,7 @@ describe("cli: ask success", () => {
         expect(first.code).toBe(0);
         expect(first.stderr).toBe("");
         const sessionId = JSON.parse(first.stdout).session_id as string;
-        const sessionsDir = join(home, ".fx", "sessions");
+        const sessionsDir = join(home, ".chassis", "sessions");
         expect(existsSync(join(sessionsDir, "index.json"))).toBe(false);
         expect(existsSync(join(sessionsDir, "latest"))).toBe(false);
         expect(existsSync(join(sessionsDir, "latest.lock"))).toBe(false);
@@ -4793,7 +4793,7 @@ describe("cli: ask success", () => {
   );
 
   test.skipIf(!HAS_API_KEY)(
-    "fx ask --json --no-save --auto returns valid JSON with output",
+    "chassis ask --json --no-save --auto returns valid JSON with output",
     async () => {
       const r = await runFx(
         ["ask", "--json", "--no-save", "--auto", "Say exactly: hello world"],
@@ -4815,9 +4815,9 @@ describe("cli: ask success", () => {
 
 describe("cli: error handling", () => {
   test(
-    "fx ask rejects unknown options before a model turn and -- preserves literal prompt text",
+    "chassis ask rejects unknown options before a model turn and -- preserves literal prompt text",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-options-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-options-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const gateway = startFakeGateway([
@@ -4830,10 +4830,10 @@ describe("cli: error handling", () => {
           HOME: realpathSync(home),
           AI_GATEWAY_API_KEY: "ask-options-key",
           VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_MODEL: FAKE_GATEWAY_MODEL,
-          FX_AUTO_UPGRADE: "0",
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+          CHASSIS_AUTO_UPGRADE: "0",
         };
 
         const rejected = await runFx(["ask", "--definitely-unknown"], {
@@ -4842,7 +4842,7 @@ describe("cli: error handling", () => {
           timeoutMs: TIMEOUT,
         });
         expect(rejected.code).toBe(1);
-        expect(rejected.stderr).toContain("usage: fx ask");
+        expect(rejected.stderr).toContain("usage: chassis ask");
         expect(gateway.requests).toHaveLength(0);
 
         const literal = await runFx(
@@ -4877,7 +4877,7 @@ describe("cli: error handling", () => {
   );
 
   test(
-    "fx ask with no prompt exits 1",
+    "chassis ask with no prompt exits 1",
     async () => {
       const r = await runFx(["ask"]);
       expect(r.code).toBe(1);
@@ -4887,7 +4887,7 @@ describe("cli: error handling", () => {
   );
 
   test(
-    "fx unknown-command exits 1",
+    "chassis unknown-command exits 1",
     async () => {
       const r = await runFx(["unknown-command"]);
       expect(r.code).toBe(1);
@@ -4896,9 +4896,9 @@ describe("cli: error handling", () => {
   );
 
   test(
-    "fx ask explains no-save resume conflicts before a model turn",
+    "chassis ask explains no-save resume conflicts before a model turn",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-e2e-ask-resume-no-save-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-e2e-ask-resume-no-save-"));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const gateway = startFakeGateway([]);
@@ -4909,10 +4909,10 @@ describe("cli: error handling", () => {
           HOME: realpathSync(home),
           AI_GATEWAY_API_KEY: "ask-conflict-key",
           VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_MODEL: FAKE_GATEWAY_MODEL,
-          FX_AUTO_UPGRADE: "0",
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+          CHASSIS_AUTO_UPGRADE: "0",
         };
 
         for (const args of [
@@ -4927,10 +4927,10 @@ describe("cli: error handling", () => {
           expect(rejected.code).toBe(1);
           expect(rejected.stdout).toBe("");
           expect(rejected.stderr).toContain(
-            "fx ask: --no-save cannot be used with --resume or --resume-id",
+            "chassis ask: --no-save cannot be used with --resume or --resume-id",
           );
           expect(rejected.stderr).toContain(
-            "usage: fx ask [--auto|--full-access] [--image PATH] [--system TEXT] [--json] [--quiet] [--prompt-permissions] [--no-save]",
+            "usage: chassis ask [--auto|--full-access] [--image PATH] [--system TEXT] [--json] [--quiet] [--prompt-permissions] [--no-save]",
           );
         }
         expect(gateway.requests).toHaveLength(0);
@@ -4956,7 +4956,7 @@ describe("cli: workspace access", () => {
         { env: enabled },
       );
       expect(help.code).toBe(0);
-      expect(help.stdout.startsWith("fx ask\n\n")).toBe(true);
+      expect(help.stdout.startsWith("chassis ask\n\n")).toBe(true);
       expect(help.stderr).toBe("");
 
       const missing = await runFx(["--add-dir"], { env: enabled });
@@ -4982,15 +4982,15 @@ describe("cli: workspace access", () => {
   test(
     "workspace commands persist per-primary roots and track availability",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-workspace-access-cli-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-workspace-access-cli-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
         const shared = join(root, "shared");
         const unknown = join(root, "unknown");
         const missing = join(root, "missing");
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
-        chmodSync(join(home, ".fx"), 0o700);
+        mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
+        chmodSync(join(home, ".chassis"), 0o700);
         mkdirSync(workspace);
         mkdirSync(shared);
         mkdirSync(unknown);
@@ -5026,7 +5026,7 @@ describe("cli: workspace access", () => {
         ]);
 
         const stored = JSON.parse(
-          readFileSync(join(home, ".fx", "settings.json"), "utf8"),
+          readFileSync(join(home, ".chassis", "settings.json"), "utf8"),
         );
         expect(stored.workspaces[workspaceRoot].additional_directories).toEqual([
           sharedRoot,
@@ -5105,7 +5105,7 @@ describe("cli: workspace access", () => {
           additional_directories: [],
         });
         const removedSettings = JSON.parse(
-          readFileSync(join(home, ".fx", "settings.json"), "utf8"),
+          readFileSync(join(home, ".chassis", "settings.json"), "utf8"),
         );
         expect(
           removedSettings.workspaces?.[workspaceRoot]?.additional_directories,
@@ -5138,7 +5138,7 @@ describe("cli: workspace access", () => {
   test(
     "workspace commands mutate persisted aliases by workspace identity",
     async () => {
-      const root = mkdtempSync(join(tmpdir(), "fx-workspace-alias-cli-"));
+      const root = mkdtempSync(join(tmpdir(), "chassis-workspace-alias-cli-"));
       try {
         const home = join(root, "home");
         const workspace = join(root, "workspace");
@@ -5147,8 +5147,8 @@ describe("cli: workspace access", () => {
         const missing = join(root, "missing");
         const realParent = join(root, "real-parent");
         const parentLink = join(root, "parent-link");
-        mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
-        chmodSync(join(home, ".fx"), 0o700);
+        mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
+        chmodSync(join(home, ".chassis"), 0o700);
         mkdirSync(workspace);
         mkdirSync(shared);
         mkdirSync(realParent);
@@ -5156,7 +5156,7 @@ describe("cli: workspace access", () => {
         symlinkSync(realParent, parentLink, "dir");
         const workspaceRoot = realpathSync(workspace);
         const sharedRoot = realpathSync(shared);
-        const settingsPath = join(home, ".fx", "settings.json");
+        const settingsPath = join(home, ".chassis", "settings.json");
         const baseEnv = {
           ...NO_GATEWAY_AUTH,
           HOME: realpathSync(home),
@@ -5270,21 +5270,21 @@ describe("cli: workspace access", () => {
 
 describe("cli: MCP profile add", () => {
   test("status and doctor inspect MCP without transport while list --connect discovers it", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-cli-mcp-inspect-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-cli-mcp-inspect-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const pidPath = join(root, "mcp.pid");
-    mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+    mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
     mkdirSync(workspace);
-    writeFileSync(join(home, ".fx", "settings.json"), "{}\n", { mode: 0o600 });
+    writeFileSync(join(home, ".chassis", "settings.json"), "{}\n", { mode: 0o600 });
     writeFileSync(
-      join(home, ".fx", "mcp.json"),
+      join(home, ".chassis", "mcp.json"),
       JSON.stringify({
         mcp: {
           fixture: {
             type: "local",
             command: [process.execPath, MODERN_MCP_FIXTURE],
-            environment: { FX_MCP_PID_PATH: pidPath, FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+            environment: { CHASSIS_MCP_PID_PATH: pidPath, CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
           },
         },
       }),
@@ -5332,16 +5332,16 @@ describe("cli: MCP profile add", () => {
   }, 30_000);
 
   test("lists paths and removes profile servers without launching MCP transport", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-cli-mcp-manage-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-cli-mcp-manage-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const profileMarker = join(root, "profile-launched");
     const workspaceMarker = join(root, "workspace-launched");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace, { recursive: true });
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({}));
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({}));
     writeFileSync(
-      join(home, ".fx", "mcp.json"),
+      join(home, ".chassis", "mcp.json"),
       JSON.stringify({
         mcp: {
           shared: {
@@ -5373,7 +5373,7 @@ describe("cli: MCP profile add", () => {
       const path = await runFx(["mcp", "path"], { cwd: workspace, env });
       expect(path.code).toBe(0);
       expect(path.stderr).toBe("");
-      expect(path.stdout.trim()).toBe(join(home, ".fx", "mcp.json"));
+      expect(path.stdout.trim()).toBe(join(home, ".chassis", "mcp.json"));
 
       const before = await runFx(["mcp", "list"], { cwd: workspace, env });
       expect(before.code).toBe(0);
@@ -5394,7 +5394,7 @@ describe("cli: MCP profile add", () => {
       expect(removed.code).toBe(0);
       expect(removed.stderr).toBe("");
       expect(removed.stdout).toContain("Removed MCP server 'shared'");
-      expect(JSON.parse(readFileSync(join(home, ".fx", "mcp.json"), "utf8")))
+      expect(JSON.parse(readFileSync(join(home, ".chassis", "mcp.json"), "utf8")))
         .toEqual({ mcp: {} });
 
       const after = await runFx(["mcp", "list"], { cwd: workspace, env });
@@ -5415,7 +5415,7 @@ describe("cli: MCP profile add", () => {
   });
 
   test("adds local and HTTP servers without launching either server", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-cli-mcp-add-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-cli-mcp-add-")));
     const home = join(root, "home");
     const marker = join(root, "launched");
     mkdirSync(home, { recursive: true });
@@ -5425,14 +5425,14 @@ describe("cli: MCP profile add", () => {
       });
       expect(help.code).toBe(0);
       for (const command of [
-        "fx mcp add NAME COMMAND [ARGS...]",
-        "fx mcp auth NAME",
-        "fx mcp list",
-        "fx mcp logout NAME",
-        "fx mcp path",
-        "fx mcp remove NAME",
-        "fx mcp trust approve|reject NAME",
-        "fx mcp trust approve-all|reset",
+        "chassis mcp add NAME COMMAND [ARGS...]",
+        "chassis mcp auth NAME",
+        "chassis mcp list",
+        "chassis mcp logout NAME",
+        "chassis mcp path",
+        "chassis mcp remove NAME",
+        "chassis mcp trust approve|reject NAME",
+        "chassis mcp trust approve-all|reset",
       ]) expect(help.stdout).toContain(command);
 
       const local = await runFx(
@@ -5447,7 +5447,7 @@ describe("cli: MCP profile add", () => {
         env: { HOME: home, ...NO_GATEWAY_AUTH },
       });
       expect(missingAuthName.code).toBe(1);
-      expect(missingAuthName.stderr).toBe("usage: fx mcp auth NAME\n");
+      expect(missingAuthName.stderr).toBe("usage: chassis mcp auth NAME\n");
       expect(existsSync(marker)).toBe(false);
       expect(local.code).toBe(0);
       expect(local.stderr).toBe("");
@@ -5469,7 +5469,7 @@ describe("cli: MCP profile add", () => {
       expect(remote.stderr).toBe("");
 
       const profile = JSON.parse(
-        readFileSync(join(home, ".fx", "mcp.json"), "utf8"),
+        readFileSync(join(home, ".chassis", "mcp.json"), "utf8"),
       );
       expect(profile).not.toHaveProperty("mcpServers");
       expect(profile.mcp.local.command).toEqual([
@@ -5487,9 +5487,9 @@ describe("cli: MCP profile add", () => {
   });
 
   test("canonicalizes alias input and refuses ambiguous server-like keys", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-cli-mcp-alias-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-cli-mcp-alias-")));
     const home = join(root, "home");
-    const fxDir = join(home, ".fx");
+    const fxDir = join(home, ".chassis");
     mkdirSync(fxDir, { recursive: true, mode: 0o700 });
     const profilePath = join(fxDir, "mcp.json");
     try {
@@ -5526,7 +5526,7 @@ describe("cli: MCP profile add", () => {
   });
 
   test("serializes concurrent different-name additions", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-cli-mcp-race-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-cli-mcp-race-")));
     const home = join(root, "home");
     mkdirSync(home, { recursive: true });
     try {
@@ -5541,7 +5541,7 @@ describe("cli: MCP profile add", () => {
       expect(first.code).toBe(0);
       expect(second.code).toBe(0);
       const profile = JSON.parse(
-        readFileSync(join(home, ".fx", "mcp.json"), "utf8"),
+        readFileSync(join(home, ".chassis", "mcp.json"), "utf8"),
       );
       expect(Object.keys(profile.mcp).sort()).toEqual(["first", "second"]);
     } finally {

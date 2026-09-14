@@ -16,15 +16,15 @@ const server = createServer((request) => {
 await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
 const { port } = server.address();
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const addonPath = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/lib/libfx.node"));
+const addonPath = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/lib/libchassis.node"));
 const nodeModuleUrl = pathToFileURL(resolve(scriptDir, "../node.js")).href;
 
 try {
   const worker = new Worker(`
     const { parentPort, workerData } = require("node:worker_threads");
     (async () => {
-      const { createFxAgent } = await import(workerData.nodeModuleUrl);
-      const agent = await createFxAgent({
+      const { createChassisAgent } = await import(workerData.nodeModuleUrl);
+      const agent = await createChassisAgent({
         nativeAddon: workerData.addonPath,
         backend: "native",
         fetch(input, init) {

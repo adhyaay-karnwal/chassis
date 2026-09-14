@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, runFx } from "../evals/eval-helpers";
 import {
   AUTO_EXA_WITHOUT_DURABLE_TOOLS_SERIALIZED_TOOL_NAMES,
   customProviderGuidanceState,
@@ -291,14 +291,14 @@ function createIsolatedRoot(
   webSearchPermission: PermissionAction = "allow",
   settings: Record<string, unknown> = {},
 ) {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-web-search-e2e-")));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-web-search-e2e-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   const permission: Record<string, Record<string, string>> = {};
   if (webSearchPermission) permission.web_search = { "*": webSearchPermission };
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ ...settings, permission }));
+  writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ ...settings, permission }));
   return { root, home, workspace: realpathSync(workspace) };
 }
 
@@ -311,12 +311,12 @@ function fakeGatewayEnv(
     HOME: root.home,
     AI_GATEWAY_API_KEY: "fake-e2e-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-    FX_E2E_GATEWAY_CREDITS_URL: undefined,
-    FX_MODEL: OUTER_MODEL,
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+    CHASSIS_E2E_GATEWAY_CREDITS_URL: undefined,
+    CHASSIS_MODEL: OUTER_MODEL,
     ...extra,
   };
 }
@@ -387,7 +387,7 @@ class AcpClient {
         (entry): entry is [string, string] => entry[1] !== undefined,
       ),
     );
-    return new AcpClient(nodeSpawn(FX_BIN, ["acp"], {
+    return new AcpClient(nodeSpawn(CHASSIS_BIN, ["acp"], {
       cwd,
       env: definedEnv,
       stdio: ["pipe", "pipe", "pipe"],
@@ -528,7 +528,7 @@ describe("web_search Gateway fixture", () => {
   );
 
   test(
-    "default fx ask unadvertised native web_search cannot start a worker",
+    "default chassis ask unadvertised native web_search cannot start a worker",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([
@@ -653,7 +653,7 @@ describe("web_search Gateway fixture", () => {
         ]),
         outerText("The saved search context is available."),
       ], model);
-      const env = fakeGatewayEnv(root, gateway, { FX_MODEL: model });
+      const env = fakeGatewayEnv(root, gateway, { CHASSIS_MODEL: model });
       try {
         const first = await runFx(
           ["ask", "--auto", "--json", "Search the web for the latest Zig release."],
@@ -780,8 +780,8 @@ describe("web_search Gateway fixture", () => {
           {
             cwd: root.workspace,
             env: fakeGatewayEnv(root, gateway, {
-              FX_TRACE_LOG: traceLog,
-              FX_TRACE_SCOPES: "agent,tool",
+              CHASSIS_TRACE_LOG: traceLog,
+              CHASSIS_TRACE_SCOPES: "agent,tool",
             }),
             timeoutMs: TIMEOUT,
           },
@@ -820,8 +820,8 @@ describe("web_search Gateway fixture", () => {
           {
             cwd: root.workspace,
             env: fakeGatewayEnv(root, gateway, {
-              FX_MODEL: PARALLEL_OUTER_MODEL,
-              FX_WEB_SEARCH_BACKEND: "ai_gateway_parallel_search",
+              CHASSIS_MODEL: PARALLEL_OUTER_MODEL,
+              CHASSIS_WEB_SEARCH_BACKEND: "ai_gateway_parallel_search",
             }),
             timeoutMs: TIMEOUT,
           },
@@ -873,7 +873,7 @@ describe("web_search Gateway fixture", () => {
           {
             cwd: root.workspace,
             env: fakeGatewayEnv(root, gateway, {
-              FX_MODEL: "anthropic/claude-opus-4.6",
+              CHASSIS_MODEL: "anthropic/claude-opus-4.6",
             }),
             timeoutMs: TIMEOUT,
           },
@@ -897,7 +897,7 @@ describe("web_search Gateway fixture", () => {
   );
 
   test(
-    "fx ask preserves the exact GLM model while sending declared Fast",
+    "chassis ask preserves the exact GLM model while sending declared Fast",
     async () => {
       const root = createIsolatedRoot("allow", {
         model: "zai/glm-5.2",
@@ -914,7 +914,7 @@ describe("web_search Gateway fixture", () => {
           ["ask", "--auto", "--json", "--no-save", "Reply with a short confirmation."],
           {
             cwd: root.workspace,
-            env: fakeGatewayEnv(root, gateway, { FX_MODEL: undefined }),
+            env: fakeGatewayEnv(root, gateway, { CHASSIS_MODEL: undefined }),
             timeoutMs: TIMEOUT,
           },
         );
@@ -960,7 +960,7 @@ describe("web_search Gateway fixture", () => {
             {
               cwd: root.workspace,
               env: fakeGatewayEnv(root, gateway, {
-                FX_MODEL: testCase.model,
+                CHASSIS_MODEL: testCase.model,
               }),
               timeoutMs: TIMEOUT,
             },
@@ -975,7 +975,7 @@ describe("web_search Gateway fixture", () => {
           expect(gateway.requests[0].body).not.toContain('"thinking"');
 
           const stored = JSON.parse(
-            readFileSync(join(root.home, ".fx", "settings.json"), "utf8"),
+            readFileSync(join(root.home, ".chassis", "settings.json"), "utf8"),
           );
           expect(stored.effort).toBe(testCase.effort);
           expect(stored.fast_mode).toBe(true);
@@ -999,7 +999,7 @@ describe("web_search Gateway fixture", () => {
           {
             cwd: root.workspace,
             env: fakeGatewayEnv(root, gateway, {
-              FX_WEB_SEARCH_BACKEND: "parallel_search",
+              CHASSIS_WEB_SEARCH_BACKEND: "parallel_search",
             }),
             timeoutMs: TIMEOUT,
           },
@@ -1092,7 +1092,7 @@ describe("web_search Gateway fixture", () => {
   );
 
   test(
-    "default fx ask applies environment model, permission, and step-limit overrides",
+    "default chassis ask applies environment model, permission, and step-limit overrides",
     async () => {
       const root = createIsolatedRoot(null, {
         model: OUTER_MODEL,
@@ -1112,9 +1112,9 @@ describe("web_search Gateway fixture", () => {
           {
             cwd: root.workspace,
             env: fakeGatewayEnv(root, gateway, {
-              FX_MODEL: PARALLEL_OUTER_MODEL,
-              FX_PERMISSION_MODE: "auto",
-              FX_MAX_AGENT_STEPS: "1",
+              CHASSIS_MODEL: PARALLEL_OUTER_MODEL,
+              CHASSIS_PERMISSION_MODE: "auto",
+              CHASSIS_MAX_AGENT_STEPS: "1",
             }),
             timeoutMs: TIMEOUT,
           },

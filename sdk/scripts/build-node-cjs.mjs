@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(scriptDir, "../..");
-const output = resolve(process.argv[2] || resolve(repoRoot, "sdk/dist/libfx/node.cjs"));
+const output = resolve(process.argv[2] || resolve(repoRoot, "sdk/dist/libchassis/node.cjs"));
 mkdirSync(dirname(output), { recursive: true });
 const result = spawnSync(process.env.BUN_BIN || "bun", [
   "build",

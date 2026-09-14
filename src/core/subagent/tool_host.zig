@@ -841,7 +841,7 @@ fn operationIdAlloc(
     var digest: [std.crypto.hash.sha2.Sha256.digest_length]u8 = undefined;
     std.crypto.hash.sha2.Sha256.hash(invocation_id, &digest, .{});
     const hex = std.fmt.bytesToHex(digest, .lower);
-    return std.fmt.allocPrint(alloc, "fxop:2:m:{d}:{s}", .{ epoch, &hex });
+    return std.fmt.allocPrint(alloc, "chassisop:2:m:{d}:{s}", .{ epoch, &hex });
 }
 
 fn checkYieldedOwnership(alloc: Allocator) !void {
@@ -1322,7 +1322,7 @@ test "internal operation identity is deterministic and invocation-bound" {
     defer alloc.free(changed);
     try std.testing.expectEqualStrings(first, replay);
     try std.testing.expect(!std.mem.eql(u8, first, changed));
-    try std.testing.expect(std.mem.startsWith(u8, first, "fxop:2:m:41:"));
+    try std.testing.expect(std.mem.startsWith(u8, first, "chassisop:2:m:41:"));
 }
 
 test "creation defaults keep parent values unless the request overrides them" {

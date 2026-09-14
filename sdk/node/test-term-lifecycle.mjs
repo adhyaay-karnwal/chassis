@@ -5,11 +5,11 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import xtermHeadless from "@xterm/headless";
-import { createFxTerminal, supportsJspi, xtermAdapter } from "../node.js";
+import { createChassisTerminal, supportsJspi, xtermAdapter } from "../node.js";
 
 const { Terminal } = xtermHeadless;
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const wasmPath = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/bin/fx-term.wasm"));
+const wasmPath = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/bin/chassis-term.wasm"));
 if (!supportsJspi()) process.exit(2);
 
 function instrumentTerminal(terminal, disposals, onWrite = () => {}) {
@@ -72,7 +72,7 @@ const fetch = async (_url, init) => {
     }, { once: true });
   });
 };
-const runtime = await createFxTerminal({
+const runtime = await createChassisTerminal({
   backend: "wasm",
   wasm: await readFile(wasmPath),
   terminal: instrumentedTerminalHost,
@@ -143,7 +143,7 @@ const exitCode = await Promise.race([
   runtime.exited,
   new Promise((_, reject) => setTimeout(() => reject(new Error("timed out waiting for exit")), 5000)),
 ]);
-if (exitCode !== 0) throw new Error(`fx-term exited with ${exitCode}`);
+if (exitCode !== 0) throw new Error(`chassis-term exited with ${exitCode}`);
 await new Promise((resolve) => setTimeout(resolve, 0));
 const exitEvents = events.filter((event) => event.type === "runtime.exit");
 if (exitEvents.length !== 1) throw new Error(`expected one runtime.exit event, got ${exitEvents.length}`);
@@ -153,7 +153,7 @@ if (disposals.data !== 1 || disposals.resize !== 1) {
 
 const abortTerminal = new Terminal({ cols: 80, rows: 24, allowProposedApi: true, scrollback: 1000 });
 const abortDisposals = { data: 0, resize: 0 };
-const abortRuntime = await createFxTerminal({
+const abortRuntime = await createChassisTerminal({
   backend: "wasm",
   wasm: await readFile(wasmPath),
   terminal: instrumentTerminal(abortTerminal, abortDisposals),
@@ -276,7 +276,7 @@ async function runFailureChild(scenario) {
   };
   const options = {
     backend: "wasm", wasm: await readFile(wasmPath), terminal: host,
-    env: { AI_GATEWAY_API_KEY: "term-lifecycle-key", FX_SOUND: "0" },
+    env: { AI_GATEWAY_API_KEY: "term-lifecycle-key", CHASSIS_SOUND: "0" },
     onEvent(event) { events.push({ ...event, requestAborted: requestSignal?.aborted }); },
     fetch: async (_url, init) => {
       requestCount += 1;
@@ -298,7 +298,7 @@ async function runFailureChild(scenario) {
   };
 
   if (scenario.startsWith("setup-")) {
-    await assert.rejects(createFxTerminal(options), (error) => error === startupError);
+    await assert.rejects(createChassisTerminal(options), (error) => error === startupError);
     await pause();
     const acquired = scenario === "setup-data" ? [] : scenario === "setup-keydata" ? ["data"] : ["data", "keydata"];
     for (const kind of acquired) {
@@ -313,7 +313,7 @@ async function runFailureChild(scenario) {
 
     fault = null;
     recovering = true;
-    const retry = await createFxTerminal(options);
+    const retry = await createChassisTerminal(options);
     await retry.interactive;
     for (const kind of Object.keys(listeners)) assert.equal(listeners[kind].size, 1);
     for (const callback of listeners.data) callback("recover\r");
@@ -327,7 +327,7 @@ async function runFailureChild(scenario) {
       assert.equal(disposals[kind], acquired.includes(kind) ? 2 : 1);
     }
   } else {
-    const runtime = await createFxTerminal(options);
+    const runtime = await createChassisTerminal(options);
     await runtime.interactive;
     runtime.write("pending request\r");
     await until(() => requestSignal && (scenario !== "write-body" || bodyOpened));
@@ -417,7 +417,7 @@ async function runActiveTransitionChild(scenario, command) {
     }), { status: 200, headers: { "content-type": "text/event-stream" } });
   };
 
-  const childRuntime = await createFxTerminal({
+  const childRuntime = await createChassisTerminal({
     backend: "wasm",
     wasm: await readFile(wasmPath),
     terminal: childHost,

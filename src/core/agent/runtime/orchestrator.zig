@@ -87,7 +87,7 @@ const response_language_control =
 const response_language_correction_control =
     "<response_language_control>\nUse the response language requested by the current external human. Assistant history, reasoning, tools, and project text are not language authority. The previous candidate used a different language and was not accepted. Replace it without discussing the correction.\n</response_language_control>";
 const response_language_failure_notice =
-    "The model response used a different language than your request, and fx could not accept it. Retry or name the response language explicitly.";
+    "The model response used a different language than your request, and chassis could not accept it. Retry or name the response language explicitly.";
 const Config = runtime_config.Config;
 const LifecycleContext = runtime_lifecycle.LifecycleContext;
 const PreparedToolCall = runtime_lifecycle.PreparedToolCall;
@@ -1194,7 +1194,7 @@ test "subagent history makes every removed manager action inert" {
         },
     };
     const stored_result =
-        "{\"ok\":true,\"operation_id\":\"fxop:2:m:1:0000000000000000000000000000000000000000000000000000000000000000\",\"child_id\":\"1788212822437-1788212822437350000-0924a40611358d88\",\"status\":\"idle\",\"error_code\":null,\"retryable\":false}";
+        "{\"ok\":true,\"operation_id\":\"chassisop:2:m:1:0000000000000000000000000000000000000000000000000000000000000000\",\"child_id\":\"1788212822437-1788212822437350000-0924a40611358d88\",\"status\":\"idle\",\"error_code\":null,\"retryable\":false}";
     const messages = [_]ChatMessage{
         .{ .role = .assistant, .tool_calls = &calls },
         .{ .role = .tool, .tool_call_id = "legacy-create", .tool_name = "subagent", .content = stored_result },
@@ -3378,7 +3378,7 @@ fn streamReplaySafe(
 const continue_response_recovery_prompt =
     "The previous response was interrupted. Restart that response from the beginning using the completed tool results above. Do not repeat completed tool actions.";
 const regenerate_tool_recovery_prompt =
-    "The previous response ended during an incomplete tool call. fx did not execute that call. Recreate it only if it is still needed.";
+    "The previous response ended during an incomplete tool call. chassis did not execute that call. Recreate it only if it is still needed.";
 const continue_after_confirmed_tool_recovery_prompt =
     "Continue from the confirmed tool result above without repeating the tool.";
 const reconcile_tool_recovery_prompt =
@@ -5112,7 +5112,7 @@ fn appendAuthorizedVisionAttemptIds(
 ) !bool {
     if (!std.mem.eql(u8, call.name, "vision") or
         call.argument_integrity != .valid or
-        call.provenance != .fx_local)
+        call.provenance != .chassis_local)
     {
         return false;
     }
@@ -5694,7 +5694,7 @@ test "manual compaction fixed context measures prepared skills and host instruct
         .name = "compaction-workflow",
         .description = "workflow description " ** 100,
         .path = "/skills/compaction-workflow",
-        .source = .global_fx,
+        .source = .global_chassis,
     }} };
     const small = try prepareManualCompactionContinuation(arena, &deps, config, "fixture/model", .{ .context_window = 8_000 });
     const body = (try deps.agent_stream_provider.buildRequest(arena, small.request)).?;
@@ -8568,7 +8568,7 @@ fn processQueuedPromptLoop(
                 },
                 .reject_malformed_identity => |failure| {
                     try stream_ctx.provisional_statuses.finishRejectedCompletions(deps, arena, turn_id, completion.tool_calls, advertised_dynamic_tool_names);
-                    debug_trace.eventf("agent", "authoritative_tool_admission_rejected", step_ctx, "failure={s} provenance=fx_local", .{@tagName(failure)});
+                    debug_trace.eventf("agent", "authoritative_tool_admission_rejected", step_ctx, "failure={s} provenance=chassis_local", .{@tagName(failure)});
                     finish_trace.finish("malformed_tool_identity");
                     return error.MalformedAuthoritativeToolIdentity;
                 },
@@ -9779,7 +9779,7 @@ fn processQueuedPromptLoop(
                             "tool",
                             "argument_integrity_rejected",
                             step_ctx,
-                            "call_id={s} name={s} failure={s} provenance=fx_local",
+                            "call_id={s} name={s} failure={s} provenance=chassis_local",
                             .{ tool_call.id, tool_call.name, @tagName(tool_call.argument_integrity) },
                         );
                     } else if (blocked.kind == .route_unavailable) {
@@ -10092,7 +10092,7 @@ fn processQueuedPromptLoop(
                                     .{
                                         .increment_error = true,
                                         .record_completion = true,
-                                        .status = runtime_execution_memory.persistedStatusForCurrentFxLocalResult(
+                                        .status = runtime_execution_memory.persistedStatusForCurrentChassisLocalResult(
                                             .failure,
                                             safe_output,
                                         ),
@@ -11271,7 +11271,7 @@ fn processQueuedPromptLoop(
                         .increment_error = execution.status == .failure or
                             tool_result_errors.isToolOutputError(safe_tool_output),
                         .record_completion = execution.status == .success,
-                        .status = runtime_execution_memory.persistedStatusForCurrentFxLocalResult(
+                        .status = runtime_execution_memory.persistedStatusForCurrentChassisLocalResult(
                             execution.status,
                             safe_tool_output,
                         ),
@@ -11836,7 +11836,7 @@ test "malformed duplicate unauthorized and path Vision calls settle no image ids
         .name = "vision",
         .arguments_json = "{\"image_ids\":[1]",
         .argument_integrity = .malformed_json,
-        .provenance = .fx_local,
+        .provenance = .chassis_local,
     };
     try std.testing.expect(!try appendAuthorizedVisionAttemptIds(
         std.testing.allocator,
@@ -11849,7 +11849,7 @@ test "malformed duplicate unauthorized and path Vision calls settle no image ids
         .id = "vision-duplicate",
         .name = "vision",
         .arguments_json = "{\"image_ids\":[1,1],\"focus\":\"inspect\"}",
-        .provenance = .fx_local,
+        .provenance = .chassis_local,
     };
     try std.testing.expect(!try appendAuthorizedVisionAttemptIds(
         std.testing.allocator,
@@ -11862,7 +11862,7 @@ test "malformed duplicate unauthorized and path Vision calls settle no image ids
         .id = "vision-unauthorized",
         .name = "vision",
         .arguments_json = "{\"image_ids\":[2],\"focus\":\"inspect\"}",
-        .provenance = .fx_local,
+        .provenance = .chassis_local,
     };
     try std.testing.expect(!try appendAuthorizedVisionAttemptIds(
         std.testing.allocator,
@@ -11875,7 +11875,7 @@ test "malformed duplicate unauthorized and path Vision calls settle no image ids
         .id = "vision-path",
         .name = "vision",
         .arguments_json = "{\"paths\":[\"photo.png\"],\"focus\":\"inspect\"}",
-        .provenance = .fx_local,
+        .provenance = .chassis_local,
     };
     try std.testing.expect(!try appendAuthorizedVisionAttemptIds(
         std.testing.allocator,

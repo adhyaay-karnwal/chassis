@@ -2,7 +2,7 @@
 import { strict as assert } from "node:assert";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { benchmarkInstructionsBytes } from "../../benchmarks/libfx/workload.mjs";
+import { benchmarkInstructionsBytes } from "../../benchmarks/libchassis/workload.mjs";
 
 const piRoot = process.env.LIBFX_BENCH_PI_ROOT;
 if (!piRoot) {
@@ -11,7 +11,7 @@ if (!piRoot) {
 }
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
-const benchmark = fileURLToPath(new URL("../../benchmarks/libfx/bench-pi.mjs", import.meta.url));
+const benchmark = fileURLToPath(new URL("../../benchmarks/libchassis/bench-pi.mjs", import.meta.url));
 const result = spawnSync(process.execPath, [benchmark, "--samples", "1", "--json"], {
   cwd: repoRoot,
   encoding: "utf8",

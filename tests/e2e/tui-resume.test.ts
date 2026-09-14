@@ -17,7 +17,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, runFx } from "../evals/eval-helpers";
 import { findFooterBlocks } from "./tui-render-assertions";
 import {
   FAKE_GATEWAY_MODEL,
@@ -69,7 +69,7 @@ function fakeShellStop(callId: string, sessionId: string): Response {
 }
 
 function sessionIdFromHome(home: string): string {
-  const sessions = join(home, ".fx", "sessions");
+  const sessions = join(home, ".chassis", "sessions");
   const ids = readdirSync(sessions, { withFileTypes: true })
     .filter((entry) => entry.name !== "latest" && entry.isDirectory())
     .map((entry) => entry.name);
@@ -89,8 +89,8 @@ function startUpgradeServer(
   } = {},
 ): { baseUrl: string; stop: () => void } {
   const artifactDir = join(root, "release-artifact");
-  const wrapperPath = join(artifactDir, "fx");
-  const archivePath = join(root, "fx.tar.gz");
+  const wrapperPath = join(artifactDir, "chassis");
+  const archivePath = join(root, "chassis.tar.gz");
   mkdirSync(artifactDir);
   const script = `#!/bin/sh
 {
@@ -100,19 +100,19 @@ function startUpgradeServer(
   done
   printf '\\n'
 } >> ${shellQuote(argvLogPath)}
-exec ${shellQuote(FX_BIN)} "$@"
+exec ${shellQuote(CHASSIS_BIN)} "$@"
 `;
   writeFileSync(wrapperPath, script);
   chmodSync(wrapperPath, 0o755);
-  const tar = Bun.spawnSync(["tar", "-czf", archivePath, "-C", artifactDir, "fx"]);
+  const tar = Bun.spawnSync(["tar", "-czf", archivePath, "-C", artifactDir, "chassis"]);
   if (tar.exitCode !== 0) throw new Error(tar.stderr.toString());
 
   const archive = readFileSync(archivePath);
   const checksum = createHash("sha256").update(archive).digest("hex");
   const platform = `${process.platform === "darwin" ? "macos" : "linux"}-${process.arch === "arm64" ? "aarch64" : "x86_64"}`;
   const revision = options.revision ?? "abcdef0123456789abcdef0123456789abcdef01";
-  const stableArchiveRoute = `/v9.9.9/fx-${platform}.tar.gz`;
-  const devArchiveRoute = `/dev/${revision}/fx-${platform}.tar.gz`;
+  const stableArchiveRoute = `/v9.9.9/chassis-${platform}.tar.gz`;
+  const devArchiveRoute = `/dev/${revision}/chassis-${platform}.tar.gz`;
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -145,10 +145,10 @@ function gatewayEnv(
     HOME: home,
     AI_GATEWAY_API_KEY: "fake-tui-resume-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_MODEL: FAKE_GATEWAY_MODEL,
-    FX_AUTO_UPGRADE: "0",
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+    CHASSIS_AUTO_UPGRADE: "0",
     NO_COLOR: "1",
   };
 }
@@ -288,7 +288,7 @@ async function waitForPersistedSessionMarker(
   marker: string,
   timeout = TIMEOUT,
 ): Promise<void> {
-  const sessionsDir = join(home, ".fx", "sessions");
+  const sessionsDir = join(home, ".chassis", "sessions");
   await waitForCondition(() => {
     if (!existsSync(sessionsDir)) return false;
     return readdirSync(sessionsDir, { withFileTypes: true })
@@ -302,7 +302,7 @@ async function waitForPersistedSessionMarker(
 }
 
 test.skipIf(!tmuxAvailable())("suspended sessions retain exclusive writer ownership until close", async () => {
-  const root = mkdtempSync(join(tmpdir(), "fx-foreground-history-"));
+  const root = mkdtempSync(join(tmpdir(), "chassis-foreground-history-"));
   const home = join(root, "home"), workspace = join(root, "workspace");
   mkdirSync(home, { mode: 0o700 });
   mkdirSync(workspace, { mode: 0o700 });
@@ -312,20 +312,20 @@ test.skipIf(!tmuxAvailable())("suspended sessions retain exclusive writer owners
     fakeGatewayFinalText("AFTER_FOREGROUND_TURN"),
     fakeGatewayFinalText("COLD_REOPEN_TURN"),
   ]);
-  const env = { ...gatewayEnv(home, gateway), FX_SOUND: "0", FX_DISABLE_KEYCHAIN: "1", FX_E2E_DISABLE_DOTENV: "1" };
+  const env = { ...gatewayEnv(home, gateway), CHASSIS_SOUND: "0", CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_E2E_DISABLE_DOTENV: "1" };
   let tui: TmuxSession | undefined;
   try {
     const seeded = await runFx(["ask", "--json", "Remember the original turn."], { cwd: workspace, env, timeoutMs: TIMEOUT });
     expect(seeded.code).toBe(0);
     const id = JSON.parse(seeded.stdout).session_id;
-    const events = join(home, ".fx", "sessions", id, "events.jsonl");
+    const events = join(home, ".chassis", "sessions", id, "events.jsonl");
     const accepted = readFileSync(events);
     tui = await TmuxSession.create({
       cmd: "/bin/sh -i", cwd: workspace, isolated: true, remainOnExit: true, width: 110, height: 36,
       env: { ...env, PS1: "SESSION_SHELL> " },
     });
     await tui.waitForText("SESSION_SHELL>", TIMEOUT);
-    await tui.sendText(`${shellQuote(FX_BIN)} --resume ${shellQuote(id)} 2>${shellQuote(stderr)}`);
+    await tui.sendText(`${shellQuote(CHASSIS_BIN)} --resume ${shellQuote(id)} 2>${shellQuote(stderr)}`);
     await tui.waitForText("FIRST_ACCEPTED_TURN", TIMEOUT);
     await tui.waitForStableComposer(TIMEOUT);
     await tui.sendLiteral("DRAFT_SURVIVES_SUSPENSION");
@@ -363,16 +363,16 @@ test.skipIf(!tmuxAvailable())("suspended sessions retain exclusive writer owners
 test.skipIf(!tmuxAvailable())(
   "resume publication preserves history from a low native cursor",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-resume-origin-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-resume-origin-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const launchReady = join(root, "launch-ready");
     const launchGate = join(root, "launch-gate");
     const stderrPath = join(root, "stderr.log");
     const tapePath = join(root, "resume.fxtape");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ startup_scrollback: false }));
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ startup_scrollback: false }));
     const labels = Array.from({ length: 67 }, (_, i) => `RESUME_ROW_${String(i).padStart(3, "0")}`);
     const gateway = startFakeGateway([
       fakeGatewayFinalText(labels.join("\n\n")),
@@ -380,9 +380,9 @@ test.skipIf(!tmuxAvailable())(
     ]);
     const env = {
       ...gatewayEnv(home, gateway),
-      FX_SOUND: "0",
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_E2E_DISABLE_DOTENV: "1",
+      CHASSIS_SOUND: "0",
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_E2E_DISABLE_DOTENV: "1",
     };
     let active: TmuxSession | undefined;
     const expectPublishedRows = (capture: string) => {
@@ -406,16 +406,16 @@ test.skipIf(!tmuxAvailable())(
       expect(seeded.code).toBe(0);
       expect(seeded.stderr).toBe("");
       const id = sessionIdFromHome(home);
-      const eventsPath = join(home, ".fx", "sessions", id, "events.jsonl");
+      const eventsPath = join(home, ".chassis", "sessions", id, "events.jsonl");
       const events = readFileSync(eventsPath, "utf8");
       for (const label of labels) expect(events).toContain(label);
 
       // Pause after real terminal output, with no synthetic cursor response.
-      const launch = `printf '\\033[2J\\033[H'; i=1; while [ "$i" -le 66 ]; do printf 'PRIOR_%03d\\n' "$i"; i=$((i+1)); done; : > ${shellQuote(launchReady)}; while [ ! -f ${shellQuote(launchGate)} ]; do sleep 0.02; done; exec ${shellQuote(FX_BIN)} --resume ${shellQuote(id)}`;
+      const launch = `printf '\\033[2J\\033[H'; i=1; while [ "$i" -le 66 ]; do printf 'PRIOR_%03d\\n' "$i"; i=$((i+1)); done; : > ${shellQuote(launchReady)}; while [ ! -f ${shellQuote(launchGate)} ]; do sleep 0.02; done; exec ${shellQuote(CHASSIS_BIN)} --resume ${shellQuote(id)}`;
       active = await TmuxSession.create({
         cmd: `/bin/sh -c ${shellQuote(launch)}`,
         cwd: workspace,
-        env: { ...env, FX_RECORD: tapePath },
+        env: { ...env, CHASSIS_RECORD: tapePath },
         width: 168, height: 75, isolated: true, remainOnExit: true,
         stderrPath,
       });
@@ -878,11 +878,11 @@ function expectExpandedCodeColors(scrollback: string): void {
 test.skipIf(!tmuxAvailable())(
   "resumed compaction handoffs stay internal after legacy conversion and restart",
   async () => {
-    const root = mkdtempSync(join(tmpdir(), "fx-resume-internal-handoff-"));
+    const root = mkdtempSync(join(tmpdir(), "chassis-resume-internal-handoff-"));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const sessionId = "internal-handoff-resume";
-    const sessionDir = join(home, ".fx", "sessions", sessionId);
+    const sessionDir = join(home, ".chassis", "sessions", sessionId);
     mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
     mkdirSync(workspace);
     const summary = "<context_handoff>\n## Authoritative continuation state\n" +
@@ -931,9 +931,9 @@ test.skipIf(!tmuxAvailable())(
         const stderrPath = join(root, `${mode}.stderr`);
         const tapePath = join(root, `${mode}.fxtape`);
         active = await TmuxSession.create({
-          cmd: mode === "startup" ? `${FX_BIN} --resume ${sessionId}` : FX_BIN,
+          cmd: mode === "startup" ? `${CHASSIS_BIN} --resume ${sessionId}` : CHASSIS_BIN,
           cwd: realpathSync(workspace),
-          env: { ...gatewayEnv(home, gateway), FX_RECORD: tapePath },
+          env: { ...gatewayEnv(home, gateway), CHASSIS_RECORD: tapePath },
           stderrPath,
         });
         await active.waitForComposer(TIMEOUT);
@@ -1006,22 +1006,22 @@ test("volatile status rows normalize before stable-grid comparison", () => {
 });
 
 test.skipIf(!tmuxAvailable())(
-  "saved fx ask metadata appears after interactive Ctrl-O resume",
+  "saved chassis ask metadata appears after interactive Ctrl-O resume",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-ask-metadata-resume-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-ask-metadata-resume-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
 
-    const prompt = "Persist this fx ask metadata.";
-    const answer = "FX_ASK_METADATA_COMPLETE";
+    const prompt = "Persist this chassis ask metadata.";
+    const answer = "CHASSIS_ASK_METADATA_COMPLETE";
     const askGateway = startFakeGateway([fakeGatewayFinalText(answer)]);
     let active: TmuxSession | null = null;
     try {
@@ -1037,7 +1037,7 @@ test.skipIf(!tmuxAvailable())(
       const resumeGateway = startFakeGateway([]);
       try {
         active = await TmuxSession.create({
-          cmd: `${FX_BIN} --resume-last`,
+          cmd: `${CHASSIS_BIN} --resume-last`,
           cwd: realpathSync(workspace),
           env: gatewayEnv(home, resumeGateway),
           stderrPath,
@@ -1072,7 +1072,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "session resume command group opens last and explicit session ids",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-session-resume-command-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-session-resume-command-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const seedStderrPath = join(root, "seed-stderr.log");
@@ -1091,7 +1091,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, seedGateway),
         stderrPath: seedStderrPath,
@@ -1109,11 +1109,11 @@ test.skipIf(!tmuxAvailable())(
       const sessionId = sessionIdFromHome(home);
       const cases = [
         {
-          command: `${FX_BIN} session resume --id ${sessionId}`,
+          command: `${CHASSIS_BIN} session resume --id ${sessionId}`,
           stderrPath: exactStderrPath,
         },
         {
-          command: `${FX_BIN} session resume last`,
+          command: `${CHASSIS_BIN} session resume last`,
           stderrPath: lastStderrPath,
         },
       ];
@@ -1171,7 +1171,7 @@ function expectAltExitToPreserveNormalViewport(tapePath: string): void {
 test.skipIf(!tmuxAvailable())(
   "approved-shell command output normalizes controls in Ctrl-O and resume views",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-command-output-terminal-safety-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-command-output-terminal-safety-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -1185,10 +1185,10 @@ test.skipIf(!tmuxAvailable())(
     const trailingMarker = "BOUNDARY_TRAILING";
     const literalClose = "LITERAL_CLOSE_</stdout>";
     const doneMarker = "CONTROL_OUTPUT_DONE";
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -1221,14 +1221,14 @@ printf '${trailingMarker}   '
     let resumedGateway: ReturnType<typeof startFakeGateway> | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, gateway),
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "agent,core,tool,render,transcript,command_output,session",
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "agent,core,tool,render,transcript,command_output,session",
         },
         stderrPath,
         width: 72,
@@ -1332,7 +1332,7 @@ printf '${trailingMarker}   '
 
       resumedGateway = startFakeGateway([]);
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-last`,
+        cmd: `${CHASSIS_BIN} --resume-last`,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, resumedGateway),
         stderrPath: resumedStderrPath,
@@ -1382,13 +1382,13 @@ printf '${trailingMarker}   '
 test.skipIf(!tmuxAvailable())(
   "resumed session labels shell interactions with their launch command",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-resume-session-label-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-resume-session-label-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "full-access", permission: {} }),
     );
 
@@ -1403,7 +1403,7 @@ test.skipIf(!tmuxAvailable())(
     let resumedGateway: ReturnType<typeof startFakeGateway> | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspace,
         env: gatewayEnv(home, gateway),
         stderrPath: join(root, "stderr.log"),
@@ -1424,7 +1424,7 @@ test.skipIf(!tmuxAvailable())(
 
       resumedGateway = startFakeGateway([]);
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-last`,
+        cmd: `${CHASSIS_BIN} --resume-last`,
         cwd: workspace,
         env: gatewayEnv(home, resumedGateway),
         stderrPath: join(root, "stderr-resumed.log"),
@@ -1456,15 +1456,15 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O opens full retained command output and restores grouped compact output",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const tapePath = join(root, "ctrl-o.fxtape");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -1481,9 +1481,9 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
-        env: { ...gatewayEnv(home, gateway), FX_RECORD: tapePath },
+        env: { ...gatewayEnv(home, gateway), CHASSIS_RECORD: tapePath },
         stderrPath,
         width: 100,
         height: 32,
@@ -1589,16 +1589,16 @@ test.skipIf(!tmuxAvailable())(
   "cap-crossing command output stays durable while grouped compact returns to input",
   async () => {
     const timeout = 120_000;
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-command-output-cap-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-command-output-cap-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const tracePath = join(root, "trace.log");
     const tapePath = join(root, "command-output-cap.fxtape");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -1622,14 +1622,14 @@ test.skipIf(!tmuxAvailable())(
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, gateway),
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "agent,tool,worker,render,transcript,command_output",
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "agent,tool,worker,render,transcript,command_output",
         },
         stderrPath,
         width: 160,
@@ -1649,7 +1649,7 @@ test.skipIf(!tmuxAvailable())(
       expect(active.paneStatus()).toEqual({ dead: false, status: null });
       const sessionId = sessionIdFromHome(home);
 
-      const commandDir = join(home, ".fx", "sessions", sessionId, "logs", "commands");
+      const commandDir = join(home, ".chassis", "sessions", sessionId, "logs", "commands");
       const artifactFiles = readdirSync(commandDir);
       const replayFiles = artifactFiles.filter((name) => name.endsWith(".bin"));
       expect(replayFiles).toHaveLength(1);
@@ -1695,7 +1695,7 @@ test.skipIf(!tmuxAvailable())(
   "active command overflow marks Ctrl-O incomplete until terminal replay attaches",
   async () => {
     const timeout = 120_000;
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-command-output-active-overflow-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-command-output-active-overflow-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -1713,10 +1713,10 @@ test.skipIf(!tmuxAvailable())(
     const tailMarker = "ACTIVE_OVERFLOW_TAIL";
     const doneMarker = "ACTIVE_OVERFLOW_DONE";
     const futureMarker = "│ … full output available when command finishes";
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -1750,12 +1750,12 @@ printf '${tailMarker}\\n'
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, gateway),
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES:
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES:
             "agent,core,tool,worker,render,transcript,command_output,transcript_retention,session",
         },
         stderrPath,
@@ -1847,7 +1847,7 @@ printf '${tailMarker}\\n'
       expect(terminalCompact).not.toContain(tailMarker);
       expect(terminalCompact).not.toContain(futureMarker);
       const sessionId = sessionIdFromHome(home);
-      const commandDir = join(home, ".fx", "sessions", sessionId, "logs", "commands");
+      const commandDir = join(home, ".chassis", "sessions", sessionId, "logs", "commands");
       const replayFiles = readdirSync(commandDir).filter((name) =>
         name.endsWith(".bin")
       );
@@ -1885,7 +1885,7 @@ test.skipIf(!tmuxAvailable())(
   "cancelled cap-crossing command keeps grouped rows stable and Ctrl-O opens its artifact",
   async () => {
     const timeout = 60_000;
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-cancelled-command-cap-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-cancelled-command-cap-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -1901,10 +1901,10 @@ test.skipIf(!tmuxAvailable())(
     const nextMarker = "CANCEL_CAP_UNRELATED_TURN_DONE";
     const callId = "cancelled-cap-command";
     const readyPath = join(workspace, ".cancel-cap-ready");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -1949,14 +1949,14 @@ while :; do :; done
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, gateway),
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES:
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES:
             "core,agent,tool,worker,interrupt,command_output,transcript,transcript_retention,render",
         },
         stderrPath,
@@ -1998,7 +1998,7 @@ while :; do :; done
       expect(beforePlain).not.toContain(tailMarker);
 
       const sessionId = sessionIdFromHome(home);
-      const commandDir = join(home, ".fx", "sessions", sessionId, "logs", "commands");
+      const commandDir = join(home, ".chassis", "sessions", sessionId, "logs", "commands");
       const replayNames = readdirSync(commandDir).filter((name) =>
         name.endsWith(".bin")
       );
@@ -2145,7 +2145,7 @@ test.skipIf(!tmuxAvailable())(
   "cancelled below-cap command exposes its TERM tail only through Ctrl-O",
   async () => {
     const timeout = 60_000;
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-cancelled-command-below-cap-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-cancelled-command-below-cap-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -2154,10 +2154,10 @@ test.skipIf(!tmuxAvailable())(
     const headMarker = "CANCEL_BELOW_CAP_HEAD";
     const tailMarker = "CANCEL_BELOW_CAP_TERM_TAIL_ONLY";
     const readyPath = join(workspace, ".cancel-below-ready");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -2184,14 +2184,14 @@ while :; do :; done
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, gateway),
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES:
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES:
             "core,agent,tool,worker,interrupt,command_output,transcript,render",
         },
         stderrPath,
@@ -2219,7 +2219,7 @@ while :; do :; done
       expect(countOccurrences(compact, headMarker)).toBe(0);
       expect(compact).not.toContain(tailMarker);
       const sessionId = sessionIdFromHome(home);
-      const commandDir = join(home, ".fx", "sessions", sessionId, "logs", "commands");
+      const commandDir = join(home, ".chassis", "sessions", sessionId, "logs", "commands");
       const replayFiles = readdirSync(commandDir).filter((name) =>
         name.endsWith(".bin")
       );
@@ -2282,7 +2282,7 @@ while :; do :; done
 test.skipIf(!tmuxAvailable())(
   "grouped command status stays compact while Ctrl-O keeps detail",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-command-output-status-order-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-command-output-status-order-")));
     const home = join(root, "home");
     const workspaceDir = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -2293,11 +2293,11 @@ test.skipIf(!tmuxAvailable())(
     const ctrlOScrollbackPath = join(root, "ctrl-o-scrollback.txt");
     const ctrlOAnsiPath = join(root, "ctrl-o-scrollback.ansi.txt");
     const replayJsonPath = join(root, "replay.json");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspaceDir);
     const workspace = realpathSync(workspaceDir);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -2339,14 +2339,14 @@ test.skipIf(!tmuxAvailable())(
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspace,
         env: {
           ...gatewayEnv(home, gateway),
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "agent,tool,render,transcript,gateway",
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "agent,tool,render,transcript,gateway",
         },
         stderrPath,
         width: 100,
@@ -2422,7 +2422,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "streamed document append preserves native scrollback without ONLCR",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-document-append-newlines-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-document-append-newlines-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -2446,7 +2446,7 @@ test.skipIf(!tmuxAvailable())(
         const gateway = startFakeGateway([
           () => streamedTextResponse(response),
         ]);
-        const launch = `${stty}; exec ${shellQuote(FX_BIN)}`;
+        const launch = `${stty}; exec ${shellQuote(CHASSIS_BIN)}`;
         let active: TmuxSession | null = null;
         try {
           active = await TmuxSession.create({
@@ -2492,18 +2492,18 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-C closes the Ctrl-O viewer without clearing the unsent draft",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-draft-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-draft-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const tapePath = join(root, "ctrl-o-draft.fxtape");
     const sentinel = "CTRL_O_DRAFT_SCROLLBACK_SENTINEL";
     const draft = "CTRL_O_UNSENT_DRAFT";
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(stderrPath, "");
 
-    const cmd = `zsh -lc 'for i in {1..14}; do printf "${sentinel}_%02d: pre-fx shell scrollback\\n" "$i"; done; exec ${FX_BIN}'`;
+    const cmd = `zsh -lc 'for i in {1..14}; do printf "${sentinel}_%02d: pre-chassis shell scrollback\\n" "$i"; done; exec ${CHASSIS_BIN}'`;
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
@@ -2513,8 +2513,8 @@ test.skipIf(!tmuxAvailable())(
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
           VERCEL_OIDC_TOKEN: undefined,
-          FX_AUTO_UPGRADE: "0",
-          FX_RECORD: tapePath,
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_RECORD: tapePath,
           NO_COLOR: "1",
         },
         stderrPath,
@@ -2524,7 +2524,7 @@ test.skipIf(!tmuxAvailable())(
       await active.waitForComposer(TIMEOUT);
       const before = await active.captureFullScrollback();
       for (const index of [9, 10, 11]) {
-        expect(before).toContain(`${sentinel}_${index.toString().padStart(2, "0")}: pre-fx shell scrollback`);
+        expect(before).toContain(`${sentinel}_${index.toString().padStart(2, "0")}: pre-chassis shell scrollback`);
       }
 
       await active.sendLiteralText(draft);
@@ -2541,7 +2541,7 @@ test.skipIf(!tmuxAvailable())(
 
       const restored = await active.captureFullScrollback();
       for (const index of [9, 10, 11]) {
-        expect(restored).toContain(`${sentinel}_${index.toString().padStart(2, "0")}: pre-fx shell scrollback`);
+        expect(restored).toContain(`${sentinel}_${index.toString().padStart(2, "0")}: pre-chassis shell scrollback`);
       }
       expect(restored).toContain(`┃ ${draft}`);
       expect(restored).not.toContain("press ctrl+c again to exit");
@@ -2568,13 +2568,13 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Cmd+R refuses session switching over a draft and opens after explicit clear",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-session-picker-draft-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-session-picker-draft-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const saved = "CMD_R_SAVED_SESSION";
     const draft = "CMD_R_UNSENT_DRAFT";
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(stderrPath, "");
 
@@ -2582,7 +2582,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -2636,17 +2636,17 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O viewer preserves hidden composer input while Ctrl-X stays inert",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-input-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-input-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const firstDone = "CTRL_O_INPUT_FIRST_DONE";
     const followUpDone = "CTRL_O_INPUT_FOLLOW_UP_DONE";
     const fullViewDraft = "CTRL_O_FULL_VIEW_COMPOSER_DRAFT";
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -2658,7 +2658,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -2720,16 +2720,16 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-C leaves Ctrl-O before cancelling a streaming command",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-cancel-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-cancel-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const tapePath = join(root, "ctrl-o-cancel.fxtape");
     const streamMarker = "CTRL_O_CANCEL_STREAM";
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -2741,9 +2741,9 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
-        env: { ...gatewayEnv(home, gateway), FX_RECORD: tapePath },
+        env: { ...gatewayEnv(home, gateway), CHASSIS_RECORD: tapePath },
         stderrPath,
         width: 100,
         height: 32,
@@ -2786,14 +2786,14 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O keeps command output live while the alternate buffer is open",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-live-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-live-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -2808,7 +2808,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -2849,17 +2849,17 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "streaming scroll stays inline while Ctrl-O preserves native selection and ignores horizontal arrows",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-stream-scroll-inline-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-stream-scroll-inline-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const tapePath = join(root, "stream-scroll.fxtape");
     const tracePath = join(root, "trace.log");
     const phaseTwoComplete = join(workspace, "phase-two.complete");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -2874,14 +2874,14 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, gateway),
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "full_transcript,full_transcript_cache,input,scroll,frame_diff,frame_commit",
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "full_transcript,full_transcript_cache,input,scroll,frame_diff,frame_commit",
         },
         stderrPath,
         width: 100,
@@ -3020,14 +3020,14 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O navigation during shell streaming preserves grouped compact rows",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-navigation-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-navigation-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -3045,7 +3045,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -3098,15 +3098,15 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "an ask-user prompt takes over Ctrl-O and accepts its choice inline",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-question-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-question-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const tapePath = join(root, "ctrl-o-question.fxtape");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -3135,9 +3135,9 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
-        env: { ...gatewayEnv(home, gateway), FX_RECORD: tapePath },
+        env: { ...gatewayEnv(home, gateway), CHASSIS_RECORD: tapePath },
         stderrPath,
         width: 100,
         height: 32,
@@ -3178,14 +3178,14 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O preserves inline block spacing while expanding tool detail",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-spacing-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-spacing-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -3213,7 +3213,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -3301,14 +3301,14 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O restores a long Markdown transcript without replaying it into scrollback",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-markdown-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-markdown-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -3328,7 +3328,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -3367,7 +3367,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O restores wrapped primary rows after resize without losing the draft",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-resize-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-resize-")));
     const response = Array.from({ length: 28 }, (_, index) => {
       const row = String(index + 1).padStart(2, "0");
       return `ROW${row} ALPHA${row}_abcdefghijklmnopqrstuvwxyz0123456789 BRAVO${row}_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`;
@@ -3379,13 +3379,13 @@ test.skipIf(!tmuxAvailable())(
         const home = join(root, String(width), "home");
         const workspace = join(root, String(width), "workspace");
         const stderrPath = join(root, String(width), "stderr.log");
-        mkdirSync(join(home, ".fx"), { recursive: true });
+        mkdirSync(join(home, ".chassis"), { recursive: true });
         mkdirSync(workspace);
         const gateway = startFakeGateway([fakeGatewayFinalText(response)]);
         let active: TmuxSession | null = null;
         try {
           active = await TmuxSession.create({
-            cmd: FX_BIN,
+            cmd: CHASSIS_BIN,
             cwd: workspace,
             env: gatewayEnv(home, gateway),
             stderrPath,
@@ -3432,7 +3432,7 @@ test.skipIf(!tmuxAvailable())(
             previousEnd = start + text.length;
           }
           const events = readFileSync(
-            join(home, ".fx", "sessions", sessionIdFromHome(home), "events.jsonl"), "utf8",
+            join(home, ".chassis", "sessions", sessionIdFromHome(home), "events.jsonl"), "utf8",
           );
           expect(events).toContain("ROW28 ALPHA28_abcdefghijklmnopqrstuvwxyz0123456789");
 
@@ -3440,7 +3440,7 @@ test.skipIf(!tmuxAvailable())(
           await active.sendText("/quit");
           await waitForCondition(
             () => active?.paneStatus().dead === true,
-            "fx to exit after resized transcript restoration",
+            "chassis to exit after resized transcript restoration",
           );
           expect(paneExitMatches(active.paneStatus(), 0)).toBe(true);
           expect(readFileSync(stderrPath, "utf8")).toBe("");
@@ -3459,14 +3459,14 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O renders read_file results as readable content",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-read-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-read-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(
@@ -3482,7 +3482,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -3520,14 +3520,14 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O expands each parallel read-only tool detail",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-parallel-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-parallel-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(join(workspace, "README.md"), "READ_FULL_DETAIL_MARKER\n");
@@ -3545,7 +3545,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -3585,15 +3585,15 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "a file approval takes over Ctrl-O and resolves back to the inline transcript",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-approval-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-approval-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const tapePath = join(root, "ctrl-o-file-approval.fxtape");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({
         sandbox: "none",
         permission_mode: "ask",
@@ -3646,9 +3646,9 @@ test.skipIf(!tmuxAvailable())(
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
-        env: { ...gatewayEnv(home, gateway), FX_RECORD: tapePath },
+        env: { ...gatewayEnv(home, gateway), CHASSIS_RECORD: tapePath },
         stderrPath,
         width: 100,
         height: 30,
@@ -3724,14 +3724,14 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "a shell approval takes over Ctrl-O and accepts its choice inline",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-shell-approval-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-shell-approval-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "ask", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -3749,7 +3749,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -3785,16 +3785,16 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "a shell approval handoff does not duplicate a long Ctrl-O transcript in scrollback",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-handoff-scrollback-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-handoff-scrollback-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     const actionTimeout = 8_000;
     const transcriptTimeout = 90_000;
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "ask", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -3892,7 +3892,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -3957,7 +3957,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O pressure preserves transcript and modal ownership under deterministic load",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-transcript-pressure-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-transcript-pressure-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -3966,10 +3966,10 @@ test.skipIf(!tmuxAvailable())(
     const scrollbackPath = join(root, "scrollback.txt");
     const ansiScrollbackPath = join(root, "scrollback.ansi.txt");
     const releasePath = join(workspace, ".ctrl-o-pressure-release");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "ask", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -4076,12 +4076,12 @@ test.skipIf(!tmuxAvailable())(
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, gateway),
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
         },
         stderrPath,
         width: 104,
@@ -4297,7 +4297,7 @@ test.skipIf(!tmuxAvailable())(
       await active.sendText("/quit");
       await waitForCondition(
         () => active?.paneStatus().dead === true,
-        "fx to exit after /quit",
+        "chassis to exit after /quit",
       );
       expect(paneExitMatches(active.paneStatus(), 0)).toBe(true);
       expect(readFileSync(stderrPath, "utf8")).toBe("");
@@ -4348,7 +4348,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "contended startup resume stays non-interactive and recovers after release",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-contended-resume-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-contended-resume-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const ownerStderrPath = join(root, "owner-stderr.log");
@@ -4369,7 +4369,7 @@ test.skipIf(!tmuxAvailable())(
     try {
       writeFileSync(ownerStderrPath, "");
       owner = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, ownerGateway),
         stderrPath: ownerStderrPath,
@@ -4381,12 +4381,12 @@ test.skipIf(!tmuxAvailable())(
 
       writeFileSync(contenderStderrPath, "");
       contender = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume`,
+        cmd: `${CHASSIS_BIN} --resume`,
         cwd: workspaceRoot,
         env: {
           ...gatewayEnv(home, ownerGateway),
-          FX_RECORD: contenderTapePath,
-          FX_RECORD_INPUT: "1",
+          CHASSIS_RECORD: contenderTapePath,
+          CHASSIS_RECORD_INPUT: "1",
         },
         stderrPath: contenderStderrPath,
         remainOnExit: true,
@@ -4400,7 +4400,7 @@ test.skipIf(!tmuxAvailable())(
 
       expect(paneExitMatches(contender.paneStatus(), 1)).toBe(true);
       expect(readFileSync(contenderStderrPath, "utf8")).toBe(
-        "fx: another fx process may be using this session (running or suspended); check other terminals or run jobs, then use fg or quit that process\n",
+        "chassis: another chassis process may be using this session (running or suspended); check other terminals or run jobs, then use fg or quit that process\n",
       );
       expect(owner.isPaneAlive()).toBe(true);
       const contenderScrollback = await contender.captureFullScrollback();
@@ -4430,7 +4430,7 @@ test.skipIf(!tmuxAvailable())(
 
       writeFileSync(retryStderrPath, "");
       retry = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume`,
+        cmd: `${CHASSIS_BIN} --resume`,
         cwd: workspaceRoot,
         env: gatewayEnv(home, retryGateway),
         stderrPath: retryStderrPath,
@@ -4477,7 +4477,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "interactive resume shows session contention and retries the preserved selection",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-interactive-contention-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-interactive-contention-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const ownerStderrPath = join(root, "owner-stderr.log");
@@ -4495,7 +4495,7 @@ test.skipIf(!tmuxAvailable())(
     try {
       writeFileSync(ownerStderrPath, "");
       owner = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, ownerGateway),
         stderrPath: ownerStderrPath,
@@ -4508,7 +4508,7 @@ test.skipIf(!tmuxAvailable())(
 
       writeFileSync(contenderStderrPath, "");
       contender = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, contenderGateway),
         stderrPath: contenderStderrPath,
@@ -4523,7 +4523,7 @@ test.skipIf(!tmuxAvailable())(
       await contender.sendKeys("Enter");
       await contender.waitForPane(
         (pane) => stripAnsi(pane).includes(
-          "This session is open in another fx. Close it there, then press enter to retry.",
+          "This session is open in another chassis. Close it there, then press enter to retry.",
         ),
         1_000,
       );
@@ -4532,7 +4532,7 @@ test.skipIf(!tmuxAvailable())(
       const contendedPicker = stripAnsi(await contender.capturePane());
       expect(contendedPicker).toContain(savedTitle);
       expect(contendedPicker).toContain(
-        "This session is open in another fx. Close it there, then press enter to retry.",
+        "This session is open in another chassis. Close it there, then press enter to retry.",
       );
       expect(contendedPicker).not.toContain("SessionBusy");
       const contendedEntries = visibleSessionPickerEntries(
@@ -4577,16 +4577,16 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "instruction refresh stays neutral after resume",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-resume-deferred-tools-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-resume-deferred-tools-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const nested = join(workspace, "nested");
     const liveStderrPath = join(root, "live-stderr.log");
     const resumeStderrPath = join(root, "resume-stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(nested, { recursive: true });
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(join(workspace, "AGENTS.md"), "DEFERRED_TOOL_ROOT_SCOPE\n");
@@ -4706,7 +4706,7 @@ test.skipIf(!tmuxAvailable())(
 
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, gateway),
         stderrPath: liveStderrPath,
@@ -4733,7 +4733,7 @@ test.skipIf(!tmuxAvailable())(
       active = null;
 
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} resume last`,
+        cmd: `${CHASSIS_BIN} resume last`,
         cwd: workspaceRoot,
         env: gatewayEnv(home, resumeGateway),
         stderrPath: resumeStderrPath,
@@ -4779,7 +4779,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "new and resumed sessions drop kill-ring and large-paste backing state",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-session-input-reset-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-session-input-reset-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -4816,7 +4816,7 @@ test.skipIf(!tmuxAvailable())(
 
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -4857,7 +4857,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "graceful exit prints an exact resume command",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-exit-handoff-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-exit-handoff-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const binDir = join(root, "bin");
@@ -4868,7 +4868,7 @@ test.skipIf(!tmuxAvailable())(
     mkdirSync(home);
     mkdirSync(workspace);
     mkdirSync(binDir);
-    symlinkSync(FX_BIN, join(binDir, "fx"));
+    symlinkSync(CHASSIS_BIN, join(binDir, "chassis"));
     writeFileSync(stderrPath, "");
     writeFileSync(resumedStderrPath, "");
     const initialGateway = startFakeGateway([fakeGatewayFinalText(marker)]);
@@ -4879,13 +4879,13 @@ test.skipIf(!tmuxAvailable())(
 
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, initialGateway),
           PATH: path,
-          FX_RECORD: tapePath,
-          FX_THEME: "dark",
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_THEME: "dark",
         },
         stderrPath,
         width: 120,
@@ -4906,7 +4906,7 @@ test.skipIf(!tmuxAvailable())(
       expect(paneExitMatches(active.paneStatus(), 0)).toBe(true);
       const scrollback = stripAnsi(await active.captureFullScrollback());
       const ansiScrollback = await active.captureFullScrollbackEscapes();
-      const expected = `Continue session with: fx --resume ${sessionId}`;
+      const expected = `Continue session with: chassis --resume ${sessionId}`;
       expect(scrollback).toContain(expected);
       expect(scrollback).not.toContain("To continue this session, run:");
       expect(ansiScrollback).toContain(`\x1b[38;5;245m${expected}\x1b[39m`);
@@ -4920,7 +4920,7 @@ test.skipIf(!tmuxAvailable())(
         .map((line) => line.trim())
         .find((line) => line === expected);
       const printedCommand = handoffLine?.slice("Continue session with: ".length);
-      expect(printedCommand).toBe(`fx --resume ${sessionId}`);
+      expect(printedCommand).toBe(`chassis --resume ${sessionId}`);
 
       await active.kill();
       active = await TmuxSession.create({
@@ -4961,7 +4961,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "rapid Ctrl-C during active-turn exit preserves the resume handoff",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-exit-sigint-race-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-exit-sigint-race-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -4976,12 +4976,12 @@ test.skipIf(!tmuxAvailable())(
 
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspace,
         env: {
           ...gatewayEnv(home, initialGateway),
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "input,worker,gateway,session",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "input,worker,gateway,session",
         },
         stderrPath,
         width: 120,
@@ -5010,7 +5010,7 @@ test.skipIf(!tmuxAvailable())(
         "the rapid Ctrl-C exit pane to stop",
       );
       const scrollback = stripAnsi(await active.captureFullScrollback());
-      const expected = `Continue session with: fx --resume ${sessionId}`;
+      const expected = `Continue session with: chassis --resume ${sessionId}`;
       expect(countOccurrences(scrollback, expected)).toBe(1);
       expect(readFileSync(stderrPath, "utf8")).toBe("");
       await active.kill();
@@ -5033,7 +5033,7 @@ test.skipIf(!tmuxAvailable())(
   "closing the startup resume picker starts a writable fresh session",
   async () => {
     const root = realpathSync(
-      mkdtempSync(join(tmpdir(), "fx-tui-resume-picker-cancel-")),
+      mkdtempSync(join(tmpdir(), "chassis-tui-resume-picker-cancel-")),
     );
     const home = join(root, "home");
     const workspace = join(root, "workspace");
@@ -5048,7 +5048,7 @@ test.skipIf(!tmuxAvailable())(
     try {
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} -r`,
+        cmd: `${CHASSIS_BIN} -r`,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -5090,7 +5090,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "interactive resume aliases restore history and return to a live composer",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-resume-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-resume-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -5108,7 +5108,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(initialGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, initialGateway),
         stderrPath,
@@ -5130,7 +5130,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(pickerGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} -r`,
+        cmd: `${CHASSIS_BIN} -r`,
         cwd: workspaceRoot,
         env: gatewayEnv(home, pickerGateway),
         stderrPath,
@@ -5170,11 +5170,11 @@ test.skipIf(!tmuxAvailable())(
         gateways.push(gateway);
         writeFileSync(stderrPath, "");
         active = await TmuxSession.create({
-          cmd: `${FX_BIN} ${args.join(" ")}`,
+          cmd: `${CHASSIS_BIN} ${args.join(" ")}`,
           cwd: workspaceRoot,
           env: {
             ...gatewayEnv(home, gateway),
-            FX_RECORD: tapePath,
+            CHASSIS_RECORD: tapePath,
           },
           stderrPath,
           width: args[0] === `--resume-${sessionId}` ? 42 : 100,
@@ -5259,9 +5259,9 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(markdownGateway);
       writeFileSync(markdownStderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(markdownWorkspace),
-        env: { ...gatewayEnv(markdownHome, markdownGateway), FX_RECORD: markdownTapePath },
+        env: { ...gatewayEnv(markdownHome, markdownGateway), CHASSIS_RECORD: markdownTapePath },
         stderrPath: markdownStderrPath,
         width: 72,
         height: 32,
@@ -5303,9 +5303,9 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(resumedMarkdownGateway);
       writeFileSync(markdownStderrPath, "");
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-last`,
+        cmd: `${CHASSIS_BIN} --resume-last`,
         cwd: realpathSync(markdownWorkspace),
-        env: { ...gatewayEnv(markdownHome, resumedMarkdownGateway), FX_RECORD: resumedMarkdownTapePath },
+        env: { ...gatewayEnv(markdownHome, resumedMarkdownGateway), CHASSIS_RECORD: resumedMarkdownTapePath },
         stderrPath: markdownStderrPath,
         width: 42,
         height: 32,
@@ -5348,10 +5348,10 @@ test.skipIf(!tmuxAvailable())(
       const toolWorkspace = join(root, "tool-workspace");
       const toolStderrPath = join(root, "tool-stderr.log");
       const toolWorkspaceMarker = "tool-workspace";
-      mkdirSync(join(toolHome, ".fx"), { recursive: true });
+      mkdirSync(join(toolHome, ".chassis"), { recursive: true });
       mkdirSync(toolWorkspace);
       writeFileSync(
-        join(toolHome, ".fx", "settings.json"),
+        join(toolHome, ".chassis", "settings.json"),
         JSON.stringify({}),
       );
       const toolWorkspaceRoot = realpathSync(toolWorkspace);
@@ -5363,7 +5363,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(toolGateway);
       writeFileSync(toolStderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: toolWorkspaceRoot,
         env: gatewayEnv(toolHome, toolGateway),
         stderrPath: toolStderrPath,
@@ -5394,7 +5394,7 @@ test.skipIf(!tmuxAvailable())(
         gateways.push(gateway);
         writeFileSync(toolStderrPath, "");
         active = await TmuxSession.create({
-          cmd: `${FX_BIN} ${args.join(" ")}`,
+          cmd: `${CHASSIS_BIN} ${args.join(" ")}`,
           cwd: toolWorkspaceRoot,
           env: gatewayEnv(toolHome, gateway),
           stderrPath: toolStderrPath,
@@ -5436,9 +5436,9 @@ test.skipIf(!tmuxAvailable())(
 );
 
 test("manual upgrade output links stable notes and dev changes", async () => {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-upgrade-links-")));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-upgrade-links-")));
   const argvLogPath = join(root, "upgrade-argv.log");
-  const installedFx = join(root, "fx");
+  const installedFx = join(root, "chassis");
   const home = join(root, "home");
   mkdirSync(home);
   const currentRevision = (await runFx(["status", "--json"], {
@@ -5446,25 +5446,25 @@ test("manual upgrade output links stable notes and dev changes", async () => {
   })).stdout;
   const revision = "abcdef0123456789abcdef0123456789abcdef01";
   const release = startUpgradeServer(root, argvLogPath, { revision });
-  copyFileSync(FX_BIN, installedFx);
+  copyFileSync(CHASSIS_BIN, installedFx);
   chmodSync(installedFx, 0o755);
 
   try {
     const stable = Bun.spawn([installedFx, "upgrade", "--channel", "stable"], {
-      env: { ...process.env, HOME: home, FX_E2E_UPGRADE_BASE_URL: release.baseUrl },
+      env: { ...process.env, HOME: home, CHASSIS_E2E_UPGRADE_BASE_URL: release.baseUrl },
       stdout: "pipe",
       stderr: "pipe",
     });
     const stableExitCode = await stable.exited;
     expect(stableExitCode).toBe(0);
     expect(await new Response(stable.stdout).text()).toContain(
-      "notes: https://fx.sh/changelog#v9.9.9",
+      "notes: https://chassis.sh/changelog#v9.9.9",
     );
 
-    copyFileSync(FX_BIN, installedFx);
+    copyFileSync(CHASSIS_BIN, installedFx);
     chmodSync(installedFx, 0o755);
     const dev = Bun.spawn([installedFx, "upgrade", "--channel", "dev"], {
-      env: { ...process.env, HOME: home, FX_E2E_UPGRADE_BASE_URL: release.baseUrl },
+      env: { ...process.env, HOME: home, CHASSIS_E2E_UPGRADE_BASE_URL: release.baseUrl },
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -5472,7 +5472,7 @@ test("manual upgrade output links stable notes and dev changes", async () => {
     expect(devExitCode).toBe(0);
     const buildRevision = JSON.parse(currentRevision).build_revision;
     expect(await new Response(dev.stdout).text()).toContain(
-      `changes: https://github.com/vercel-labs/fx/compare/${buildRevision}...${revision}`,
+      `changes: https://github.com/adhyaay-karnwal/chassis/compare/${buildRevision}...${revision}`,
     );
   } finally {
     release.stop();
@@ -5483,7 +5483,7 @@ test("manual upgrade output links stable notes and dev changes", async () => {
 test.skipIf(!tmuxAvailable())(
   "upgrade ctrl-g reloads the background-installed binary and resumes",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-upgrade-ctrl-g-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-upgrade-ctrl-g-")));
     const home = join(root, "home");
     const freshHome = join(root, "fresh-home");
     const workspace = join(root, "workspace");
@@ -5497,8 +5497,8 @@ test.skipIf(!tmuxAvailable())(
     mkdirSync(workspace);
     mkdirSync(installDir);
     const workspaceRoot = realpathSync(workspace);
-    const installedFx = join(installDir, "fx");
-    copyFileSync(FX_BIN, installedFx);
+    const installedFx = join(installDir, "chassis");
+    copyFileSync(CHASSIS_BIN, installedFx);
     chmodSync(installedFx, 0o755);
 
     let active: TmuxSession | null = null;
@@ -5518,10 +5518,10 @@ test.skipIf(!tmuxAvailable())(
         cwd: workspaceRoot,
         env: {
           ...gatewayEnv(home, gateway),
-          FX_AUTO_UPGRADE: "1",
-          FX_E2E_UPGRADE_BASE_URL: release.baseUrl,
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "core,session",
+          CHASSIS_AUTO_UPGRADE: "1",
+          CHASSIS_E2E_UPGRADE_BASE_URL: release.baseUrl,
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "core,session",
         },
         stderrPath,
         width: 110,
@@ -5561,7 +5561,7 @@ test.skipIf(!tmuxAvailable())(
       const version = (await runFx(["--version"])).stdout.trim();
       await active.sendHexBytes(["07"]);
 
-      const updatedNotice = `✓ fx has been updated to v${version} (notes)`;
+      const updatedNotice = `✓ chassis has been updated to v${version} (notes)`;
       await active.waitForText(updatedNotice, TIMEOUT);
       await active.waitForComposer(TIMEOUT);
       const postUpgradeTrace = readFileSync(tracePath, "utf8");
@@ -5573,7 +5573,7 @@ test.skipIf(!tmuxAvailable())(
       expect(resumed).toContain(updatedNotice);
       const noticeEscapes = await active.capturePaneEscapes();
       expect(noticeEscapes).toContain(
-        `(\x1b[4m\x1b]8;;https://fx.sh/changelog#v${version}\x1b\\notes\x1b[0m`,
+        `(\x1b[4m\x1b]8;;https://chassis.sh/changelog#v${version}\x1b\\notes\x1b[0m`,
       );
       expect(noticeEscapes).toContain("\x1b]8;;\x1b\\)");
       expect(resumed).not.toContain("* session resumed:");
@@ -5615,7 +5615,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "answered question cards survive flag and picker resume",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-resume-question-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-resume-question-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -5667,7 +5667,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(initialGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, initialGateway),
         stderrPath,
@@ -5690,7 +5690,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(flagGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-last`,
+        cmd: `${CHASSIS_BIN} --resume-last`,
         cwd: workspaceRoot,
         env: gatewayEnv(home, flagGateway),
         stderrPath,
@@ -5713,7 +5713,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(pickerGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, pickerGateway),
         stderrPath,
@@ -5747,7 +5747,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "recorded file diffs survive resume and retain their Ctrl-O detail",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-resume-file-diff-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-resume-file-diff-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -5763,10 +5763,10 @@ test.skipIf(!tmuxAvailable())(
     );
     const firstCompletion = "RESUMED_FIRST_FILE_COMPLETE";
     const secondCompletion = "RESUMED_SECOND_FILE_COMPLETE";
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "ask", permission: {} }),
     );
     writeFileSync(stderrPath, "");
@@ -5787,9 +5787,9 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
-        env: { ...gatewayEnv(home, initialGateway), FX_RECORD: initialTapePath },
+        env: { ...gatewayEnv(home, initialGateway), CHASSIS_RECORD: initialTapePath },
         stderrPath,
         width: 120,
         height: 32,
@@ -5826,16 +5826,16 @@ test.skipIf(!tmuxAvailable())(
 
       const sessionId = sessionIdFromHome(home);
       const eventsJsonl = readFileSync(
-        join(home, ".fx", "sessions", sessionId, "events.jsonl"),
+        join(home, ".chassis", "sessions", sessionId, "events.jsonl"),
         "utf8",
       );
       expect(eventsJsonl).toContain("committed_file_presentation");
       expect(eventsJsonl).not.toContain("sk-abcdefghijklmnop");
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-${sessionId}`,
+        cmd: `${CHASSIS_BIN} --resume-${sessionId}`,
         cwd: realpathSync(workspace),
-        env: { ...gatewayEnv(home, resumedGateway), FX_RECORD: resumedTapePath },
+        env: { ...gatewayEnv(home, resumedGateway), CHASSIS_RECORD: resumedTapePath },
         stderrPath,
         width: 120,
         height: 32,
@@ -5901,16 +5901,16 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "command output folding survives flag and picker resume",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-resume-command-output-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-resume-command-output-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
     mkdirSync(home);
     mkdirSync(workspace);
     const workspaceRoot = realpathSync(workspace);
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "ask", permission: {} }),
     );
     const lineCount = 40;
@@ -6005,9 +6005,9 @@ printf '${stdoutTail2}\\n'
       gateways.push(initialGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
-        env: { ...gatewayEnv(home, initialGateway), FX_PERMISSION_MODE: "ask" },
+        env: { ...gatewayEnv(home, initialGateway), CHASSIS_PERMISSION_MODE: "ask" },
         stderrPath,
         width: 100,
         height: 32,
@@ -6030,7 +6030,7 @@ printf '${stdoutTail2}\\n'
       gateways.push(flagGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-last`,
+        cmd: `${CHASSIS_BIN} --resume-last`,
         cwd: workspaceRoot,
         env: gatewayEnv(home, flagGateway),
         stderrPath,
@@ -6053,7 +6053,7 @@ printf '${stdoutTail2}\\n'
       gateways.push(pickerGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, pickerGateway),
         stderrPath,
@@ -6087,7 +6087,7 @@ printf '${stdoutTail2}\\n'
 test.skipIf(!tmuxAvailable())(
   "interactive /resume opens a searchable scoped catalog and resumes the selection",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-session-picker-workspace-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-session-picker-workspace-")));
     const home = join(root, "home");
     const workspaceA = join(root, "workspace-a");
     const workspaceB = join(root, "workspace-b");
@@ -6107,7 +6107,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(workspaceAGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceARoot,
         env: gatewayEnv(home, workspaceAGateway),
         stderrPath,
@@ -6126,7 +6126,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(workspaceBGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceBRoot,
         env: gatewayEnv(home, workspaceBGateway),
         stderrPath,
@@ -6145,7 +6145,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(pickerGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceARoot,
         env: gatewayEnv(home, pickerGateway),
         stderrPath,
@@ -6185,7 +6185,7 @@ test.skipIf(!tmuxAvailable())(
       expect(filteredPicker).toContain("workspace B");
       expect(filteredPicker).toContain("workspace-b");
       expect(filteredPicker).not.toContain("Preview:");
-      const sessionIds = readdirSync(join(home, ".fx", "sessions"), {
+      const sessionIds = readdirSync(join(home, ".chassis", "sessions"), {
         withFileTypes: true,
       })
         .filter((entry) => entry.name !== "latest" && entry.isDirectory())
@@ -6217,7 +6217,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "interactive /resume keeps shared-prefix titles distinguishable at narrow widths",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-session-picker-narrow-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-session-picker-narrow-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -6239,7 +6239,7 @@ test.skipIf(!tmuxAvailable())(
       for (let index = 0; index < titles.length; index += 1) {
         writeFileSync(stderrPath, "");
         active = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: workspaceRoot,
           env: gatewayEnv(home, sessionGateway),
           stderrPath,
@@ -6260,7 +6260,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(pickerGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, pickerGateway),
         stderrPath,
@@ -6293,7 +6293,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "interactive /resume highlight reaches bottom before the list scrolls",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-session-picker-row-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-session-picker-row-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -6315,11 +6315,11 @@ test.skipIf(!tmuxAvailable())(
         gateways.push(gateway);
         writeFileSync(stderrPath, "");
         active = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: workspaceRoot,
           env: {
             ...gatewayEnv(home, gateway),
-            FX_THEME: "dark",
+            CHASSIS_THEME: "dark",
             NO_COLOR: undefined,
           },
           stderrPath,
@@ -6340,11 +6340,11 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(pickerGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: {
           ...gatewayEnv(home, pickerGateway),
-          FX_THEME: "dark",
+          CHASSIS_THEME: "dark",
           NO_COLOR: undefined,
         },
         stderrPath,
@@ -6430,7 +6430,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "interactive /resume loads more sessions and dismisses cleanly",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-session-picker-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-session-picker-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -6451,7 +6451,7 @@ test.skipIf(!tmuxAvailable())(
         gateways.push(gateway);
         writeFileSync(stderrPath, "");
         active = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: workspaceRoot,
           env: gatewayEnv(home, gateway),
           stderrPath,
@@ -6472,7 +6472,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(gateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, gateway),
         stderrPath,
@@ -6552,9 +6552,9 @@ test.skipIf(!tmuxAvailable())(
 );
 
 test.skipIf(!tmuxAvailable())(
-  "new and resumed sessions preserve native terminal scrollback while fx is active",
+  "new and resumed sessions preserve native terminal scrollback while chassis is active",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-direct-resume-scroll-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-direct-resume-scroll-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -6580,11 +6580,11 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(initialGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: {
           ...gatewayEnv(home, initialGateway),
-          FX_RECORD: initialTapePath,
+          CHASSIS_RECORD: initialTapePath,
         },
         stderrPath,
         width: 80,
@@ -6607,11 +6607,11 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(resumedGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} resume ${sessionId}`,
+        cmd: `${CHASSIS_BIN} resume ${sessionId}`,
         cwd: workspaceRoot,
         env: {
           ...gatewayEnv(home, resumedGateway),
-          FX_RECORD: tapePath,
+          CHASSIS_RECORD: tapePath,
         },
         stderrPath,
         width: 80,
@@ -6644,7 +6644,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "interactive /resume refuses a live stream and preserves Escape cancellation",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-tui-session-picker-stream-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-tui-session-picker-stream-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
@@ -6659,7 +6659,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(savedGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, savedGateway),
         stderrPath,
@@ -6677,7 +6677,7 @@ test.skipIf(!tmuxAvailable())(
       gateways.push(heldGateway);
       writeFileSync(stderrPath, "");
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: workspaceRoot,
         env: gatewayEnv(home, heldGateway),
         stderrPath,
@@ -6704,7 +6704,7 @@ test.skipIf(!tmuxAvailable())(
       const resumedGateway = startFakeGateway([]);
       gateways.push(resumedGateway);
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} resume last`,
+        cmd: `${CHASSIS_BIN} resume last`,
         cwd: workspaceRoot,
         env: gatewayEnv(home, resumedGateway),
         stderrPath,
@@ -6712,7 +6712,7 @@ test.skipIf(!tmuxAvailable())(
         height: 40,
       });
       await active.waitForComposer(TIMEOUT);
-      await active.waitForText("What can fx do differently?", TIMEOUT);
+      await active.waitForText("What can chassis do differently?", TIMEOUT);
       const resumedGrid = await active.capturePaneGrid();
       const footer = findFooterBlocks(resumedGrid).at(-1);
       const cancelledRow = resumedGrid.findIndex((row) => row.includes("■ Cancelled"));
@@ -6743,7 +6743,7 @@ test.skipIf(!tmuxAvailable())(
   "cancelled command presentation survives a distinct-process resume",
   async () => {
     const timeout = 60_000;
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-cancelled-command-resume-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-cancelled-command-resume-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const initialStderrPath = join(root, "initial-stderr.log");
@@ -6756,10 +6756,10 @@ test.skipIf(!tmuxAvailable())(
     const bufferedTailMarker = "INTERRUPT_BUFFERED_TAIL";
     const artifactTailMarker = "INTERRUPT_TERM_TAIL";
     const followUpMarker = "INTERRUPT_FOLLOW_UP_DONE";
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(initialStderrPath, "");
@@ -6797,12 +6797,12 @@ while :; do sleep 1; done
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, initialGateway),
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "session,agent,tool,worker,interrupt,command_output,transcript",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "session,agent,tool,worker,interrupt,command_output,transcript",
         },
         stderrPath: initialStderrPath,
         width: 120,
@@ -6843,7 +6843,7 @@ while :; do sleep 1; done
       expect(followUpBody).not.toContain(".command_artifacts");
 
       const sessionId = sessionIdFromHome(home);
-      const commandDir = join(home, ".fx", "sessions", sessionId, "logs", "commands");
+      const commandDir = join(home, ".chassis", "sessions", sessionId, "logs", "commands");
       const replayNames = readdirSync(commandDir).filter((name) =>
         name.endsWith(".bin")
       );
@@ -6861,7 +6861,7 @@ while :; do sleep 1; done
       expect(readFileSync(initialStderrPath, "utf8")).toBe("");
 
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} resume last`,
+        cmd: `${CHASSIS_BIN} resume last`,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, resumedGateway),
         stderrPath: resumedStderrPath,
@@ -6919,7 +6919,7 @@ test.skipIf(!tmuxAvailable())(
   "zero-output cancelled command restores its row without an output block",
   async () => {
     const timeout = 60_000;
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-zero-output-cancel-resume-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-zero-output-cancel-resume-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const initialStderrPath = join(root, "initial-stderr.log");
@@ -6927,10 +6927,10 @@ test.skipIf(!tmuxAvailable())(
     const tracePath = join(root, "trace.log");
     const readyPath = join(workspace, ".zero-ready");
     const scriptPath = join(workspace, "z.sh");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ sandbox: "none", permission_mode: "auto", permission: {} }),
     );
     writeFileSync(initialStderrPath, "");
@@ -6949,12 +6949,12 @@ test.skipIf(!tmuxAvailable())(
     let passed = false;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(workspace),
         env: {
           ...gatewayEnv(home, initialGateway),
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "session,agent,tool,worker,interrupt,command_output,transcript",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "session,agent,tool,worker,interrupt,command_output,transcript",
         },
         stderrPath: initialStderrPath,
         width: 100,
@@ -6982,7 +6982,7 @@ test.skipIf(!tmuxAvailable())(
       expect(readFileSync(initialStderrPath, "utf8")).toBe("");
 
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} resume last`,
+        cmd: `${CHASSIS_BIN} resume last`,
         cwd: realpathSync(workspace),
         env: gatewayEnv(home, resumedGateway),
         stderrPath: resumedStderrPath,
@@ -6992,13 +6992,13 @@ test.skipIf(!tmuxAvailable())(
       await active.waitForComposer(TIMEOUT);
       const resumed = stripAnsi(await waitForScrollback(
         active,
-        "What can fx do differently?",
+        "What can chassis do differently?",
         timeout,
       ));
       const cancelledIndex = resumed.indexOf("Cancelled");
       expect(cancelledIndex).toBeGreaterThanOrEqual(0);
       expect(resumed).toContain("■ Cancelled");
-      expect(countOccurrences(resumed, "What can fx do differently?")).toBe(1);
+      expect(countOccurrences(resumed, "What can chassis do differently?")).toBe(1);
       expect(resumed).not.toContain("system: cancelled");
       expect(resumed).not.toContain("Cancelling");
       expect(resumed).not.toContain("Interrupted by user after completing");
@@ -7046,7 +7046,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "latest and picker resume preserve conversations beside incomplete session creation",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-resume-incomplete-creation-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-resume-incomplete-creation-")));
     const home = join(root, "home"), workspace = join(root, "workspace");
     mkdirSync(home); mkdirSync(workspace);
     const gateway = startFakeGateway([
@@ -7060,7 +7060,7 @@ test.skipIf(!tmuxAvailable())(
       const seed = await runFx(["ask", "--json", "Save the conversation."], { cwd: workspace, env });
       expect(seed.code).toBe(0);
       const id = JSON.parse(seed.stdout).session_id;
-      const sessions = join(home, ".fx", "sessions");
+      const sessions = join(home, ".chassis", "sessions");
       const eventsPath = join(sessions, id, "events.jsonl");
       const before = readFileSync(eventsPath);
       const metadata = JSON.parse(readFileSync(join(sessions, id, "session.json"), "utf8"));
@@ -7076,7 +7076,7 @@ test.skipIf(!tmuxAvailable())(
       }
       for (const [flag, reply] of [["--resume-last", "LATEST_CONTINUATION_SAVED"], ["-r", "PICKER_CONTINUATION_SAVED"]] as const) {
         const stderrPath = join(root, `${flag}.stderr`);
-        active = await TmuxSession.create({ cmd: `${shellQuote(FX_BIN)} ${flag}`, cwd: workspace, env, stderrPath, remainOnExit: true });
+        active = await TmuxSession.create({ cmd: `${shellQuote(CHASSIS_BIN)} ${flag}`, cwd: workspace, env, stderrPath, remainOnExit: true });
         if (flag === "-r") {
           await active.waitForText("Sessions 1", TIMEOUT);
           await active.sendKeys("Enter");
@@ -7107,7 +7107,7 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "manual compaction keeps earlier small-session messages visible after resume",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-resume-compacted-display-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-resume-compacted-display-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     mkdirSync(home);
@@ -7139,7 +7139,7 @@ test.skipIf(!tmuxAvailable())(
         await active.waitForComposer(TIMEOUT);
       }
       const sessionId = sessionIdFromHome(home);
-      const historyPath = join(home, ".fx", "sessions", sessionId, "events.jsonl");
+      const historyPath = join(home, ".chassis", "sessions", sessionId, "events.jsonl");
       const before = readFileSync(historyPath, "utf8");
       await active.sendText("/compact");
       // Success is silent; publication, not a transcript notice, gates resume.
@@ -7165,7 +7165,7 @@ test.skipIf(!tmuxAvailable())(
       expect(await active.waitForSessionEnd(TIMEOUT)).toBe(true);
       await active.kill();
       active = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume ${sessionId}`,
+        cmd: `${CHASSIS_BIN} --resume ${sessionId}`,
         cwd: workspace,
         env: gatewayEnv(home, gateway),
         width: 100,
@@ -7197,13 +7197,13 @@ test.skipIf(!tmuxAvailable())(
 test.skipIf(!tmuxAvailable())(
   "Ctrl-O rebuilds its page when a saved tool result disappears",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-full-result-disappeared-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-full-result-disappeared-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const stderrPath = join(root, "stderr.log");
-    mkdirSync(join(home, ".fx"), { recursive: true });
+    mkdirSync(join(home, ".chassis"), { recursive: true });
     mkdirSync(workspace);
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ max_tool_result_bytes: 2 * 1024 * 1024 }));
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ max_tool_result_bytes: 2 * 1024 * 1024 }));
     writeFileSync(join(workspace, "result.txt"), Array.from({ length: 400 }, (_, index) =>
       `SAVED_OUTPUT_ROW_${String(index).padStart(4, "0")} ${"local-fixture-".repeat(7)}`
     ).join("\n") + "\n");
@@ -7221,7 +7221,7 @@ test.skipIf(!tmuxAvailable())(
       await active.waitForComposer(TIMEOUT);
       await active.sendHexBytes(["0f"]);
       await active.waitForPane((pane) => pane.includes("full detail · ctrl+o close") && pane.includes(tail), TIMEOUT);
-      const resultsDir = join(home, ".fx", "sessions", sessionIdFromHome(home), "tool-results");
+      const resultsDir = join(home, ".chassis", "sessions", sessionIdFromHome(home), "tool-results");
       const files = readdirSync(resultsDir).filter((name) => name.endsWith(".txt"));
       expect(files).toHaveLength(1);
       renameSync(join(resultsDir, files[0]!), join(root, "withheld-result.txt"));
@@ -7249,14 +7249,14 @@ for (const inspectDetails of [false, true]) {
   test.skipIf(!tmuxAvailable())(
     `resumed tool history survives continuation${inspectDetails ? " after full detail resize" : ""}`,
     async () => {
-      const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-resumed-tool-history-")));
+      const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-resumed-tool-history-")));
       const home = join(root, "home");
       const workspace = join(root, "workspace");
       const tracePath = join(root, "trace.log");
       const stderrPath = join(root, "stderr.log");
-      mkdirSync(join(home, ".fx"), { recursive: true });
+      mkdirSync(join(home, ".chassis"), { recursive: true });
       mkdirSync(workspace);
-      writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({
+      writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({
         sound: false, permission_mode: "auto", sandbox: "none",
       }));
       const ledger = Array.from({ length: 420 }, (_, i) => `ROW_${i + 1} café 東京`).join("\n") + "\n";
@@ -7289,17 +7289,17 @@ for (const inspectDetails of [false, true]) {
         for (const marker of markers) expect(plain).toContain(marker);
       };
       try {
-        const env = { ...gatewayEnv(home, gateway), FX_SOUND: "0", FX_TRACE_LOG: tracePath, FX_TRACE_SCOPES: "agent,worker" };
-        active = await TmuxSession.create({ cmd: FX_BIN, cwd: workspace, env, stderrPath, isolated: true, remainOnExit: true, width: 160, height: 48 });
+        const env = { ...gatewayEnv(home, gateway), CHASSIS_SOUND: "0", CHASSIS_TRACE_LOG: tracePath, CHASSIS_TRACE_SCOPES: "agent,worker" };
+        active = await TmuxSession.create({ cmd: CHASSIS_BIN, cwd: workspace, env, stderrPath, isolated: true, remainOnExit: true, width: 160, height: 48 });
         await active.waitForComposer(TIMEOUT);
         await prompt("Read every line of ledger.txt without changing it.");
         await prompt("Create receipt.txt containing RECEIVED and a newline. Keep ledger.txt unchanged.");
         await prompt("Read missing.txt once without retrying.");
         expect(readFileSync(stderrPath, "utf8")).toBe("");
         const sessionId = sessionIdFromHome(home);
-        const eventsPath = join(home, ".fx", "sessions", sessionId, "events.jsonl");
+        const eventsPath = join(home, ".chassis", "sessions", sessionId, "events.jsonl");
         await active.kill();
-        active = await TmuxSession.create({ cmd: `${FX_BIN} --resume-last`, cwd: workspace, env, stderrPath, isolated: true, remainOnExit: true, width: 88, height: 24 });
+        active = await TmuxSession.create({ cmd: `${CHASSIS_BIN} --resume-last`, cwd: workspace, env, stderrPath, isolated: true, remainOnExit: true, width: 88, height: 24 });
         await active.waitForComposer(TIMEOUT);
         await assertHistory();
         if (inspectDetails) {
@@ -7345,7 +7345,7 @@ for (const inspectDetails of [false, true]) {
 
 
 test.skipIf(!tmuxAvailable())("remembered continuation restores the selected conversation without discovery", async () => {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-remembered-resume-")));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-remembered-resume-")));
   const home = join(root, "home"), workspace = join(root, "workspace");
   mkdirSync(home); mkdirSync(workspace);
   const gateway = startFakeGateway([
@@ -7355,13 +7355,13 @@ test.skipIf(!tmuxAvailable())("remembered continuation restores the selected con
     fakeGatewayFinalText("LATEST_B_ACTIVITY"),
   ]);
   const env = gatewayEnv(home, gateway);
-  const bookmark = join(home, ".fx", "continue", createHash("sha256").update(workspace).digest("hex"));
+  const bookmark = join(home, ".chassis", "continue", createHash("sha256").update(workspace).digest("hex"));
   let active: TmuxSession | null = null, other: TmuxSession | null = null;
   let passed = false;
   async function open(args: string[], label: string) {
     return TmuxSession.create({
-      cmd: [FX_BIN, ...args].map(shellQuote).join(" "), cwd: workspace,
-      env: { ...env, FX_TRACE_LOG: join(root, label + ".trace"), FX_TRACE_SCOPES: "core,session" },
+      cmd: [CHASSIS_BIN, ...args].map(shellQuote).join(" "), cwd: workspace,
+      env: { ...env, CHASSIS_TRACE_LOG: join(root, label + ".trace"), CHASSIS_TRACE_SCOPES: "core,session" },
       stderrPath: join(root, label + ".stderr"), isolated: true, remainOnExit: true,
       width: 110, height: 40,
     });
@@ -7423,7 +7423,7 @@ test.skipIf(!tmuxAvailable())("remembered continuation restores the selected con
     other = await open(["--continue"], "busy");
     await other.waitForPane(() => other!.paneStatus().dead, TIMEOUT);
     expect(other.paneStatus().status).toBe(1);
-    expect(readFileSync(join(root, "busy.stderr"), "utf8")).toContain("another fx process");
+    expect(readFileSync(join(root, "busy.stderr"), "utf8")).toContain("another chassis process");
     await other.kill(); other = null;
     await active.sendText("/resume");
     await active.waitForText("enter resume", TIMEOUT);

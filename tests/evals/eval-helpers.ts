@@ -12,16 +12,16 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-export const FX_BIN = resolve(import.meta.dirname, "../../zig-out/bin/fx");
+export const CHASSIS_BIN = resolve(import.meta.dirname, "../../zig-out/bin/chassis");
 export const REPO_ROOT = resolve(import.meta.dirname, "../..");
 
 export function providerVersionTestEnv(env: Record<string, string | undefined>): Record<string, string | undefined> {
   const result = { ...env };
-  if (env.FX_E2E_OPENAI_CODEX_MODELS_URL && !env.FX_E2E_CODEX_VERSION_URL && !env.FX_E2E_CODEX_CLIENT_VERSION) {
-    result.FX_E2E_CODEX_CLIENT_VERSION = "0.153.0";
+  if (env.CHASSIS_E2E_OPENAI_CODEX_MODELS_URL && !env.CHASSIS_E2E_CODEX_VERSION_URL && !env.CHASSIS_E2E_CODEX_CLIENT_VERSION) {
+    result.CHASSIS_E2E_CODEX_CLIENT_VERSION = "0.153.0";
   }
-  if ((env.FX_E2E_XAI_GROK_MODELS_URL || env.FX_E2E_XAI_GROK_RESPONSES_URL) && !env.FX_E2E_GROK_VERSION_URL && !env.FX_E2E_GROK_CLIENT_VERSION) {
-    result.FX_E2E_GROK_CLIENT_VERSION = "1.0.6";
+  if ((env.CHASSIS_E2E_XAI_GROK_MODELS_URL || env.CHASSIS_E2E_XAI_GROK_RESPONSES_URL) && !env.CHASSIS_E2E_GROK_VERSION_URL && !env.CHASSIS_E2E_GROK_CLIENT_VERSION) {
+    result.CHASSIS_E2E_GROK_CLIENT_VERSION = "1.0.6";
   }
   return result;
 }
@@ -61,7 +61,7 @@ function loadDotEnv(): Record<string, string> {
 export function shouldLoadDotEnv(
   environment: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return environment.FX_E2E_DISABLE_DOTENV !== "1";
+  return environment.CHASSIS_E2E_DISABLE_DOTENV !== "1";
 }
 
 const dotEnvVars = shouldLoadDotEnv() ? loadDotEnv() : {};
@@ -110,9 +110,9 @@ export interface EvalOptions {
   setup?: (dir: string) => Promise<void>;
 }
 
-const PREFIX = "fx-eval-";
-const HOME_PREFIX = "fx-eval-home-";
-const TEST_HOME_PREFIX = "fx-test-home-";
+const PREFIX = "chassis-eval-";
+const HOME_PREFIX = "chassis-eval-home-";
+const TEST_HOME_PREFIX = "chassis-test-home-";
 
 export function createWorkDir(): string {
   return mkdtempSync(join(tmpdir(), PREFIX));
@@ -134,9 +134,9 @@ export function cleanupIsolatedTestHome(home: string): void {
 
 function createEvalHome(): string {
   const home = mkdtempSync(join(tmpdir(), HOME_PREFIX));
-  mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+  mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({
       permission_mode: "auto",
       permission: {
@@ -164,7 +164,7 @@ export function buildEvalProcessEnv(
     NO_COLOR: "1",
     HOME: home,
     PATH: process.env.PATH ?? "",
-    FX_MODEL: model,
+    CHASSIS_MODEL: model,
   };
 }
 
@@ -182,9 +182,9 @@ export async function runEval(
       await setup(workDir);
     }
 
-    if (!existsSync(FX_BIN)) {
+    if (!existsSync(CHASSIS_BIN)) {
       throw new Error(
-        `fx binary not found at ${FX_BIN}. Run 'zig build' first.`,
+        `chassis binary not found at ${CHASSIS_BIN}. Run 'zig build' first.`,
       );
     }
 
@@ -204,7 +204,7 @@ export async function runEval(
       code: number | null;
     }>((resolvePromise) => {
       const env = buildEvalProcessEnv(home, model);
-      const child = nodeSpawn(FX_BIN, args, {
+      const child = nodeSpawn(CHASSIS_BIN, args, {
         env,
         cwd: workDir,
         stdio: ["pipe", "pipe", "pipe"],
@@ -230,7 +230,7 @@ export async function runEval(
       json = JSON.parse(result.stdout.trim());
     } catch {
       throw new Error(
-        `Failed to parse fx JSON output.\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+        `Failed to parse chassis JSON output.\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
       );
     }
 
@@ -252,7 +252,7 @@ export async function runEval(
 
     if (json.error) {
       throw new Error(
-        `fx returned error: ${json.error}\nstderr: ${result.stderr.slice(-1000)}`,
+        `chassis returned error: ${json.error}\nstderr: ${result.stderr.slice(-1000)}`,
       );
     }
 
@@ -433,9 +433,9 @@ export function assertFirstTerminalExecMatches(
   expect(pattern.test(first?.command_result?.command ?? "")).toBe(true);
 }
 
-// Generic fx CLI runner for deterministic command coverage.
+// Generic chassis CLI runner for deterministic command coverage.
 
-export interface FxRunResult {
+export interface ChassisRunResult {
   stdout: string;
   stderr: string;
   code: number | null;
@@ -453,7 +453,7 @@ function captureFxProcessState(): string {
     return execFileSync("ps", ["-axo", "pid,ppid,stat,etime,command"], {
       encoding: "utf8",
     }).split("\n").filter((line) =>
-      line.includes("/zig-out/bin/fx") ||
+      line.includes("/zig-out/bin/chassis") ||
       line.includes("mcp-modern-") ||
       line.includes("mcp-legacy-") ||
       line.includes("bun test")
@@ -471,14 +471,14 @@ export async function runFx(
     stdin?: string | Uint8Array;
     timeoutMs?: number;
   } = {},
-): Promise<FxRunResult> {
-  if (!existsSync(FX_BIN)) {
-    throw new Error(`fx binary not found at ${FX_BIN}. Run 'zig build' first.`);
+): Promise<ChassisRunResult> {
+  if (!existsSync(CHASSIS_BIN)) {
+    throw new Error(`chassis binary not found at ${CHASSIS_BIN}. Run 'zig build' first.`);
   }
 
   const { cwd, timeoutMs = 15_000 } = opts;
 
-  return new Promise<FxRunResult>((resolvePromise) => {
+  return new Promise<ChassisRunResult>((resolvePromise) => {
     const env: Record<string, string | undefined> = {
       ...dotEnvVars,
       ...process.env,
@@ -493,7 +493,7 @@ export async function runFx(
         env[key] = value;
       }
     }
-    const child = nodeSpawn(FX_BIN, args, {
+    const child = nodeSpawn(CHASSIS_BIN, args, {
       env: providerVersionTestEnv(env),
       cwd: cwd ?? REPO_ROOT,
       stdio: ["pipe", "pipe", "pipe"],

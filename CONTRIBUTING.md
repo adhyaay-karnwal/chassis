@@ -2,7 +2,7 @@
 
 ## Scope
 
-`fx` is a CLI-first coding agent written in Zig.
+`chassis` is a CLI-first coding agent written in Zig.
 
 Contributions should preserve that direction:
 
@@ -24,7 +24,7 @@ Requirements:
 
 * interactive terminal for manual shell testing
 
-* a Vercel OAuth session via `fx login` for model-backed flows. macOS Keychain API keys (via `fx setup`), `AI_GATEWAY_API_KEY`, and `VERCEL_OIDC_TOKEN` are also supported
+* a Vercel OAuth session via `chassis login` for model-backed flows. macOS Keychain API keys (via `chassis setup`), `AI_GATEWAY_API_KEY`, and `VERCEL_OIDC_TOKEN` are also supported
 
 Common commands:
 
@@ -37,7 +37,7 @@ zig build run
 
 ## Verification Workflow
 
-Keep the local development loop focused: run the narrowest test that covers the changed path, build fx, and exercise the change using `./zig-out/bin/fx`. The installed `fx` on `PATH` is not valid development evidence.
+Keep the local development loop focused: run the narrowest test that covers the changed path, build chassis, and exercise the change using `./zig-out/bin/chassis`. The installed `chassis` on `PATH` is not valid development evidence.
 
 Once the focused checks pass, create a clean checkpoint commit, push the non-`main` feature branch, and open a draft PR immediately. The **Full CI** workflow runs the complete deterministic suite on native Linux x86_64, Linux aarch64, macOS x86_64, and macOS aarch64 runners. The native matrix builds, tests, and smoke-tests ReleaseSafe on every platform; formatting and the public-surface audit run in those ReleaseSafe jobs. Four duration-balanced, isolated ReleaseSafe E2E shards per platform use checked-in weights to assign every Bun test file once; files inside each shard run sequentially in separate Bun processes so terminal fixtures and process state cannot leak between files. A failed file receives one bounded retry after tmux is reset.
 
@@ -85,7 +85,7 @@ If you cannot manage labels, a maintainer or repository agent will apply the lab
 
 * `src/gateway/`: AI Gateway client transport
 
-* `.fx/skills/`: optional fx-native workspace-level skill root
+* `.chassis/skills/`: optional chassis-native workspace-level skill root
 
 * `skills/`: optional shared workspace-level skill root
 
@@ -119,58 +119,58 @@ duplicate, stale, and unclassified files without running the full PGSO gate.
 
 Config precedence (highest wins):
 
-1. Environment variables such as `FX_MODEL`, `FX_PERMISSION_MODE`, and `FX_MAX_AGENT_STEPS`
-2. `~/.fx/settings.json` → `workspaces["<workspace_path>"]` (profile workspace overrides)
-3. `~/.fx/settings.json` top-level (profile global settings)
-4. `<workspace>/.fx.json` (committed project defaults)
+1. Environment variables such as `CHASSIS_MODEL`, `CHASSIS_PERMISSION_MODE`, and `CHASSIS_MAX_AGENT_STEPS`
+2. `~/.chassis/settings.json` → `workspaces["<workspace_path>"]` (profile workspace overrides)
+3. `~/.chassis/settings.json` top-level (profile global settings)
+4. `<workspace>/.chassis.json` (committed project defaults)
 5. Built-in defaults
 
-Project `.fx.json` accepts only repo-safe defaults: `sandbox`, `max_agent_steps`, `max_tool_result_bytes`, and `context`. Profile-owned keys such as `model`, `effort`, `fast_mode`, `slash_menu_categories`, `startup_scrollback`, `prompt_history`, `statusLine`, `skill_match_fuzzy`, `first_call_tool_choice`, `auto_upgrade`, `update_channel`, `permission_mode`, and `permission` are ignored from project config before their values are parsed.
+Project `.chassis.json` accepts only repo-safe defaults: `sandbox`, `max_agent_steps`, `max_tool_result_bytes`, and `context`. Profile-owned keys such as `model`, `effort`, `fast_mode`, `slash_menu_categories`, `startup_scrollback`, `prompt_history`, `statusLine`, `skill_match_fuzzy`, `first_call_tool_choice`, `auto_upgrade`, `update_channel`, `permission_mode`, and `permission` are ignored from project config before their values are parsed.
 
-Runtime state lives under `~/.fx/`:
+Runtime state lives under `~/.chassis/`:
 
-* `~/.fx/sessions/<session-id>/session.json`
+* `~/.chassis/sessions/<session-id>/session.json`
 
-* `~/.fx/sessions/<session-id>/background/`
+* `~/.chassis/sessions/<session-id>/background/`
 
-* `~/.fx/sessions/<session-id>/subagent/`
+* `~/.chassis/sessions/<session-id>/subagent/`
 
-* `~/.fx/sessions/<session-id>/logs/`
+* `~/.chassis/sessions/<session-id>/logs/`
 
 Sessions are global and portable across workspaces. Each session tracks a `workspace_root` that updates when resumed from a different directory.
 
-Subagent children are internal ordinary sessions with their own `~/.fx/sessions/<child-id>/` directory and history. The parent owns one bounded `subagent/children.json` registry; each child carries only an immutable owner marker. Child sessions are hidden from ordinary session discovery and cannot be resumed directly. A first `subagent.message` creates a named persistent child for that parent; later messages continue it, and optional instructions replace only its child-specific system overlay.
+Subagent children are internal ordinary sessions with their own `~/.chassis/sessions/<child-id>/` directory and history. The parent owns one bounded `subagent/children.json` registry; each child carries only an immutable owner marker. Child sessions are hidden from ordinary session discovery and cannot be resumed directly. A first `subagent.message` creates a named persistent child for that parent; later messages continue it, and optional instructions replace only its child-specific system overlay.
 
 ## Skills
 
-There are two distinct skill categories in `fx`:
+There are two distinct skill categories in `chassis`:
 
-* `fx` roots that belong to the product itself: `.fx/skills`, `skills/`, `~/.fx/skills`
+* `chassis` roots that belong to the product itself: `.chassis/skills`, `skills/`, `~/.chassis/skills`
 
 * compatibility roots discovered for other agent installs: `.opencode/skills`, `.codex/skills`, `.claude/skills`, `.agents/skills`, `.claw/skills`, plus their global equivalents
 
 `/skills list` should make that distinction visible to the user.
 
-`/skills add` and `/skills install` install full skill directories into the profile-owned `~/.fx/skills` managed root, not just `SKILL.md`. Workspace `.fx/skills` and `skills/` remain discoverable project-local instructions, not managed install targets.
+`/skills add` and `/skills install` install full skill directories into the profile-owned `~/.chassis/skills` managed root, not just `SKILL.md`. Workspace `.chassis/skills` and `skills/` remain discoverable project-local instructions, not managed install targets.
 
 The interactive agent can also install skills via the `install_skill` tool when the user asks to install one in conversation, including pasted `npx skills add ...` syntax.
 
 ## MCP
 
-Native fx connections use MCP v1 initialization by default over stdio,
+Native chassis connections use MCP v1 initialization by default over stdio,
 Streamable HTTP, and deprecated `2024-11-05` HTTP+SSE. Servers using the newer
 `2026-07-28` discovery lifecycle opt in with
-`FX_MCP_PROTOCOL_VERSION=2026-07-28` in their configured `environment` map.
+`CHASSIS_MCP_PROTOCOL_VERSION=2026-07-28` in their configured `environment` map.
 The SDK's host-owned client controls its own protocol negotiation. Native
 sessions load trusted MCP configuration from the profile:
 
-* `~/.fx/mcp.json`
+* `~/.chassis/mcp.json`
 
 They also read Claude-compatible workspace configuration from:
 
 * `<workspace>/.mcp.json`
 
-Project `.fx.json` does not define runnable MCP commands, URLs, env, or secrets.
+Project `.chassis.json` does not define runnable MCP commands, URLs, env, or secrets.
 The profile file reads top-level `mcp` and accepts `mcpServers` as a
 compatibility alias; `mcp` wins when both exist, and every write uses `mcp`.
 Suspicious server-like unsupported keys produce a bounded warning and block
@@ -180,7 +180,7 @@ bounded no-follow regular file. Profile entries win native name collisions;
 ACP request entries win ACP name collisions without deduplicating the request
 array. Workspace entries are always optional and never load stored credentials.
 Approved workspace `command`, `args`, `env`, and HTTP header values expand
-`${VAR}` and `${VAR:-default}` from the fx process environment. Pending and
+`${VAR}` and `${VAR:-default}` from the chassis process environment. Pending and
 rejected entries do not read environment values. Missing required variables
 leave an approved server unloaded and appear in `/mcp list` without exposing
 values.
@@ -192,8 +192,8 @@ resource, prompt, completion, and authentication commands require explicit
 Choices live only in profile `settings.json` under the canonical workspace key,
 using `enabledMcpjsonServers`, `disabledMcpjsonServers`, and
 `enableAllProjectMcpServers`. Repository files cannot persist their own
-approval. `fx ask` and ACP skip pending workspace servers. Noninteractive users
-approve them first with `fx mcp trust approve <name>`; rejected servers remain
+approval. `chassis ask` and ACP skip pending workspace servers. Noninteractive users
+approve them first with `chassis mcp trust approve <name>`; rejected servers remain
 disabled.
 
 The core feature surface is Tools, Resources and Resource Templates, Prompts,
@@ -201,10 +201,10 @@ Completion, pagination, cache-aware discovery, subscriptions, progress,
 cancellation, and form or URL elicitation. Keep modern and legacy protocol
 behavior in their existing version-scoped modules.
 
-fx bounds schema size and structure before publication. It accepts schemas
+chassis bounds schema size and structure before publication. It accepts schemas
 without `$schema`, the canonical JSON Schema 2020-12 declaration, and the
 canonical Draft 7 declaration used by legacy SDKs; other declared dialects are
-rejected. fx does not resolve network references or evaluate semantic schema
+rejected. chassis does not resolve network references or evaluate semantic schema
 assertions. Servers validate their tool arguments and results.
 
 The interactive surface supports:
@@ -249,27 +249,27 @@ The interactive surface supports:
 
 The noninteractive MCP surface supports:
 
-* `fx mcp add <name> <command> [args...]`
+* `chassis mcp add <name> <command> [args...]`
 
-* `fx mcp add --transport http <name> <url>`
+* `chassis mcp add --transport http <name> <url>`
 
-* `fx mcp auth <name>`
+* `chassis mcp auth <name>`
 
-* `fx mcp list`
+* `chassis mcp list`
 
-* `fx mcp logout <name>`
+* `chassis mcp logout <name>`
 
-* `fx mcp path`
+* `chassis mcp path`
 
-* `fx mcp remove <name>`
+* `chassis mcp remove <name>`
 
-* `fx mcp trust approve <name>`
+* `chassis mcp trust approve <name>`
 
-* `fx mcp trust reject <name>`
+* `chassis mcp trust reject <name>`
 
-* `fx mcp trust approve-all`
+* `chassis mcp trust approve-all`
 
-* `fx mcp trust reset`
+* `chassis mcp trust reset`
 
 The local form saves a stdio command. The HTTP form saves a remote Streamable
 HTTP endpoint. List reads effective profile and workspace configuration plus
@@ -281,11 +281,11 @@ constructs the TUI or contacts the Gateway.
 
 The default MCP startup timeout is 30 seconds and remains overridable per
 server with `startup_timeout_ms`. Exact direct `docker run` stdio commands
-without `--cidfile` receive a private cidfile so fx can remove the container
+without `--cidfile` receive a private cidfile so chassis can remove the container
 after shutdown or startup failure. An explicit cidfile remains user-owned.
 
 MongoDB Atlas Managed MCP configuration service accounts use the OAuth
-client-credentials grant. fx does not implement that grant directly. Use
+client-credentials grant. chassis does not implement that grant directly. Use
 MongoDB's `mongodb-atlas-mcp-remote` stdio wrapper with inherited
 `MDB_MCP_API_CLIENT_ID` and `MDB_MCP_API_CLIENT_SECRET` environment variables.
 The Atlas App Connection browser flow is user-delegated access and must not be
@@ -297,12 +297,12 @@ private-cache identity changes invalidate prior private state. macOS persists
 OAuth credentials in Keychain and migrates the private profile credential file
 only after verified publication. If the user account has no default Keychain,
 macOS falls back to the same `0600` credential file used on other platforms
-under the `0700` profile directory. `FX_DISABLE_KEYCHAIN=1` selects that portable
+under the `0700` profile directory. `CHASSIS_DISABLE_KEYCHAIN=1` selects that portable
 backend explicitly for deterministic tests and local troubleshooting.
 
 Servers are optional by default. Required startup failures block the first TUI
-or `fx ask` model request; optional failures publish a reduced, degraded
-capability set. Terminal `fx ask` completes admitted MCP discovery before its
+or `chassis ask` model request; optional failures publish a reduced, degraded
+capability set. Terminal `chassis ask` completes admitted MCP discovery before its
 first model request. JSON and other headless asks start required servers first
 and defer optional servers until the turn performs an MCP operation or delegates
 MCP capability to a child. Server-filtered searches, selected tools, and feature
@@ -402,17 +402,17 @@ test("my scenario", async () => {
 ### Tape-based test (replay a real capture)
 
 For bugs reported by a user, have them run the built binary with an exact
-`FX_RECORD=<path>`, or use `FX_DEBUG_RECORD=1` for an automatic private tape.
-`FX_DEBUG_RECORD_SILENT_BANNER=1` hides the developer-only startup notice from
+`CHASSIS_RECORD=<path>`, or use `CHASSIS_DEBUG_RECORD=1` for an automatic private tape.
+`CHASSIS_DEBUG_RECORD_SILENT_BANNER=1` hides the developer-only startup notice from
 the inline transcript without disabling capture; Ctrl+O still shows it. Drop
 the tape in `tests/e2e/tapes/<name>.fxtape` and assert against the built replay
 command:
 
 ```bash
-./zig-out/bin/fx replay tests/e2e/tapes/my-bug.fxtape --golden tests/e2e/tapes/my-bug.txt
+./zig-out/bin/chassis replay tests/e2e/tapes/my-bug.fxtape --golden tests/e2e/tapes/my-bug.txt
 ```
 
-Check in the golden file and wire a regression test that re-runs `fx replay` in CI and diffs.
+Check in the golden file and wire a regression test that re-runs `chassis replay` in CI and diffs.
 
 ## What Not To Do
 
@@ -424,9 +424,9 @@ Check in the golden file and wire a regression test that re-runs `fx replay` in 
 
 * Do not document intended behavior as if it already exists
 
-* Do not commit generated state from `.fx/`, `.zig-cache/`, or `zig-out/`
+* Do not commit generated state from `.chassis/`, `.zig-cache/`, or `zig-out/`
 
-* Do not add a general alternate-screen (`\x1b[?1049h/l`) render path. fx is inline by design except for the three exclusive owner classes represented by `AlternateScreenOwner`: interactive tool-approval review, the full-transcript screen, and catalog menus. Every owner must leave or explicitly hand off the alternate buffer and restore the main grid, composer, cursor, paste, mouse, focus, and keyboard modes before resolving, cancelling, or shutting down
+* Do not add a general alternate-screen (`\x1b[?1049h/l`) render path. chassis is inline by design except for the three exclusive owner classes represented by `AlternateScreenOwner`: interactive tool-approval review, the full-transcript screen, and catalog menus. Every owner must leave or explicitly hand off the alternate buffer and restore the main grid, composer, cursor, paste, mouse, focus, and keyboard modes before resolving, cancelling, or shutting down
 
 ## Releases
 
@@ -436,11 +436,11 @@ Releases are triggered automatically when the version in `src/main.zig` changes 
 2. Merge to `main`
 3. The release workflow checks if `vX.Y.Z` tag exists; if not, it builds four platform binaries, creates the git tag, and publishes a GitHub Release with the binaries attached
 
-The install script and `fx upgrade` fetch binaries from `releases.fx.sh`, backed by the public Vercel Blob CDN. No authentication or external CLI tools are required. The release workflow also publishes binaries to the CDN and updates `latest.txt` automatically.
+The install script and `chassis upgrade` fetch binaries from `releases.chassis.sh`, backed by the public Vercel Blob CDN. No authentication or external CLI tools are required. The release workflow also publishes binaries to the CDN and updates `latest.txt` automatically.
 
-After CI passes for a push to `main`, the dev release workflow publishes commit-addressed binaries and then updates `dev.json`. Dogfooders opt in with `fx upgrade --channel dev`; the choice is stored in their user settings and applies to manual upgrades, automatic upgrades, and the `ctrl+g` handoff. `fx upgrade --channel stable` returns to tagged releases. Dev publishing does not create tags or GitHub Releases.
+After CI passes for a push to `main`, the dev release workflow publishes commit-addressed binaries and then updates `dev.json`. Dogfooders opt in with `chassis upgrade --channel dev`; the choice is stored in their user settings and applies to manual upgrades, automatic upgrades, and the `ctrl+g` handoff. `chassis upgrade --channel stable` returns to tagged releases. Dev publishing does not create tags or GitHub Releases.
 
-Release notes are public product copy. Describe user-visible behavior, always spell the product `fx`, and omit contributor attribution, tracker references, repository or website work, delivery infrastructure, CI and test details, branch history, and implementation-only refactors. Use commits and pull requests as research evidence only. Changelog formatting and release-marker rules live in `AGENTS.md`.
+Release notes are public product copy. Describe user-visible behavior, always spell the product `chassis`, and omit contributor attribution, tracker references, repository or website work, delivery infrastructure, CI and test details, branch history, and implementation-only refactors. Use commits and pull requests as research evidence only. Changelog formatting and release-marker rules live in `AGENTS.md`.
 
 Do not create tags manually. The workflow owns tag creation.
 
@@ -473,12 +473,12 @@ The workflow builds a ReleaseSafe binary, then uses [hyperfine](https://github.c
 
 | Command                | Budget | What it measures                                   |
 | ---------------------- | ------ | -------------------------------------------------- |
-| `fx` (startup)         | 2ms    | Binary launch through CLI dispatch (no TTY needed) |
-| `fx help`              | 2ms    | Minimal startup, pure text output                  |
-| `fx status --json`     | 2ms    | Config read + JSON serialization                   |
-| `fx background --json` | 2ms    | Background record read                             |
-| `fx doctor --json`     | 2ms    | System checks, subprocess spawns                   |
-| `fx sessions --json`   | 2ms    | Session directory read                             |
+| `chassis` (startup)         | 2ms    | Binary launch through CLI dispatch (no TTY needed) |
+| `chassis help`              | 2ms    | Minimal startup, pure text output                  |
+| `chassis status --json`     | 2ms    | Config read + JSON serialization                   |
+| `chassis background --json` | 2ms    | Background record read                             |
+| `chassis doctor --json`     | 2ms    | System checks, subprocess spawns                   |
+| `chassis sessions --json`   | 2ms    | Session directory read                             |
 
 On PRs the check **fails** if any command exceeds its budget.
 
@@ -487,7 +487,7 @@ raw means for comparison but do not assign a substitute product budget because
 the host process and dynamic-loader floor can independently exceed 2ms. The
 process baseline is diagnostic only and is never subtracted.
 
-The startup benchmark uses `FX_BENCH=1`, which runs through CLI dispatch and exits before TTY initialization.
+The startup benchmark uses `CHASSIS_BENCH=1`, which runs through CLI dispatch and exits before TTY initialization.
 
 To run locally:
 
@@ -501,10 +501,10 @@ CI uses `--runs 100` with a reduced warmup and skips the build step because the
 workflow builds ReleaseSafe first. Results are written to
 `benchmarks/results/` (gitignored).
 
-The libfx runtime job measures cold startup, warm prompts, host-tool calls,
+The libchassis runtime job measures cold startup, warm prompts, host-tool calls,
 stream throughput, and Agent cleanup. Its direct Pi comparison uses an external
 Zig HTTP server, Pi 0.84.4, and three alternating 100-sample rounds. On Bun,
-native libfx must match or beat Pi p50 and stay within 0.25 ms of Pi p95.
+native libchassis must match or beat Pi p50 and stay within 0.25 ms of Pi p95.
 The Node comparison is report-only because Node's bundled fetch client and
 Pi's dispatcher have different warm-request overhead. Both runtimes still
 require valid measurements, 300 samples, and exactly one inference request per
@@ -512,8 +512,8 @@ prompt. Native/Wasm latency, host-tool, and resource gates remain blocking.
 Live model latency and bulk-stream throughput remain informational.
 
 ```sh
-zig build-exe benchmarks/libfx/fake-inference-server.zig -O ReleaseSafe -femit-bin=/tmp/libfx-bench-server
-node benchmarks/libfx/bench-competitive.mjs --server /tmp/libfx-bench-server --pi-root /tmp/libfx-pi --out benchmarks/results/libfx
+zig build-exe benchmarks/libchassis/fake-inference-server.zig -O ReleaseSafe -femit-bin=/tmp/libchassis-bench-server
+node benchmarks/libchassis/bench-competitive.mjs --server /tmp/libchassis-bench-server --pi-root /tmp/libchassis-pi --out benchmarks/results/libchassis
 ```
 
 Build the SDK artifacts and install the pinned Pi package first, as shown in
@@ -524,7 +524,7 @@ Build the SDK artifacts and install the pinned Pi package first, as shown in
 Minimum checklist:
 
 1. Run `zig fmt --check src/` and the focused tests for the changed path.
-2. Run `zig build`, then exercise the change with `./zig-out/bin/fx`.
+2. Run `zig build`, then exercise the change with `./zig-out/bin/chassis`.
 3. Push the feature branch and open a draft PR immediately.
 4. Require all four **Full CI** jobs and the final ship gate to pass for the exact current commit before marking the PR ready.
 5. Update `README.md` if user-facing behavior changed.

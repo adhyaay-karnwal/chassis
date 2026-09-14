@@ -1,4 +1,4 @@
-//! FX_RECORD tape writer and replay reader.
+//! CHASSIS_RECORD tape writer and replay reader.
 
 const std = @import("std");
 const debug_trace = @import("../shared/debug_trace.zig");
@@ -119,13 +119,13 @@ pub fn configureFromEnv(
     alloc: Allocator,
     initial_cols: u16,
     initial_rows: u16,
-    fx_version: []const u8,
+    chassis_version: []const u8,
 ) !void {
     const policy = resolve_startup_policy(.{
-        .debug_record = io_mod.getenv("FX_DEBUG_RECORD"),
-        .configured_path = io_mod.getenv("FX_RECORD"),
-        .record_input = io_mod.getenv("FX_RECORD_INPUT"),
-        .silent_banner = io_mod.getenv("FX_DEBUG_RECORD_SILENT_BANNER"),
+        .debug_record = io_mod.getenv("CHASSIS_DEBUG_RECORD"),
+        .configured_path = io_mod.getenv("CHASSIS_RECORD"),
+        .record_input = io_mod.getenv("CHASSIS_RECORD_INPUT"),
+        .silent_banner = io_mod.getenv("CHASSIS_DEBUG_RECORD_SILENT_BANNER"),
     });
     switch (policy.destination) {
         .inactive => return,
@@ -133,7 +133,7 @@ pub fn configureFromEnv(
             alloc,
             initial_cols,
             initial_rows,
-            fx_version,
+            chassis_version,
             policy.show_inline_notice,
         ),
         .explicit => |path| configureWithOptions(
@@ -141,7 +141,7 @@ pub fn configureFromEnv(
             path,
             initial_cols,
             initial_rows,
-            fx_version,
+            chassis_version,
             false,
             false,
             policy.show_inline_notice,
@@ -164,16 +164,16 @@ pub fn configure(
     path: []const u8,
     initial_cols: u16,
     initial_rows: u16,
-    fx_version: []const u8,
+    chassis_version: []const u8,
 ) !void {
-    try configureWithOptions(alloc, path, initial_cols, initial_rows, fx_version, false, false, true);
+    try configureWithOptions(alloc, path, initial_cols, initial_rows, chassis_version, false, false, true);
 }
 
 fn configureAutomatic(
     alloc: Allocator,
     initial_cols: u16,
     initial_rows: u16,
-    fx_version: []const u8,
+    chassis_version: []const u8,
     show_inline_notice: bool,
 ) !void {
     const home = if (io_mod.getenv("HOME")) |value| blk: {
@@ -183,7 +183,7 @@ fn configureAutomatic(
     const root = if (home) |value|
         try profile_paths.recordingsDir(alloc, value)
     else
-        try std.fs.path.join(alloc, &.{ io_mod.getenv("TMPDIR") orelse "/tmp", "fx-recordings" });
+        try std.fs.path.join(alloc, &.{ io_mod.getenv("TMPDIR") orelse "/tmp", "chassis-recordings" });
     defer alloc.free(root);
     try io_mod.makeDirRecursive(root);
 
@@ -192,10 +192,10 @@ fn configureAutomatic(
         var random_bytes: [6]u8 = undefined;
         io_mod.getIo().random(&random_bytes);
         const random_hex = std.fmt.bytesToHex(random_bytes, .lower);
-        const path = try std.fmt.allocPrint(alloc, "{s}/fx-record-{d}-{s}.fxtape", .{ root, nowMs(), random_hex });
+        const path = try std.fmt.allocPrint(alloc, "{s}/chassis-record-{d}-{s}.fxtape", .{ root, nowMs(), random_hex });
         defer alloc.free(path);
 
-        configureWithOptions(alloc, path, initial_cols, initial_rows, fx_version, true, true, show_inline_notice) catch |err| switch (err) {
+        configureWithOptions(alloc, path, initial_cols, initial_rows, chassis_version, true, true, show_inline_notice) catch |err| switch (err) {
             error.PathAlreadyExists => continue,
             else => return err,
         };
@@ -209,7 +209,7 @@ fn configureWithOptions(
     path: []const u8,
     initial_cols: u16,
     initial_rows: u16,
-    fx_version: []const u8,
+    chassis_version: []const u8,
     exclusive: bool,
     private: bool,
     show_inline_notice: bool,
@@ -228,7 +228,7 @@ fn configureWithOptions(
     const owned_path = try alloc.dupe(u8, path);
     errdefer alloc.free(owned_path);
 
-    const header = buildHeader(initial_cols, initial_rows, fx_version);
+    const header = buildHeader(initial_cols, initial_rows, chassis_version);
     try file.writeStreamingAll(zio, &header.fixed);
     if (header.version_tail.len > 0) {
         try file.writeStreamingAll(zio, header.version_tail);
@@ -272,10 +272,10 @@ const Header = struct {
     version_tail: []const u8,
 };
 
-fn buildHeader(initial_cols: u16, initial_rows: u16, fx_version: []const u8) Header {
+fn buildHeader(initial_cols: u16, initial_rows: u16, chassis_version: []const u8) Header {
     var header: Header = .{
         .fixed = undefined,
-        .version_tail = fx_version,
+        .version_tail = chassis_version,
     };
     @memcpy(header.fixed[0..magic.len], magic);
     var idx: usize = magic.len;
@@ -285,7 +285,7 @@ fn buildHeader(initial_cols: u16, initial_rows: u16, fx_version: []const u8) Hea
     idx += 2;
     std.mem.writeInt(i64, header.fixed[idx..][0..8], nowMs(), .little);
     idx += 8;
-    header.fixed[idx] = @intCast(@min(fx_version.len, @as(usize, 255)));
+    header.fixed[idx] = @intCast(@min(chassis_version.len, @as(usize, 255)));
     return header;
 }
 
@@ -731,7 +731,7 @@ test "debug recording request creates a private tape under home" {
     var env = std.process.Environ.Map.init(alloc);
     defer env.deinit();
     try env.put("HOME", home);
-    try env.put("FX_DEBUG_RECORD", "1");
+    try env.put("CHASSIS_DEBUG_RECORD", "1");
 
     shutdown();
     defer shutdown();
@@ -836,7 +836,7 @@ test "debug recording request uses the temporary fallback when HOME is empty" {
     var env = std.process.Environ.Map.init(alloc);
     defer env.deinit();
     try env.put("HOME", "");
-    try env.put("FX_DEBUG_RECORD", "1");
+    try env.put("CHASSIS_DEBUG_RECORD", "1");
 
     shutdown();
     defer shutdown();
@@ -847,7 +847,7 @@ test "debug recording request uses the temporary fallback when HOME is empty" {
     defer status.deinit(alloc);
     switch (status) {
         .active => |active| {
-            try testing.expect(std.mem.startsWith(u8, active.path, "/tmp/fx-recordings/"));
+            try testing.expect(std.mem.startsWith(u8, active.path, "/tmp/chassis-recordings/"));
             shutdown();
             if (std.fs.path.isAbsolute(active.path)) {
                 std.Io.Dir.deleteFileAbsolute(io_mod.getIo(), active.path) catch {};
@@ -876,8 +876,8 @@ test "configureFromEnv enables stdin for the accepted truthy values only" {
 
         var env = std.process.Environ.Map.init(alloc);
         defer env.deinit();
-        try env.put("FX_RECORD", path);
-        try env.put("FX_RECORD_INPUT", value);
+        try env.put("CHASSIS_RECORD", path);
+        try env.put("CHASSIS_RECORD_INPUT", value);
 
         shutdown();
         io_mod.setEnvironMap(&env);
@@ -901,8 +901,8 @@ test "configureFromEnv enables stdin for the accepted truthy values only" {
     defer alloc.free(path);
     var env = std.process.Environ.Map.init(alloc);
     defer env.deinit();
-    try env.put("FX_RECORD", path);
-    try env.put("FX_RECORD_INPUT", "yes");
+    try env.put("CHASSIS_RECORD", path);
+    try env.put("CHASSIS_RECORD_INPUT", "yes");
 
     shutdown();
     io_mod.setEnvironMap(&env);

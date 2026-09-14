@@ -1655,7 +1655,7 @@ fn resolveClientRegistration(
     var payload: std.Io.Writer.Allocating = .init(alloc);
     defer payload.deinit();
     try payload.writer.writeAll(
-        "{\"client_name\":\"fx\",\"application_type\":\"native\",\"redirect_uris\":[",
+        "{\"client_name\":\"chassis\",\"application_type\":\"native\",\"redirect_uris\":[",
     );
     try std.json.Stringify.value(redirect_uri, .{}, &payload.writer);
     try payload.writer.writeAll("],\"response_types\":[\"code\"],\"grant_types\":[\"authorization_code\"");

@@ -19,7 +19,7 @@ import {
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, REPO_ROOT, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, REPO_ROOT, runFx } from "../evals/eval-helpers";
 import { fakeGatewaySse, fakeGatewayTitleDefault, hasEmptyComposer, TITLE_GENERATION_MARKER, TmuxSession, tmuxAvailable } from "./tmux-helpers";
 
 const TIMEOUT = 15_000;
@@ -79,8 +79,8 @@ const VISION_RESULT = JSON.stringify({
     {
       image_id: 1,
       status: "ok",
-      summary: "FX logo in a square mark",
-      visible_text: ["FX LOGO"],
+      summary: "CHASSIS logo in a square mark",
+      visible_text: ["CHASSIS LOGO"],
       details: ["square layout"],
     },
   ],
@@ -157,7 +157,7 @@ function expectVisionResponseFormat(body: string, imageCount: number) {
   };
   expect(request.responseFormat).toMatchObject({
     type: "json",
-    name: "fx_vision_evidence",
+    name: "chassis_vision_evidence",
     schema: {
       type: "object",
       required: ["images"],
@@ -261,12 +261,12 @@ function startImageGateway(
 }
 
 function createIsolatedRoot() {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-vision-route-e2e-")));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-vision-route-e2e-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ permission: {} }));
+  writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ permission: {} }));
   return { root, home, workspace: realpathSync(workspace) };
 }
 
@@ -301,7 +301,7 @@ function writeLegacyZeroImageSession(
   sessionId: string,
   imagePaths: [string, string, string, string],
 ) {
-  const sessionDir = join(root.home, ".fx", "sessions", sessionId);
+  const sessionDir = join(root.home, ".chassis", "sessions", sessionId);
   mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
   writeFileSync(
     join(sessionDir, "session.json"),
@@ -373,9 +373,9 @@ function fakeGatewayEnv(
     HOME: root.home,
     AI_GATEWAY_API_KEY: "fake-vision-route-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_MODEL: model,
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_MODEL: model,
   };
 }
 
@@ -397,12 +397,12 @@ async function expectNonRegularVisionPathFailure(
   let session: TmuxSession | null = null;
   try {
     session = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       cwd: root.workspace,
       env: {
         ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-        FX_PERMISSION_MODE: "ask",
-        FX_AUTO_UPGRADE: "0",
+        CHASSIS_PERMISSION_MODE: "ask",
+        CHASSIS_AUTO_UPGRADE: "0",
         NO_COLOR: "1",
       },
       stderrPath,
@@ -442,7 +442,7 @@ async function expectChangedCanonicalVisionPathFailure(
   writeMarkedImage(targetPath, "TMUX_APPROVED_TARGET_A");
   symlinkSync(targetPath, approvedPath);
   writeFileSync(
-    join(root.home, ".fx", "settings.json"),
+    join(root.home, ".chassis", "settings.json"),
     JSON.stringify({ permission_mode: "ask", permission: {} }),
   );
   const gateway = startImageGateway([
@@ -458,12 +458,12 @@ async function expectChangedCanonicalVisionPathFailure(
   let session: TmuxSession | null = null;
   try {
     session = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       cwd: root.workspace,
       env: {
         ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-        FX_PERMISSION_MODE: "ask",
-        FX_AUTO_UPGRADE: "0",
+        CHASSIS_PERMISSION_MODE: "ask",
+        CHASSIS_AUTO_UPGRADE: "0",
         NO_COLOR: "1",
       },
       stderrPath,
@@ -569,7 +569,7 @@ function toolResultText(body: string, toolCallId: string): string {
 
 describe("Vision route fake Gateway", () => {
   test(
-    "fx ask rejects missing images before Gateway startup in text and JSON modes",
+    "chassis ask rejects missing images before Gateway startup in text and JSON modes",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startImageGateway([]);
@@ -640,11 +640,11 @@ describe("Vision route fake Gateway", () => {
         expect(gateway.chatRequests).toHaveLength(0);
 
         session = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: root.workspace,
           env: {
             ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-            FX_AUTO_UPGRADE: "0",
+            CHASSIS_AUTO_UPGRADE: "0",
             NO_COLOR: "1",
           },
           stderrPath,
@@ -671,7 +671,7 @@ describe("Vision route fake Gateway", () => {
   );
 
   test(
-    "fx ask gates GLM images through Vision without leaking paths",
+    "chassis ask gates GLM images through Vision without leaking paths",
     async () => {
       const root = createIsolatedRoot();
       const fixture = createScopedImageFixture(root);
@@ -714,7 +714,7 @@ describe("Vision route fake Gateway", () => {
         expect(gateway.chatRequests[1].body).toContain('"type":"file"');
         expect(gateway.chatRequests[1].body).not.toContain(fixture.rootRule);
         expect(gateway.chatRequests[1].body).not.toContain(fixture.nestedRule);
-        expect(gateway.chatRequests[2].body).toContain("FX LOGO");
+        expect(gateway.chatRequests[2].body).toContain("CHASSIS LOGO");
         expect(gateway.chatRequests[2].body).not.toContain('"type":"file"');
         expectScopedImageContext(gateway.chatRequests[2].body, fixture);
         const finalUserText = lastUserText(gateway.chatRequests[2].body);
@@ -730,7 +730,7 @@ describe("Vision route fake Gateway", () => {
   );
 
   test(
-    "fx ask recovers when the model rejects the post-Vision prompt as assistant prefill",
+    "chassis ask recovers when the model rejects the post-Vision prompt as assistant prefill",
     async () => {
       const root = createIsolatedRoot();
       const fixture = createScopedImageFixture(root);
@@ -794,13 +794,13 @@ describe("Vision route fake Gateway", () => {
   );
 
   test(
-    "fx ask executes path-source Vision and cleans transient snapshots without failure telemetry",
+    "chassis ask executes path-source Vision and cleans transient snapshots without failure telemetry",
     async () => {
       const root = createIsolatedRoot();
       const imagePath = join(root.workspace, "path-source.png");
       const tracePath = join(root.root, "trace.log");
       const snapshotsBefore = readdirSync("/tmp")
-        .filter((name) => name.startsWith("fx-image-snapshots-"))
+        .filter((name) => name.startsWith("chassis-image-snapshots-"))
         .sort();
       writeMarkedImage(imagePath, "HEADLESS_PATH_SOURCE");
       const gateway = startImageGateway([
@@ -825,8 +825,8 @@ describe("Vision route fake Gateway", () => {
             cwd: root.workspace,
             env: {
               ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-              FX_TRACE_LOG: tracePath,
-              FX_TRACE_SCOPES: "images",
+              CHASSIS_TRACE_LOG: tracePath,
+              CHASSIS_TRACE_SCOPES: "images",
             },
             timeoutMs: TIMEOUT,
           },
@@ -844,7 +844,7 @@ describe("Vision route fake Gateway", () => {
         expect(readFileSync(tracePath, "utf8")).not.toContain("snapshot_cleanup_failed");
         expect(
           readdirSync("/tmp")
-            .filter((name) => name.startsWith("fx-image-snapshots-"))
+            .filter((name) => name.startsWith("chassis-image-snapshots-"))
             .sort(),
         ).toEqual(snapshotsBefore);
       } finally {
@@ -965,8 +965,8 @@ describe("Vision route fake Gateway", () => {
           for (const request of gateway.chatRequests) {
             for (const imagePath of fixture.paths) expect(request.body).not.toContain(imagePath);
             expect(request.body).not.toContain("data:image");
-            expect(request.body).not.toContain("fx-image-snapshots");
-            expect(request.body).not.toContain(".fx/sessions");
+            expect(request.body).not.toContain("chassis-image-snapshots");
+            expect(request.body).not.toContain(".chassis/sessions");
           }
         } finally {
           gateway.stop();
@@ -1029,7 +1029,7 @@ describe("Vision route fake Gateway", () => {
         expect(rejectedCall.input).toEqual({});
         expect(gateway.chatRequests[3].headers.get("ai-language-model-id")).toBe(GEMINI_MODEL);
         expect(filePartCount(gateway.chatRequests[3].body)).toBe(1);
-        expect(gateway.chatRequests[4].body).toContain("FX LOGO");
+        expect(gateway.chatRequests[4].body).toContain("CHASSIS LOGO");
         expect(gateway.chatRequests[4].body).not.toContain(forbiddenContents);
       } finally {
         gateway.stop();
@@ -1040,7 +1040,7 @@ describe("Vision route fake Gateway", () => {
   );
 
   test(
-    "fx ask preserves native image parts for Gemini",
+    "chassis ask preserves native image parts for Gemini",
     async () => {
       const root = createIsolatedRoot();
       const fixture = createScopedImageFixture(root);
@@ -1082,7 +1082,7 @@ describe("Vision route fake Gateway", () => {
   );
 
   test(
-    "fx ask uses Kimi native vision without Vision tool",
+    "chassis ask uses Kimi native vision without Vision tool",
     async () => {
       const root = createIsolatedRoot();
       const fixture = createScopedImageFixture(root);
@@ -1124,7 +1124,7 @@ describe("Vision route fake Gateway", () => {
   );
 
   test(
-    "fx ask normalizes encoded-oversized native images on macOS and rejects elsewhere",
+    "chassis ask normalizes encoded-oversized native images on macOS and rejects elsewhere",
     async () => {
       const root = createIsolatedRoot();
       const oversizedPath = join(root.workspace, "encoded-oversized.png");
@@ -1269,7 +1269,7 @@ describe("Vision route fake Gateway", () => {
         });
         expect(rejectionOutput as string).not.toContain(fixture.imagePath);
         expect(filePartCount(recoveryRequest.body)).toBe(1);
-        const eventsPath = join(root.home, ".fx", "sessions", firstJson.session_id, "events.jsonl");
+        const eventsPath = join(root.home, ".chassis", "sessions", firstJson.session_id, "events.jsonl");
         const originalEvents = readFileSync(eventsPath, "utf8");
         if (shape !== "plain") expect(originalEvents).toContain("removed-vision-signature");
 
@@ -1397,7 +1397,7 @@ describe("Vision route fake Gateway", () => {
           expect(savedJson.output).toContain(`saved ${entry.name}`);
           expect(gateway.chatRequests).toHaveLength(1);
 
-          const imageDir = join(root.home, ".fx", "sessions", savedJson.session_id, "images");
+          const imageDir = join(root.home, ".chassis", "sessions", savedJson.session_id, "images");
           const snapshotNames = readdirSync(imageDir).filter((name) => name.endsWith(".bin"));
           expect(snapshotNames).toHaveLength(1);
           entry.damage(join(imageDir, snapshotNames[0]));
@@ -1456,7 +1456,7 @@ describe("Vision route fake Gateway", () => {
   );
 
   test(
-    "fx ask applies image_adapter_output_bytes to Vision provider capture",
+    "chassis ask applies image_adapter_output_bytes to Vision provider capture",
     async () => {
       const root = createIsolatedRoot();
       const fixture = createScopedImageFixture(root);
@@ -1672,7 +1672,7 @@ describe("Vision route fake Gateway", () => {
         expect(result.code).toBe(1);
         expect(result.stdout).toBe("");
         expect(result.stderr).toBe(
-          "fx ask: Unable to verify image support for this model, so the image was not sent. Try again later, choose another model, or remove the image.\n",
+          "chassis ask: Unable to verify image support for this model, so the image was not sent. Try again later, choose another model, or remove the image.\n",
         );
         expect(result.stderr).not.toContain("ModelImageCapabilityUnavailable");
         expect(gateway.catalogRequests).toBe(1);
@@ -2158,7 +2158,7 @@ describe("Vision route fake Gateway", () => {
         expect(JSON.parse(gateway.chatRequests[3].body).responseFormat).toBeUndefined();
         // Byte-identical retry payload: same verified snapshot, ids, focus, and batch.
         expect(gateway.chatRequests[2].body).toBe(gateway.chatRequests[1].body);
-        expect(gateway.chatRequests[3].body).toContain("FX LOGO");
+        expect(gateway.chatRequests[3].body).toContain("CHASSIS LOGO");
         expect(gateway.chatRequests[3].body).not.toContain("provider_response_invalid");
         expect(gateway.chatRequests[3].body).not.toContain("missing_provider_record");
         expect(gateway.chatRequests[3].body).not.toContain(IMAGE_PATH);
@@ -2287,7 +2287,7 @@ describe("Vision route fake Gateway", () => {
           },
         );
         const savedJson = parseFxJson(saved);
-        const imageDir = join(root.home, ".fx", "sessions", savedJson.session_id, "images");
+        const imageDir = join(root.home, ".chassis", "sessions", savedJson.session_id, "images");
         const firstSnapshot = readdirSync(imageDir).find((name) => name.startsWith("image-1-"));
         expect(firstSnapshot).toBeDefined();
         writeFileSync(join(imageDir, firstSnapshot!), "corrupt");
@@ -2373,7 +2373,7 @@ describe("Vision route fake Gateway", () => {
           },
         );
         const savedJson = parseFxJson(saved);
-        const imageDir = join(root.home, ".fx", "sessions", savedJson.session_id, "images");
+        const imageDir = join(root.home, ".chassis", "sessions", savedJson.session_id, "images");
         const firstSnapshot = readdirSync(imageDir).find((name) => name.startsWith("image-1-"));
         expect(firstSnapshot).toBeDefined();
         writeFileSync(join(imageDir, firstSnapshot!), "corrupt");
@@ -2505,7 +2505,7 @@ describe("Vision route fake Gateway", () => {
       const imagePath = join(desktop, "test.png");
       writeMarkedImage(imagePath, "TMUX_AT_HOME_IMAGE");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({ permission_mode: "ask", permission: {} }),
       );
       const gateway = startImageGateway([
@@ -2518,12 +2518,12 @@ describe("Vision route fake Gateway", () => {
       let session: TmuxSession | null = null;
       try {
         session = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: root.workspace,
           env: {
             ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-            FX_PERMISSION_MODE: "ask",
-            FX_AUTO_UPGRADE: "0",
+            CHASSIS_PERMISSION_MODE: "ask",
+            CHASSIS_AUTO_UPGRADE: "0",
             NO_COLOR: "1",
           },
           stderrPath,
@@ -2576,11 +2576,11 @@ describe("Vision route fake Gateway", () => {
       let session: TmuxSession | null = null;
       try {
         session = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: root.workspace,
           env: {
             ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-            FX_AUTO_UPGRADE: "0",
+            CHASSIS_AUTO_UPGRADE: "0",
             NO_COLOR: "1",
           },
           stderrPath,
@@ -2620,7 +2620,7 @@ describe("Vision route fake Gateway", () => {
       const imagePath = join(desktop, "test.png");
       writeMarkedImage(imagePath, "TMUX_PATH_SOURCE_APPROVAL");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({ permission_mode: "ask", permission: {} }),
       );
       const gateway = startImageGateway([
@@ -2637,12 +2637,12 @@ describe("Vision route fake Gateway", () => {
       let session: TmuxSession | null = null;
       try {
         session = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: root.workspace,
           env: {
             ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-            FX_PERMISSION_MODE: "ask",
-            FX_AUTO_UPGRADE: "0",
+            CHASSIS_PERMISSION_MODE: "ask",
+            CHASSIS_AUTO_UPGRADE: "0",
             NO_COLOR: "1",
           },
           stderrPath,
@@ -2689,7 +2689,7 @@ describe("Vision route fake Gateway", () => {
       const payload = writeMarkedImage(sourcePath, "TMUX_HARD_LINKED_IMAGE");
       linkSync(sourcePath, approvedPath);
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({ permission_mode: "ask", permission: {} }),
       );
       const gateway = startImageGateway([
@@ -2706,12 +2706,12 @@ describe("Vision route fake Gateway", () => {
       let session: TmuxSession | null = null;
       try {
         session = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: root.workspace,
           env: {
             ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-            FX_PERMISSION_MODE: "ask",
-            FX_AUTO_UPGRADE: "0",
+            CHASSIS_PERMISSION_MODE: "ask",
+            CHASSIS_AUTO_UPGRADE: "0",
             NO_COLOR: "1",
           },
           stderrPath,
@@ -2760,7 +2760,7 @@ describe("Vision route fake Gateway", () => {
       const payloadB = writeMarkedImage(targetB, "TMUX_RETARGETED_TARGET_B");
       symlinkSync(targetA, approvedPath);
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({ permission_mode: "ask", permission: {} }),
       );
       const gateway = startImageGateway([
@@ -2777,12 +2777,12 @@ describe("Vision route fake Gateway", () => {
       let session: TmuxSession | null = null;
       try {
         session = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: root.workspace,
           env: {
             ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-            FX_PERMISSION_MODE: "ask",
-            FX_AUTO_UPGRADE: "0",
+            CHASSIS_PERMISSION_MODE: "ask",
+            CHASSIS_AUTO_UPGRADE: "0",
             NO_COLOR: "1",
           },
           stderrPath,
@@ -2960,7 +2960,7 @@ describe("Vision route fake Gateway", () => {
       const imagePath = join(root.workspace, "feedback.png");
       writeMarkedImage(imagePath, "TMUX_PERMISSION_FEEDBACK");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({ permission_mode: "ask", permission: {} }),
       );
       const feedback = "Do not modify any more files.";
@@ -2975,12 +2975,12 @@ describe("Vision route fake Gateway", () => {
       let session: TmuxSession | null = null;
       try {
         session = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: root.workspace,
           env: {
             ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-            FX_PERMISSION_MODE: "ask",
-            FX_AUTO_UPGRADE: "0",
+            CHASSIS_PERMISSION_MODE: "ask",
+            CHASSIS_AUTO_UPGRADE: "0",
             NO_COLOR: "1",
           },
           stderrPath,
@@ -2993,7 +2993,7 @@ describe("Vision route fake Gateway", () => {
         await session.sendText(rootRequest);
         await session.waitForText("Would you like to allow this action?", TIMEOUT);
         await session.sendKeys("Tab");
-        await session.waitForText("Yes, and tell fx what to do next", TIMEOUT);
+        await session.waitForText("Yes, and tell chassis what to do next", TIMEOUT);
         await session.sendLiteralText(feedback);
         await session.waitForText(`Yes, ${feedback}`, TIMEOUT);
         await session.sendKeys("Enter");
@@ -3006,7 +3006,7 @@ describe("Vision route fake Gateway", () => {
         expect(selectedFollowup).toContain(rootRequest);
         expect(selectedFollowup).not.toContain(imagePath);
 
-        const sessionsRoot = join(root.home, ".fx", "sessions");
+        const sessionsRoot = join(root.home, ".chassis", "sessions");
         const sessionIds = readdirSync(sessionsRoot, { withFileTypes: true })
           .filter((entry) => entry.isDirectory() && entry.name !== "latest")
           .map((entry) => entry.name);
@@ -3038,7 +3038,7 @@ describe("Vision route fake Gateway", () => {
       const firstMutatedPayload = writeMarkedImage(firstMutatedPath, "TMUX_PERMISSION_B");
       writeMarkedImage(secondImagePath, "TMUX_OUTAGE_A");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({ permission_mode: "ask", permission: {} }),
       );
       const gateway = startImageGateway([
@@ -3056,12 +3056,12 @@ describe("Vision route fake Gateway", () => {
       let session: TmuxSession | null = null;
       try {
         session = await TmuxSession.create({
-          cmd: FX_BIN,
+          cmd: CHASSIS_BIN,
           cwd: root.workspace,
           env: {
             ...fakeGatewayEnv(root, gateway, GLM_MODEL),
-            FX_PERMISSION_MODE: "ask",
-            FX_AUTO_UPGRADE: "0",
+            CHASSIS_PERMISSION_MODE: "ask",
+            CHASSIS_AUTO_UPGRADE: "0",
             NO_COLOR: "1",
           },
           stderrPath,
@@ -3146,7 +3146,7 @@ for (const sourceChange of ["removed", "changed", "saved snapshot missing", "sav
       const failed = await runFx(["ask", "--json", "--auto", "--image", input, "Describe the saved image."], options);
       expect(failed.code).toBe(1);
       expect(failed.stdout).toContain("RequiredVisionToolCallMissing");
-      const sessions = join(root.home, ".fx", "sessions");
+      const sessions = join(root.home, ".chassis", "sessions");
       const id = readdirSync(sessions).find(name => existsSync(join(sessions, name, "recovery.json")))!;
       expect(id).toBeDefined();
       const checkpointPath = join(sessions, id, "recovery.json");
@@ -3200,14 +3200,14 @@ test.skipIf(!tmuxAvailable())("TUI recovery retains images through failure and c
   let session: TmuxSession | null = null;
   const env = fakeGatewayEnv(root, gateway, GLM_MODEL);
   try {
-    session = await TmuxSession.create({ cmd: FX_BIN, cwd: root.workspace, env, isolated: true, remainOnExit: true });
+    session = await TmuxSession.create({ cmd: CHASSIS_BIN, cwd: root.workspace, env, isolated: true, remainOnExit: true });
     await session.waitForStableComposer(TIMEOUT);
     await session.sendText(`/image ${input}`);
     await session.waitForText("attached image:", TIMEOUT);
     await session.sendText("Describe this image.");
     await session.waitForText("RequiredVisionToolCallMissing", TIMEOUT);
     await session.waitForStableComposer(TIMEOUT);
-    const sessions = join(root.home, ".fx", "sessions");
+    const sessions = join(root.home, ".chassis", "sessions");
     const id = readdirSync(sessions).find(name => existsSync(join(sessions, name, "recovery.json")))!;
     const checkpoint = JSON.parse(readFileSync(join(sessions, id, "recovery.json"), "utf8")).checkpoint;
     const snapshot = join(sessions, id, checkpoint.user.images[0].snapshot_path);
@@ -3218,7 +3218,7 @@ test.skipIf(!tmuxAvailable())("TUI recovery retains images through failure and c
     await session.kill();
     session = null;
     rmSync(input);
-    session = await TmuxSession.create({ cmd: `${FX_BIN} --resume ${id}`, cwd: root.workspace, env, isolated: true, remainOnExit: true });
+    session = await TmuxSession.create({ cmd: `${CHASSIS_BIN} --resume ${id}`, cwd: root.workspace, env, isolated: true, remainOnExit: true });
     await session.waitForStableComposer(TIMEOUT);
     await session.sendText("/continue");
     await session.waitForText("TUI_RECOVERY_IMAGE_COMPLETE", TIMEOUT);

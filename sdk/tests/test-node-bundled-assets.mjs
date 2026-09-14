@@ -4,9 +4,9 @@ import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { createFxAgent, getBackendInfo } from "../node.js";
+import { createChassisAgent, getBackendInfo } from "../node.js";
 
-const root = await mkdtemp(join(tmpdir(), "libfx bundled assets "));
+const root = await mkdtemp(join(tmpdir(), "libchassis bundled assets "));
 const media = join(root, "static", "media");
 const originalBase = Object.getOwnPropertyDescriptor(globalThis, "__webpack_base_uri__");
 const originalPublicPath = Object.getOwnPropertyDescriptor(globalThis, "__webpack_public_path__");
@@ -23,10 +23,10 @@ function relativeUrl(href) {
 
 try {
   await mkdir(media, { recursive: true });
-  const nativeName = `libfx.${process.platform}-${process.arch}.fixture.node`;
-  await cp(new URL("../../zig-out/lib/libfx.node", import.meta.url), join(media, nativeName));
+  const nativeName = `libchassis.${process.platform}-${process.arch}.fixture.node`;
+  await cp(new URL("../../zig-out/lib/libchassis.node", import.meta.url), join(media, nativeName));
   for (const surface of ["core", "term"]) {
-    await cp(new URL(`../../zig-out/bin/fx-${surface}.wasm`, import.meta.url), join(media, `fx-${surface}.fixture.wasm`));
+    await cp(new URL(`../../zig-out/bin/chassis-${surface}.wasm`, import.meta.url), join(media, `chassis-${surface}.fixture.wasm`));
   }
   globalThis.__webpack_base_uri__ = pathToFileURL(`${root}/`).href;
   for (const publicPath of ["/_next/", "https://cdn.example.test/assets/"]) {
@@ -35,11 +35,11 @@ try {
     assert.ok(nativeAddon instanceof URL);
     assert.throws(() => fileURLToPath(nativeAddon), { code: "ERR_INVALID_ARG_TYPE" });
     assert.equal((await getBackendInfo({ backend: "native", nativeAddon })).backend, "native");
-    const agent = await createFxAgent({ backend: "native", nativeAddon, apiKey: "fixture-key" });
+    const agent = await createChassisAgent({ backend: "native", nativeAddon, apiKey: "fixture-key" });
     try { assert.ok((await agent.checkpoint()).length > 48); }
     finally { await agent.close(); }
     for (const [surface, artifact] of [["agent", "core"], ["terminal", "term"]]) {
-      const wasm = relativeUrl(`${publicPath}static/media/fx-${artifact}.fixture.wasm`);
+      const wasm = relativeUrl(`${publicPath}static/media/chassis-${artifact}.fixture.wasm`);
       const info = await getBackendInfo({ backend: "wasm", surface, wasm });
       assert.equal(info.backend, "wasm-jspi", JSON.stringify(info));
     }

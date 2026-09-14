@@ -62,7 +62,7 @@ test "parent steering preserves its sender in persisted execution text" {
     try std.testing.expectEqual(@as(usize, 0), memory.steering[0].after_tool_step_count);
 }
 
-pub fn persistedStatusForCurrentFxLocalResult(
+pub fn persistedStatusForCurrentChassisLocalResult(
     status: ToolExecutionStatus,
     output: []const u8,
 ) types.PersistedToolStatus {
@@ -207,7 +207,7 @@ test "retained standalone cut rebuilds exactly the selected execution suffix" {
                     .parts_json = "[{\"type\":\"reasoning\",\"text\":\"private\"}]",
                 } else null,
             },
-            .{ .role = .user, .content = "Continue the turn. fx hook context:\nverify" },
+            .{ .role = .user, .content = "Continue the turn. chassis hook context:\nverify" },
             .{ .role = .assistant, .tool_calls = &.{call} },
             .{ .role = .tool, .content = "result", .tool_call_id = call.id, .tool_name = call.name, .tool_result_status = .success },
         };

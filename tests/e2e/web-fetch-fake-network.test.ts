@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, runFx } from "../evals/eval-helpers";
 import { fakeGatewayTitleDefault, TITLE_GENERATION_MARKER } from "./tmux-helpers";
 
 const TIMEOUT = 20_000;
@@ -111,17 +111,17 @@ function startFakeGateway(
 function createIsolatedRoot(args: {
   webFetchPermission?: PermissionAction;
 } = {}) {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-web-fetch-e2e-")));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-web-fetch-e2e-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
 
   const permission: Record<string, Record<string, string>> = {};
   if (args.webFetchPermission) {
     permission.web_fetch = { "domain:example.com": args.webFetchPermission };
   }
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ permission }));
+  writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ permission }));
   return { root, home, workspace: realpathSync(workspace) };
 }
 
@@ -134,9 +134,9 @@ function fakeGatewayEnv(
     HOME: root.home,
     AI_GATEWAY_API_KEY: "fake-web-fetch-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_MODEL: gateway.model,
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_MODEL: gateway.model,
     ...extra,
   };
 }
@@ -228,7 +228,7 @@ class AcpClient {
         (entry): entry is [string, string] => entry[1] !== undefined,
       ),
     );
-    return new AcpClient(nodeSpawn(FX_BIN, ["acp"], {
+    return new AcpClient(nodeSpawn(CHASSIS_BIN, ["acp"], {
       cwd,
       env: definedEnv,
       stdio: ["pipe", "pipe", "pipe"],
@@ -380,7 +380,7 @@ describe("web_fetch Gateway fixture", () => {
         expectNoFetchProgress(result.stderr);
 
         const sessionEvents = readFileSync(
-          join(root.home, ".fx", "sessions", json.session_id, "events.jsonl"),
+          join(root.home, ".chassis", "sessions", json.session_id, "events.jsonl"),
           "utf8",
         );
         expect(sessionEvents).toContain("web_fetch");
@@ -428,7 +428,7 @@ describe("web_fetch Gateway fixture", () => {
   );
 
   test(
-    "default fx ask validates malformed web_fetch before transport",
+    "default chassis ask validates malformed web_fetch before transport",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([

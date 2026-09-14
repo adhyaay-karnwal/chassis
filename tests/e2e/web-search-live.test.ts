@@ -12,13 +12,13 @@ const BACKENDS = [
 ] as const;
 
 function createIsolatedRoot() {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-web-search-live-")));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-web-search-live-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({
       model: OUTER_MODEL,
       permission: { web_search: { "*": "allow" } },
@@ -56,10 +56,10 @@ describe.skipIf(!HAS_API_KEY)("live web_search private backends", () => {
               cwd: root.workspace,
               env: {
                 HOME: root.home,
-                FX_AUTO_UPGRADE: "0",
-                FX_TRACE_LOG: traceLog,
-                FX_TRACE_SCOPES: "agent,gateway,stream,web_search",
-                FX_WEB_SEARCH_BACKEND: backend,
+                CHASSIS_AUTO_UPGRADE: "0",
+                CHASSIS_TRACE_LOG: traceLog,
+                CHASSIS_TRACE_SCOPES: "agent,gateway,stream,web_search",
+                CHASSIS_WEB_SEARCH_BACKEND: backend,
               },
               timeoutMs: TIMEOUT,
             },
@@ -67,7 +67,7 @@ describe.skipIf(!HAS_API_KEY)("live web_search private backends", () => {
 
           if (result.code !== 0) {
             throw new Error(
-              `fx exited with code ${result.code}\nstdout: ${result.stdout.slice(-4000)}\nstderr: ${result.stderr.slice(0, 8000)}`,
+              `chassis exited with code ${result.code}\nstdout: ${result.stdout.slice(-4000)}\nstderr: ${result.stderr.slice(0, 8000)}`,
             );
           }
           const json = JSON.parse(result.stdout.trim()) as {

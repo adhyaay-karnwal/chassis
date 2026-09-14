@@ -36,7 +36,7 @@ if (requestedProtocol && !supportedProtocols.has(requestedProtocol)) {
 }
 const conformanceEnv = {
   ...process.env,
-  FX_MCP_PROTOCOL_VERSION: requestedProtocol ?? "2026-07-28",
+  CHASSIS_MCP_PROTOCOL_VERSION: requestedProtocol ?? "2026-07-28",
 };
 let configuredServerUrl = serverUrl;
 let legacyProbeProxy: LegacyProbeProxy | null = null;
@@ -86,15 +86,15 @@ for (const call of toolCalls) {
   permission[`mcp_conformance_${call.name}`] = "allow";
 }
 
-const fxBin = resolve(import.meta.dirname, "../../../zig-out/bin/fx");
-const root = mkdtempSync(join(tmpdir(), "fx-mcp-conformance-client-"));
+const fxBin = resolve(import.meta.dirname, "../../../zig-out/bin/chassis");
+const root = mkdtempSync(join(tmpdir(), "chassis-mcp-conformance-client-"));
 const home = join(root, "home");
 const workspace = join(root, "workspace");
-mkdirSync(join(home, ".fx", "skills"), { recursive: true, mode: 0o700 });
+mkdirSync(join(home, ".chassis", "skills"), { recursive: true, mode: 0o700 });
 mkdirSync(workspace, { recursive: true });
 
 writeFileSync(
-  join(home, ".fx", "mcp.json"),
+  join(home, ".chassis", "mcp.json"),
   JSON.stringify({
     mcp: {
       conformance: {
@@ -108,7 +108,7 @@ writeFileSync(
             ? { client_id: scenarioContext.client_id }
             : {}),
           ...(scenarioContext.client_secret
-            ? { client_secret_env: "FX_MCP_CONFORMANCE_CLIENT_SECRET" }
+            ? { client_secret_env: "CHASSIS_MCP_CONFORMANCE_CLIENT_SECRET" }
             : {}),
         },
       },
@@ -116,7 +116,7 @@ writeFileSync(
   }),
 );
 writeFileSync(
-  join(home, ".fx", "settings.json"),
+  join(home, ".chassis", "settings.json"),
   JSON.stringify({
     permission_mode: "auto",
     permission,
@@ -159,20 +159,20 @@ try {
         HOME: home,
         AI_GATEWAY_API_KEY: "mcp-conformance-placeholder",
         VERCEL_OIDC_TOKEN: "",
-        FX_AUTO_UPGRADE: "0",
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_E2E_MCP_AUTH_AUTOMATE: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_E2E_MCP_AUTH_AUTOMATE: "1",
         ...(scenarioContext.client_secret
           ? {
-              FX_MCP_CONFORMANCE_CLIENT_SECRET:
+              CHASSIS_MCP_CONFORMANCE_CLIENT_SECRET:
                 scenarioContext.client_secret,
             }
           : {}),
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
-        FX_SKIP_ONBOARDING: "1",
-        FX_SOUND: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_SOUND: "0",
         NO_COLOR: "1",
       },
       stdout: "pipe",

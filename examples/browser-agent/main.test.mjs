@@ -29,9 +29,9 @@ async function page({ key = '', fail = false, stopReason = 'stop', duringFetch }
       return 'hello'
     },
   })
-  const sdk = new SyntheticModule(['createFxAgent', 'supportsJspi'], function () {
+  const sdk = new SyntheticModule(['createChassisAgent', 'supportsJspi'], function () {
     this.setExport('supportsJspi', () => true)
-    this.setExport('createFxAgent', async (options) => {
+    this.setExport('createChassisAgent', async (options) => {
       const agent = {
         options, closed: false,
         async close() { this.closed = true },
@@ -55,7 +55,7 @@ async function page({ key = '', fail = false, stopReason = 'stop', duringFetch }
     this.setExport('model', 'test/model')
   }, { context })
   const module = new SourceTextModule(source, { context })
-  await module.link((name) => name === 'libfx/browser' ? sdk : model)
+  await module.link((name) => name === 'libchassis/browser' ? sdk : model)
   await module.evaluate()
   return { elements, calls, agents, submit: () => submit({ preventDefault() {} }) }
 }

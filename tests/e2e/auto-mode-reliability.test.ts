@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, runFx } from "../evals/eval-helpers";
 import {
   fakeGatewayFinalText,
   fakeGatewayPermissionDecision,
@@ -51,14 +51,14 @@ afterEach(async () => {
 
 function createIsolatedRoot(baseDir = tmpdir()): IsolatedRoot {
   const root = realpathSync(
-    mkdtempSync(join(baseDir, "fx-auto-mode-reliability-e2e-")),
+    mkdtempSync(join(baseDir, "chassis-auto-mode-reliability-e2e-")),
   );
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({ sandbox: "none", permission: {} }),
   );
   roots.push(root);
@@ -73,11 +73,11 @@ function gatewayEnv(
     HOME: root.home,
     AI_GATEWAY_API_KEY: "fake-auto-mode-reliability-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_MODEL: MODEL,
-    FX_PERMISSION_MODE: "auto",
-    FX_AUTO_UPGRADE: "0",
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_MODEL: MODEL,
+    CHASSIS_PERMISSION_MODE: "auto",
+    CHASSIS_AUTO_UPGRADE: "0",
     NO_COLOR: "1",
   };
 }
@@ -242,7 +242,7 @@ describe("lean auto mode reliability", () => {
       expect(laterReview).not.toContain(accusation);
       expect(readFileSync(plan, "utf8")).toBe("48 runs\n");
       const sessionId = JSON.parse(result.stdout).session_id;
-      const events = readFileSync(join(root.home, ".fx", "sessions", sessionId, "events.jsonl"), "utf8")
+      const events = readFileSync(join(root.home, ".chassis", "sessions", sessionId, "events.jsonl"), "utf8")
         .trim().split("\n").map((line) => JSON.parse(line));
       const held = events.find((entry) => entry.event.tool_result?.call_id === "edit_plan").event.tool_result;
       expect(held.review_feedback).toBe(true);
@@ -369,7 +369,7 @@ describe("lean auto mode reliability", () => {
     async () => {
       const root = createIsolatedRoot();
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { bash: { pwd: "allow" } },
@@ -413,7 +413,7 @@ describe("lean auto mode reliability", () => {
         "substitution-bypass-must-not-run",
       );
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { "*": { "printf *": "allow" } },
@@ -660,8 +660,8 @@ describe("lean auto mode reliability", () => {
           cwd: root.workspace,
           env: {
             ...gatewayEnv(root, gateway),
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "permission,tool,terminal",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "permission,tool,terminal",
           },
           timeoutMs: TIMEOUT,
         },
@@ -726,8 +726,8 @@ describe("lean auto mode reliability", () => {
           cwd: root.workspace,
           env: {
             ...gatewayEnv(root, gateway),
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "core,permission,tool,terminal",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "core,permission,tool,terminal",
           },
           timeoutMs: TIMEOUT,
         },
@@ -1114,7 +1114,7 @@ describe("lean auto mode reliability", () => {
     async () => {
       const root = createIsolatedRoot();
       const startup = join(root.home, ".zshrc");
-      const before = "alias r='cd ~/projects/research && fx'\n";
+      const before = "alias r='cd ~/projects/research && chassis'\n";
       const after = before +
         "\n_rfx() {\n" +
         "  local key\n" +
@@ -1171,8 +1171,8 @@ describe("lean auto mode reliability", () => {
         "  [[ -z $key ]] && return 1\n" +
         "  command sandbox run --silent \\\n" +
         "    -i -e \"AI_GATEWAY_API_KEY=$key\" \"$@\" -- \\\n" +
-        "    bash -c 'curl -fsSL https://fx.sh/setup.sh | bash 2>/dev/nu\n" +
-        "    ll && fx; exec bash'\n" +
+        "    bash -c 'curl -fsSL https://chassis.sh/setup.sh | bash 2>/dev/nu\n" +
+        "    ll && chassis; exec bash'\n" +
         "}\n";
       const after = before.replace(
         "2>/dev/nu\n    ll",
@@ -1220,7 +1220,7 @@ describe("lean auto mode reliability", () => {
     async () => {
       const root = createIsolatedRoot();
       const startup = join(root.home, ".zshrc");
-      const before = "alias r='cd ~/projects/research && fx'\n";
+      const before = "alias r='cd ~/projects/research && chassis'\n";
       const after = before +
         'sandbox -e "AI_GATEWAY_API_KEY=$key literal-suffix"\n';
       writeFileSync(startup, before);
@@ -1268,7 +1268,7 @@ describe("lean auto mode reliability", () => {
     async () => {
       const root = createIsolatedRoot();
       const startup = join(root.home, ".zshrc");
-      const before = "alias r='cd ~/projects/research && fx'\n";
+      const before = "alias r='cd ~/projects/research && chassis'\n";
       const after = before + 'AI_GATEWAY_API_KEY="literal-fixture-value" run-sandbox\n';
       writeFileSync(startup, before);
       const gateway = startGateway(
@@ -1330,7 +1330,7 @@ describe("lean auto mode reliability", () => {
             ) as { full_output_handle?: string; exit_code?: number };
             expect(commandResult.exit_code).toBe(0);
             outputHandle = commandResult.full_output_handle ?? "";
-            expect(outputHandle).toMatch(/^fx-command-replay-.+\.bin$/);
+            expect(outputHandle).toMatch(/^chassis-command-replay-.+\.bin$/);
             return fakeGatewayToolCall("read_secret_like_output", "read_tool_result", {
               request: { handle: outputHandle, query: "TOOL_DATA_TOKEN=" },
             });
@@ -1400,12 +1400,12 @@ describe("lean auto mode reliability", () => {
         timeoutMs: TIMEOUT,
       });
       expect(first.code).toBe(0);
-      const sessionIds = readdirSync(join(root.home, ".fx", "sessions"), {
+      const sessionIds = readdirSync(join(root.home, ".chassis", "sessions"), {
         withFileTypes: true,
       })
         .filter((entry) =>
           entry.isDirectory() &&
-          existsSync(join(root.home, ".fx", "sessions", entry.name, "session.json"))
+          existsSync(join(root.home, ".chassis", "sessions", entry.name, "session.json"))
         )
         .map((entry) => entry.name);
       expect(sessionIds).toHaveLength(1);
@@ -1464,7 +1464,7 @@ describe("lean auto mode reliability", () => {
     async () => {
       const root = createIsolatedRoot();
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { bash: { pwd: "allow" } },
@@ -1606,15 +1606,15 @@ describe("lean auto mode reliability", () => {
         ffmpeg,
         "#!/bin/sh\n" +
           "case \"$*\" in\n" +
-          "  *frame-%03d.jpg*) printf 'rebuilt frame\\n' > \"$FX_MEDIA_FRAMES/frame-001.jpg\" ;;\n" +
-          "  *) printf 'rendered media\\n' > \"$FX_MEDIA_RENDER\" ;;\n" +
+          "  *frame-%03d.jpg*) printf 'rebuilt frame\\n' > \"$CHASSIS_MEDIA_FRAMES/frame-001.jpg\" ;;\n" +
+          "  *) printf 'rendered media\\n' > \"$CHASSIS_MEDIA_RENDER\" ;;\n" +
           "esac\n",
       );
       chmodSync(ffmpeg, 0o755);
       const python = join(bin, "python3");
       writeFileSync(
         python,
-        "#!/bin/sh\ncat >/dev/null\nprintf 'python ui data\\n' > \"$FX_MEDIA_PYTHON\"\n",
+        "#!/bin/sh\ncat >/dev/null\nprintf 'python ui data\\n' > \"$CHASSIS_MEDIA_PYTHON\"\n",
       );
       chmodSync(python, 0o755);
 
@@ -1660,9 +1660,9 @@ describe("lean auto mode reliability", () => {
       const env = {
         ...gatewayEnv(root, successfulGateway),
         PATH: `${bin}:${process.env.PATH ?? "/usr/bin:/bin"}`,
-        FX_MEDIA_FRAMES: frames,
-        FX_MEDIA_RENDER: renderedVideo,
-        FX_MEDIA_PYTHON: pythonMarker,
+        CHASSIS_MEDIA_FRAMES: frames,
+        CHASSIS_MEDIA_RENDER: renderedVideo,
+        CHASSIS_MEDIA_PYTHON: pythonMarker,
       };
       const successful = await runFx(
         [
@@ -1851,8 +1851,8 @@ describe("lean auto mode reliability", () => {
           cwd: root.workspace,
           env: {
             ...gatewayEnv(root, gateway),
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "permission",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "permission",
           },
           timeoutMs: TIMEOUT,
         },
@@ -2000,7 +2000,7 @@ describe("lean auto mode reliability", () => {
     async () => {
       const root = createIsolatedRoot();
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { bash: { pwd: "allow" } },
@@ -2068,7 +2068,7 @@ describe("lean auto mode reliability", () => {
     async () => {
       const root = createIsolatedRoot();
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { bash: { pwd: "allow" } },
@@ -2090,7 +2090,7 @@ describe("lean auto mode reliability", () => {
       );
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway),
         stderrPath,
@@ -2127,7 +2127,7 @@ describe("lean auto mode reliability", () => {
       const allowedMarker = join(root.workspace, "saved-allow-ran");
       const allowedCommand = `touch ${JSON.stringify(allowedMarker)}`;
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { bash: { [allowedCommand]: "ask" } },
@@ -2141,7 +2141,7 @@ describe("lean auto mode reliability", () => {
       const stderrPath = join(root.root, "saved-allow-stderr.log");
       writeFileSync(stderrPath, "");
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway),
         stderrPath,
@@ -2162,13 +2162,13 @@ describe("lean auto mode reliability", () => {
       await activeSession.kill();
       activeSession = null;
 
-      const sessionIds = readdirSync(join(root.home, ".fx", "sessions"), {
+      const sessionIds = readdirSync(join(root.home, ".chassis", "sessions"), {
         withFileTypes: true,
       })
         .filter((entry) =>
           entry.isDirectory() &&
           existsSync(
-            join(root.home, ".fx", "sessions", entry.name, "session.json"),
+            join(root.home, ".chassis", "sessions", entry.name, "session.json"),
           )
         )
         .map((entry) => entry.name);
@@ -2245,7 +2245,7 @@ describe("lean auto mode reliability", () => {
       const blockedMarker = join(root.workspace, "saved-deny-must-not-run");
       const blockedCommand = `touch ${JSON.stringify(blockedMarker)}`;
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { bash: { [blockedCommand]: "allow", pwd: "allow" } },
@@ -2263,7 +2263,7 @@ describe("lean auto mode reliability", () => {
       const stderrPath = join(root.root, "saved-deny-stderr.log");
       writeFileSync(stderrPath, "");
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway),
         stderrPath,

@@ -3,12 +3,12 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import xtermHeadless from "@xterm/headless";
-import { createFxTerminal, supportsJspi, xtermAdapter } from "../node.js";
+import { createChassisTerminal, supportsJspi, xtermAdapter } from "../node.js";
 
 const { Terminal } = xtermHeadless;
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const defaultWasm = resolve(scriptDir, "../../zig-out/bin/fx-term.wasm");
+const defaultWasm = resolve(scriptDir, "../../zig-out/bin/chassis-term.wasm");
 const wasmPath = resolve(process.argv[2] || defaultWasm);
 
 if (!supportsJspi()) {
@@ -40,7 +40,7 @@ const mockFetch = async (_url, init) => {
     },
   }), { status: 200, headers: { "content-type": "text/event-stream" } });
 };
-const runtime = await createFxTerminal({
+const runtime = await createChassisTerminal({
   backend: "wasm",
   wasm: await readFile(wasmPath),
   terminal: xtermAdapter(terminal),
@@ -62,7 +62,7 @@ const readGrid = () => {
 const startupDeadline = performance.now() + 5000;
 while (!readGrid().includes("𝒇x")) {
   await flushTerminal();
-  if (performance.now() >= startupDeadline) throw new Error(`timed out waiting for fx-term startup:\n${readGrid()}`);
+  if (performance.now() >= startupDeadline) throw new Error(`timed out waiting for chassis-term startup:\n${readGrid()}`);
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
 runtime.write("/model sdk/accepted-model\r");
@@ -83,7 +83,7 @@ runtime.write("finished\r");
 const streamDeadline = performance.now() + 5000;
 while (!readGrid().includes("streamed response")) {
   await flushTerminal();
-  if (performance.now() >= streamDeadline) throw new Error(`timed out waiting for rendered fx-term stream; requestedModel=${requestedModel}; events=${JSON.stringify(events)}:\n${readGrid()}`);
+  if (performance.now() >= streamDeadline) throw new Error(`timed out waiting for rendered chassis-term stream; requestedModel=${requestedModel}; events=${JSON.stringify(events)}:\n${readGrid()}`);
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
 await flushTerminal();
@@ -92,12 +92,12 @@ runtime.write("/exit\r");
 
 const exitCode = await Promise.race([
   runtime.exited,
-  new Promise((_, reject) => setTimeout(() => reject(new Error("timed out waiting for fx-term exit")), 5000)),
+  new Promise((_, reject) => setTimeout(() => reject(new Error("timed out waiting for chassis-term exit")), 5000)),
 ]);
 
-if (exitCode !== 0) throw new Error(`fx-term exited with code ${exitCode}`);
-if (!grid.includes("𝒇x")) throw new Error(`shared fx welcome frame was not visible in xterm grid:\n${grid}`);
-if (!grid.includes("Run /help for commands")) throw new Error(`shared fx welcome guidance was not visible in xterm grid:\n${grid}`);
+if (exitCode !== 0) throw new Error(`chassis-term exited with code ${exitCode}`);
+if (!grid.includes("𝒇x")) throw new Error(`shared chassis welcome frame was not visible in xterm grid:\n${grid}`);
+if (!grid.includes("Run /help for commands")) throw new Error(`shared chassis welcome guidance was not visible in xterm grid:\n${grid}`);
 if (terminal.buffer.active.baseY !== 0 || terminal.buffer.active.viewportY !== 0) {
   throw new Error(`fresh xterm startup created blank scrollback: baseY=${terminal.buffer.active.baseY}, viewportY=${terminal.buffer.active.viewportY}`);
 }
@@ -110,4 +110,4 @@ if (!grid.includes("streamed response")) throw new Error(`terminal prompt did no
 if (requestedModel !== "sdk/accepted-model") throw new Error(`terminal prompt used unexpected accepted model: ${requestedModel}`);
 if (!(firstChunkAt >= startedAt)) throw new Error("terminal fetch did not produce a first stream chunk");
 
-console.log("headless xterm smoke passed: shared fx frame used the 96x30 host cell grid");
+console.log("headless xterm smoke passed: shared chassis frame used the 96x30 host cell grid");

@@ -6,7 +6,7 @@ import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
-import { createFxAgent } from "../node.js";
+import { createChassisAgent } from "../node.js";
 import { createMcpAdapter } from "../mcp.js";
 
 const imageError = process.argv[4] === "images-error";
@@ -39,7 +39,7 @@ function rpcClient(send, close) {
     });
   });
   return {
-    initialize: () => request("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "libfx-test", version: "1" } }),
+    initialize: () => request("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "libchassis-test", version: "1" } }),
     listTools: (params) => request("tools/list", params),
     callTool: (params, resultSchema, options) => {
       assert.equal(resultSchema, undefined);
@@ -139,8 +139,8 @@ let agent;
 try {
   const options = {
     backend,
-    nativeAddon: resolve(scriptDir, "../../zig-out/lib/libfx.node"),
-    ...(backend === "wasm" ? { wasm: await readFile(resolve(scriptDir, "../../zig-out/bin/fx-core.wasm")) } : {}),
+    nativeAddon: resolve(scriptDir, "../../zig-out/lib/libchassis.node"),
+    ...(backend === "wasm" ? { wasm: await readFile(resolve(scriptDir, "../../zig-out/bin/chassis-core.wasm")) } : {}),
     tools: adapter.tools,
     instructions: adapter.instructions,
     fetch: (input, init) => fetch((init?.method ?? "GET") === "GET" ? `http://127.0.0.1:${gateway.address().port}/models` : input, init),
@@ -148,7 +148,7 @@ try {
     gatewayChatUrl: `http://127.0.0.1:${gateway.address().port}/chat`,
     model: "mcp/model",
   };
-  agent = await createFxAgent(options);
+  agent = await createChassisAgent(options);
   const turn = agent.prompt("use MCP");
   let text = "";
   for await (const event of turn) if (event.type === "text_delta") text += event.delta;
@@ -157,7 +157,7 @@ try {
   if (imageMode) {
     const checkpoint = await agent.checkpoint();
     await agent.close();
-    agent = await createFxAgent({ ...options, checkpoint });
+    agent = await createChassisAgent({ ...options, checkpoint });
     const resumed = agent.prompt("Describe that screenshot again");
     for await (const event of resumed) {}
     assert.equal((await resumed.result).stopReason, "end_turn");

@@ -1,6 +1,6 @@
-# libfx examples
+# libchassis examples
 
-Small applications built with [libfx](https://fx.sh/docs/lib). Each example keeps
+Small applications built with [libchassis](https://chassis.sh/docs/lib). Each example keeps
 the agent calls in its entry point. Start with the one that matches your runtime.
 
 - [Node.js readline chat](node-chat): one agent, a prompt loop, and streamed text.
@@ -9,15 +9,15 @@ the agent calls in its entry point. Start with the one that matches your runtime
 - [Nuxt](nuxt-agent): a Vue form and a streaming Nitro route.
 
 Use Node.js 24 and an [AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok).
-The examples pin libfx 0.0.8. They do not use the CLI's built-in tools.
+The examples pin libchassis 0.0.8. They do not use the CLI's built-in tools.
 
 ## Run an example
 
 Clone this repository, then open the example directory:
 
 ```sh
-git clone https://github.com/vercel-labs/fx.git
-cd fx/examples/node-chat
+git clone https://github.com/adhyaay-karnwal/chassis.git
+cd chassis/examples/node-chat
 npm install
 ```
 
@@ -39,7 +39,7 @@ is needed. The key stays in memory, and changing it starts a new conversation.
 The hosted browser demo works without a key through a proxy with some free tokens.
 Entering a key bypasses that proxy and uses your Gateway balance. To run the proxy
 locally, set `AI_GATEWAY_API_KEY` in `.env.local` and run `npx vercel dev` instead.
-WebAssembly needs a browser with [JSPI support](https://fx.sh/docs/lib/webassembly#check-runtime-support).
+WebAssembly needs a browser with [JSPI support](https://chassis.sh/docs/lib/webassembly#check-runtime-support).
 
 Keep the sibling `shared/` directory when copying a web example. It contains the
 public-demo model and transport policy, not another agent framework.

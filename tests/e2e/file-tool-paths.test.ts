@@ -27,7 +27,7 @@ const REMOVED_FILESYSTEM_TOOLS = [
   "open_file",
 ] as const;
 const liveTest = test.skipIf(
-  !HAS_API_KEY || process.env.FX_E2E_REAL_API !== "1",
+  !HAS_API_KEY || process.env.CHASSIS_E2E_REAL_API !== "1",
 );
 
 type GatewayRequest = {
@@ -211,14 +211,14 @@ function startFakeGateway(
 }
 
 function createIsolatedRoot() {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-file-paths-e2e-")));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-file-paths-e2e-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const external = join(root, "external");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(external, { recursive: true });
-  writeFileSync(join(home, ".fx", "settings.json"), "{}");
+  writeFileSync(join(home, ".chassis", "settings.json"), "{}");
   return {
     root,
     home: realpathSync(home),
@@ -237,12 +237,12 @@ function gatewayEnv(
     HOME: home,
     AI_GATEWAY_API_KEY: "fake-file-paths-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-    FX_MODEL: MODEL,
-    FX_AUTO_UPGRADE: "0",
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+    CHASSIS_MODEL: MODEL,
+    CHASSIS_AUTO_UPGRADE: "0",
     ...extra,
   };
 }
@@ -250,7 +250,7 @@ function gatewayEnv(
 function parseFxJson(result: Awaited<ReturnType<typeof runFx>>) {
   if (result.code !== 0) {
     throw new Error(
-      `fx exited ${result.code}\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+      `chassis exited ${result.code}\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
     );
   }
   return JSON.parse(result.stdout.trim()) as {
@@ -516,8 +516,8 @@ describe("filesystem path handling", () => {
     async () => {
       const root = createIsolatedRoot();
       const target = join(root.external, "live-added-root.txt");
-      const content = `FX_LIVE_ADDED_ROOT_${Date.now()}`;
-      const instructionSentinel = "FX_LIVE_ADDED_ROOT_INSTRUCTION_MUST_NOT_APPEAR";
+      const content = `CHASSIS_LIVE_ADDED_ROOT_${Date.now()}`;
+      const instructionSentinel = "CHASSIS_LIVE_ADDED_ROOT_INSTRUCTION_MUST_NOT_APPEAR";
       writeFileSync(target, content + "\n");
       writeFileSync(
         join(root.external, "AGENTS.md"),
@@ -538,10 +538,10 @@ describe("filesystem path handling", () => {
             cwd: root.workspace,
             env: {
               HOME: root.home,
-              FX_AUTO_UPGRADE: "0",
-              FX_GATEWAY_BASE_URL: undefined,
-              FX_GATEWAY_CHAT_URL: undefined,
-              FX_MODEL: process.env.FX_WORKSPACE_ACCESS_LIVE_MODEL ?? EVAL_MODEL,
+              CHASSIS_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: undefined,
+              CHASSIS_GATEWAY_CHAT_URL: undefined,
+              CHASSIS_MODEL: process.env.CHASSIS_WORKSPACE_ACCESS_LIVE_MODEL ?? EVAL_MODEL,
             },
             timeoutMs: 120_000,
           },
@@ -564,21 +564,21 @@ describe("filesystem path handling", () => {
     async () => {
       const root = createIsolatedRoot();
       try {
-        const homeFile = join(root.home, "fx-path-fixture.txt");
-        const externalFile = join(root.external, "fx-path-fixture.txt");
+        const homeFile = join(root.home, "chassis-path-fixture.txt");
+        const externalFile = join(root.external, "chassis-path-fixture.txt");
         writeFileSync(homeFile, "HOME_FIXTURE_CONTENT\n");
         writeFileSync(externalFile, "EXTERNAL_FIXTURE_CONTENT\n");
 
         const cases = [
           {
             id: "read_home_1",
-            path: "~/fx-path-fixture.txt",
+            path: "~/chassis-path-fixture.txt",
             canonical: homeFile,
             content: "HOME_FIXTURE_CONTENT",
           },
           {
             id: "read_relative_1",
-            path: "../external/fx-path-fixture.txt",
+            path: "../external/chassis-path-fixture.txt",
             canonical: externalFile,
             content: "EXTERNAL_FIXTURE_CONTENT",
           },
@@ -616,7 +616,7 @@ describe("filesystem path handling", () => {
       const root = createIsolatedRoot();
       try {
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".chassis", "settings.json"),
           JSON.stringify({ sandbox: "none" }),
         );
         const cases = [
@@ -784,7 +784,7 @@ describe("filesystem path handling", () => {
         }
 
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".chassis", "settings.json"),
           JSON.stringify({
             permission: {
               edit: {
@@ -854,8 +854,8 @@ describe("filesystem path handling", () => {
           {
             cwd: root.workspace,
             env: gatewayEnv(root, gateway, root.home, {
-              FX_TRACE_LOG: tracePath,
-              FX_TRACE_SCOPES: "permission",
+              CHASSIS_TRACE_LOG: tracePath,
+              CHASSIS_TRACE_SCOPES: "permission",
             }),
             timeoutMs: TIMEOUT,
           },
@@ -949,7 +949,7 @@ describe("filesystem path handling", () => {
   );
 
   test(
-    "registered typed write and edit use one canonical fx ask mutation path",
+    "registered typed write and edit use one canonical chassis ask mutation path",
     async () => {
       const root = createIsolatedRoot();
       try {
@@ -980,8 +980,8 @@ describe("filesystem path handling", () => {
             {
               cwd: root.workspace,
               env: gatewayEnv(root, gateway, root.home, {
-                FX_TRACE_LOG: tracePath,
-                FX_TRACE_SCOPES: "core,tool",
+                CHASSIS_TRACE_LOG: tracePath,
+                CHASSIS_TRACE_SCOPES: "core,tool",
               }),
               timeoutMs: TIMEOUT,
             },
@@ -1097,7 +1097,7 @@ describe("filesystem path handling", () => {
         const editTarget = join(root.external, "edit.txt");
         writeFileSync(editTarget, "BEFORE_EDIT\n");
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".chassis", "settings.json"),
           JSON.stringify({
             permission: {
               edit: {
@@ -1180,13 +1180,13 @@ describe("filesystem path handling", () => {
         const literalWorkspacePath = join(
           root.workspace,
           "~",
-          "fx-path-fixture.txt",
+          "chassis-path-fixture.txt",
         );
         await runTerminalToolScenario({
           root,
           id: "read_missing_home_1",
           name: "read_file",
-          input: { path: "~/fx-path-fixture.txt" },
+          input: { path: "~/chassis-path-fixture.txt" },
           unsetHome: true,
           expectedResultRequest: ["HomeNotSet"],
         });
@@ -1302,10 +1302,10 @@ describe("filesystem path handling", () => {
             cwd: root.workspace,
             env: {
               HOME: root.home,
-              FX_AUTO_UPGRADE: "0",
-              FX_GATEWAY_BASE_URL: undefined,
-              FX_GATEWAY_CHAT_URL: undefined,
-              FX_MODEL: process.env.FX_WORKSPACE_ACCESS_LIVE_MODEL ?? EVAL_MODEL,
+              CHASSIS_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: undefined,
+              CHASSIS_GATEWAY_CHAT_URL: undefined,
+              CHASSIS_MODEL: process.env.CHASSIS_WORKSPACE_ACCESS_LIVE_MODEL ?? EVAL_MODEL,
             },
             timeoutMs: 120_000,
           },

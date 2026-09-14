@@ -3145,7 +3145,7 @@ test "scoped stdio recovery rejects revoked authority before state changes" {
     defer runtime.deinit();
     try runtime.addServer(.{
         .name = try alloc.dupe(u8, "fixture"),
-        .command = try alloc.dupe(u8, "/definitely/not/an/fx-mcp-fixture"),
+        .command = try alloc.dupe(u8, "/definitely/not/an/chassis-mcp-fixture"),
     });
     const server = runtime.servers.items[0];
     server.state.store(.ready, .release);
@@ -3210,7 +3210,7 @@ test "failed recovery leaves its remaining generation budget reachable" {
     var runtime = McpRuntime.init(std.testing.allocator);
     var server = McpServer{ .config = .{
         .name = "fixture",
-        .command = "/definitely/not/an/fx-mcp-fixture",
+        .command = "/definitely/not/an/chassis-mcp-fixture",
         .restart_limit = 2,
     } };
     defer if (server.last_error) |message| std.testing.allocator.free(message);
@@ -5192,7 +5192,7 @@ test "modern request builders share required request metadata" {
     const alloc = std.testing.allocator;
     const metadata = try std.fmt.allocPrint(
         alloc,
-        "\"_meta\":{{\"io.modelcontextprotocol/protocolVersion\":\"{s}\",\"io.modelcontextprotocol/clientInfo\":{{\"name\":\"fx\",\"version\":\"{s}\"}},\"io.modelcontextprotocol/clientCapabilities\":{{}}}}",
+        "\"_meta\":{{\"io.modelcontextprotocol/protocolVersion\":\"{s}\",\"io.modelcontextprotocol/clientInfo\":{{\"name\":\"chassis\",\"version\":\"{s}\"}},\"io.modelcontextprotocol/clientCapabilities\":{{}}}}",
         .{ modern_protocol_version, build_options.app_version },
     );
     defer alloc.free(metadata);

@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const wasmPath = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/bin/fx-core.wasm"));
+const wasmPath = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/bin/chassis-core.wasm"));
 const bytes = await readFile(wasmPath);
 let offset = 8;
 
@@ -30,7 +30,7 @@ while (offset < bytes.length) {
   const sectionEnd = offset + sectionSize;
   assert.ok(sectionEnd <= bytes.length, "truncated Wasm section");
   if (sectionId === 5) {
-    assert.equal(readUleb(), 1, "fx-core must define exactly one linear memory");
+    assert.equal(readUleb(), 1, "chassis-core must define exactly one linear memory");
     const flags = readUleb();
     initialPages = readUleb();
     if ((flags & 1) !== 0) readUleb();
@@ -40,6 +40,6 @@ while (offset < bytes.length) {
   offset = sectionEnd;
 }
 
-assert.notEqual(initialPages, null, "fx-core did not define linear memory");
-assert.ok(initialPages <= 32, `fx-core initial memory exceeds 32 pages: ${initialPages}`);
-console.log(`fx-core Wasm memory passed: ${initialPages} initial pages`);
+assert.notEqual(initialPages, null, "chassis-core did not define linear memory");
+assert.ok(initialPages <= 32, `chassis-core initial memory exceeds 32 pages: ${initialPages}`);
+console.log(`chassis-core Wasm memory passed: ${initialPages} initial pages`);

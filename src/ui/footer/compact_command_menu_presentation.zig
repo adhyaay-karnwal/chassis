@@ -446,7 +446,7 @@ fn composeUsageStatusRow(
     else if (snapshot.coverage == .partial or snapshot.completeness != .complete)
         if (width < 48) "Partial data" else "Partial data · some usage may be missing"
     else
-        "Local fx activity";
+        "Local chassis activity";
     return composeStyledRow(alloc, status, width, ui_render.dim_style);
 }
 

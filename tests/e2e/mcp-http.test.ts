@@ -67,22 +67,22 @@ function createRoot(
   operationTimeoutMs = 5_000,
   required = false,
 ) {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), `fx-mcp-http-${label}-`)));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), `chassis-mcp-http-${label}-`)));
   cleanupRoot = root;
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({}),
   );
   writeFileSync(
-    join(home, ".fx", "mcp.json"),
+    join(home, ".chassis", "mcp.json"),
     JSON.stringify({
       mcp: {
         fixture: {
-          type: "http", environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+          type: "http", environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
           url: activeFixture.url,
           headers: { "X-Workspace": "one" },
           ...(required ? { required: true } : {}),
@@ -92,19 +92,19 @@ function createRoot(
       },
     }),
   );
-  return { root, home, workspace, traceLogPath: join(root, "fx-trace.log") };
+  return { root, home, workspace, traceLogPath: join(root, "chassis-trace.log") };
 }
 
 function createEmptyRoot(label: string) {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), `fx-mcp-http-${label}-`)));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), `chassis-mcp-http-${label}-`)));
   cleanupRoot = root;
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({}));
-  writeFileSync(join(home, ".fx", "mcp.json"), JSON.stringify({ mcp: {} }));
-  return { root, home, workspace, traceLogPath: join(root, "fx-trace.log") };
+  writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({}));
+  writeFileSync(join(home, ".chassis", "mcp.json"), JSON.stringify({ mcp: {} }));
+  return { root, home, workspace, traceLogPath: join(root, "chassis-trace.log") };
 }
 
 function fixtureEnv(
@@ -115,15 +115,15 @@ function fixtureEnv(
     HOME: root.home,
     AI_GATEWAY_API_KEY: "fake-mcp-http-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_AUTO_UPGRADE: "0",
-    FX_MCP_PROTOCOL_VERSION: "2026-07-28",
-    FX_PERMISSION_MODE: "auto",
-    FX_GATEWAY_BASE_URL: activeGateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: activeGateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: activeGateway.chatUrl,
-    FX_MODEL: MODEL,
-    FX_TRACE_LOG: root.traceLogPath,
-    FX_TRACE_SCOPES: "mcp",
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28",
+    CHASSIS_PERMISSION_MODE: "auto",
+    CHASSIS_GATEWAY_BASE_URL: activeGateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: activeGateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_CHAT_URL: activeGateway.chatUrl,
+    CHASSIS_MODEL: MODEL,
+    CHASSIS_TRACE_LOG: root.traceLogPath,
+    CHASSIS_TRACE_SCOPES: "mcp",
   };
 }
 
@@ -168,8 +168,8 @@ function preserveHttpFailure(
 ): void {
   if (result.code === 0 && !force) return;
   cleanupRoot = null;
-  writeFileSync(join(root.root, "fx-stdout.log"), result.stdout);
-  writeFileSync(join(root.root, "fx-stderr.log"), result.stderr);
+  writeFileSync(join(root.root, "chassis-stdout.log"), result.stdout);
+  writeFileSync(join(root.root, "chassis-stderr.log"), result.stderr);
   writeFileSync(
     join(root.root, "failure.json"),
     JSON.stringify({
@@ -179,7 +179,7 @@ function preserveHttpFailure(
       gatewayRequests: activeGateway.requests.map((request) => request.body),
     }, null, 2),
   );
-  throw new Error(`fx ${label} failed; retained artifacts: ${root.root}`);
+  throw new Error(`chassis ${label} failed; retained artifacts: ${root.root}`);
 }
 
 function assertModernWire(
@@ -223,10 +223,10 @@ describe("modern MCP Streamable HTTP", () => {
       },
     });
     const root = createRoot("oauth-server-failure", { url: `http://127.0.0.1:${failing.port}/mcp` });
-    writeFileSync(join(root.home, ".fx", "mcp.json"), JSON.stringify({
+    writeFileSync(join(root.home, ".chassis", "mcp.json"), JSON.stringify({
       mcp: {
         fixture: {
-          type: "http", environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+          type: "http", environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
           url: `http://127.0.0.1:${failing.port}/mcp`,
           oauth: { client_id: "fixture-client" },
           startup_timeout_ms: 1_000,
@@ -242,15 +242,15 @@ describe("modern MCP Streamable HTTP", () => {
         cwd: root.workspace,
         env: {
           HOME: root.home,
-          FX_DISABLE_KEYCHAIN: "1",
-          FX_AUTO_UPGRADE: "0",
-          FX_SKIP_ONBOARDING: "1",
-          FX_SOUND: "0",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_SKIP_ONBOARDING: "1",
+          CHASSIS_SOUND: "0",
           AI_GATEWAY_API_KEY: "local-fixture-key",
           VERCEL_OIDC_TOKEN: undefined,
-          FX_MODEL: MODEL,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_MODEL: MODEL,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         timeoutMs: 15_000,
       });
@@ -275,9 +275,9 @@ describe("modern MCP Streamable HTTP", () => {
           HOME: root.home,
           AI_GATEWAY_API_KEY: undefined,
           VERCEL_OIDC_TOKEN: undefined,
-          FX_AUTO_UPGRADE: "0",
-          FX_TRACE_LOG: root.traceLogPath,
-          FX_TRACE_SCOPES: "mcp",
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_TRACE_LOG: root.traceLogPath,
+          CHASSIS_TRACE_SCOPES: "mcp",
         },
         timeoutMs: 20_000,
       },
@@ -311,9 +311,9 @@ describe("modern MCP Streamable HTTP", () => {
           HOME: root.home,
           AI_GATEWAY_API_KEY: undefined,
           VERCEL_OIDC_TOKEN: undefined,
-          FX_AUTO_UPGRADE: "0",
-          FX_TRACE_LOG: root.traceLogPath,
-          FX_TRACE_SCOPES: "mcp",
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_TRACE_LOG: root.traceLogPath,
+          CHASSIS_TRACE_SCOPES: "mcp",
         },
         timeoutMs: 20_000,
       },
@@ -335,7 +335,7 @@ describe("modern MCP Streamable HTTP", () => {
     ]);
   }, 25_000);
 
-  test("plain-text discovery auth rejection fails closed without aborting fx", async () => {
+  test("plain-text discovery auth rejection fails closed without aborting chassis", async () => {
     fixture = startModernMcpHttpFixture("legacy_plaintext_auth_rejection");
     const root = createRoot("plaintext-auth-rejection", fixture);
 
@@ -347,9 +347,9 @@ describe("modern MCP Streamable HTTP", () => {
           HOME: root.home,
           AI_GATEWAY_API_KEY: undefined,
           VERCEL_OIDC_TOKEN: undefined,
-          FX_AUTO_UPGRADE: "0",
-          FX_TRACE_LOG: root.traceLogPath,
-          FX_TRACE_SCOPES: "mcp",
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_TRACE_LOG: root.traceLogPath,
+          CHASSIS_TRACE_SCOPES: "mcp",
         },
         timeoutMs: 20_000,
       },
@@ -374,7 +374,7 @@ describe("modern MCP Streamable HTTP", () => {
           HOME: root.home,
           AI_GATEWAY_API_KEY: undefined,
           VERCEL_OIDC_TOKEN: undefined,
-          FX_AUTO_UPGRADE: "0",
+          CHASSIS_AUTO_UPGRADE: "0",
         },
       },
     );
@@ -479,7 +479,7 @@ describe("modern MCP Streamable HTTP", () => {
       );
 
       const profile = JSON.parse(
-        readFileSync(join(root.home, ".fx", "mcp.json"), "utf8"),
+        readFileSync(join(root.home, ".chassis", "mcp.json"), "utf8"),
       );
       expect(profile.mcp.prisma).toMatchObject({
         type: "http",
@@ -760,9 +760,9 @@ describe("modern MCP Streamable HTTP", () => {
     const second = startModernMcpHttpFixture("features", "SECOND_SERVER_RESOURCE");
     try {
       const root = createRoot("private-server-isolation", fixture);
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-      profile.mcp.fixture.bearer_token_env = "FX_TEST_SHARED_MCP_TOKEN";
+      profile.mcp.fixture.bearer_token_env = "CHASSIS_TEST_SHARED_MCP_TOKEN";
       profile.mcp.second = { ...profile.mcp.fixture, url: second.url };
       writeFileSync(profilePath, JSON.stringify(profile));
       const calls = [
@@ -783,7 +783,7 @@ describe("modern MCP Streamable HTTP", () => {
       ], { models: [{ id: MODEL, type: "language", tags: ["tool-use"] }] });
       const result = await runFx(
         ["ask", "--json", "--auto", "--no-save", "Read the same resource on both configured servers twice."],
-        { cwd: root.workspace, env: { ...fixtureEnv(root, gateway), FX_TEST_SHARED_MCP_TOKEN: "shared-fixture-token" }, timeoutMs: 25_000 },
+        { cwd: root.workspace, env: { ...fixtureEnv(root, gateway), CHASSIS_TEST_SHARED_MCP_TOKEN: "shared-fixture-token" }, timeoutMs: 25_000 },
       );
       preserveHttpFailure("private-server-isolation", root, result, fixture, gateway);
       expect(result.code).toBe(0);
@@ -1404,7 +1404,7 @@ describe("modern MCP Streamable HTTP", () => {
   }, 30_000);
 
   for (const mode of ["json", "sse"] as ModernHttpMode[]) {
-    test(`fresh fx ask calls the request-scoped ${mode.toUpperCase()} fixture`, async () => {
+    test(`fresh chassis ask calls the request-scoped ${mode.toUpperCase()} fixture`, async () => {
       fixture = startModernMcpHttpFixture(mode);
       const root = createRoot(`ask-${mode}`, fixture);
       gateway = startToolGateway(`${mode} MCP HTTP complete.`);
@@ -1429,7 +1429,7 @@ describe("modern MCP Streamable HTTP", () => {
     }, 30_000);
   }
 
-  test("fresh fx ask delegates unsupported input and output schema assertions", async () => {
+  test("fresh chassis ask delegates unsupported input and output schema assertions", async () => {
     fixture = startModernMcpHttpFixture("server_authoritative_schema");
     const root = createRoot("server-authoritative-schema", fixture, 5_000, true);
     gateway = startToolGateway("Server-authoritative schema complete.");
@@ -1557,11 +1557,11 @@ describe("modern MCP Streamable HTTP", () => {
     fixture = startModernMcpHttpFixture("json");
     const root = createRoot("environment-headers", fixture);
     writeFileSync(
-      join(root.home, ".fx", "mcp.json"),
+      join(root.home, ".chassis", "mcp.json"),
       JSON.stringify({
         mcp: {
           fixture: {
-            type: "http", environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+            type: "http", environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
             url: fixture.url,
             header_env: { "X-Workspace": "MCP_WORKSPACE" },
             bearer_token_env: "MCP_BEARER_TOKEN",
@@ -1594,7 +1594,7 @@ describe("modern MCP Streamable HTTP", () => {
     }
     expect(result.stdout).not.toContain("environment-bearer-secret");
     expect(result.stderr).not.toContain("environment-bearer-secret");
-    expect(readFileSync(join(root.home, ".fx", "mcp.json"), "utf8")).not
+    expect(readFileSync(join(root.home, ".chassis", "mcp.json"), "utf8")).not
       .toContain("environment-bearer-secret");
   }, 30_000);
 
@@ -1602,7 +1602,7 @@ describe("modern MCP Streamable HTTP", () => {
     fixture = startModernMcpHttpFixture("json");
     const root = createRoot("workspace-expanded-headers", fixture);
     writeFileSync(
-      join(root.home, ".fx", "mcp.json"),
+      join(root.home, ".chassis", "mcp.json"),
       JSON.stringify({ mcp: {} }),
     );
     writeFileSync(
@@ -1610,7 +1610,7 @@ describe("modern MCP Streamable HTTP", () => {
       JSON.stringify({
         mcpServers: {
           fixture: {
-            type: "http", environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+            type: "http", environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
             url: fixture.url,
             headers: {
               Authorization: "Bearer ${WORKSPACE_HTTP_TOKEN}",

@@ -226,7 +226,7 @@ pub fn Runtime(comptime App: type) type {
                 try app.writeDomainNotice(.{
                     .topic = "auth",
                     .tone = .warning,
-                    .body = "Set FX_API_KEY through createFxTerminal() to authenticate this WASM session.",
+                    .body = "Set CHASSIS_API_KEY through createChassisTerminal() to authenticate this WASM session.",
                 }, true);
                 return;
             }
@@ -343,7 +343,7 @@ pub fn Runtime(comptime App: type) type {
                     try writeAuthNotice(app, .{
                         .topic = "auth",
                         .tone = .@"error",
-                        .body = "Could not complete fx logout. The current source is unchanged.",
+                        .body = "Could not complete chassis logout. The current source is unchanged.",
                     });
                     return;
                 },
@@ -507,28 +507,28 @@ pub fn Runtime(comptime App: type) type {
         fn applyLogoutResult(app: *App, result: login_flow.LogoutResult) !void {
             // Logging out is an explicit rejection of that credential, so a
             // remembered pointer to it would silently reactivate on next login.
-            // A remembered source always wins resolution, so an active fx login
+            // A remembered source always wins resolution, so an active chassis login
             // is the only way one can be remembered; clearing otherwise is a
             // no-op against a store that holds nothing.
-            if (app.auth.credentialSource() == .fx_login) forgetCredentialSource(app);
-            applyCredentialChange(app, try app.auth.reconcileAfterFxLoginLogout(app.alloc));
+            if (app.auth.credentialSource() == .chassis_login) forgetCredentialSource(app);
+            applyCredentialChange(app, try app.auth.reconcileAfterChassisLoginLogout(app.alloc));
             try writeAuthNotice(app, if (result.local_durability_failed)
                 .{
                     .topic = "auth",
                     .tone = .warning,
-                    .body = "Could not confirm durable fx logout. The active source was recalculated.",
+                    .body = "Could not confirm durable chassis logout. The active source was recalculated.",
                 }
             else if (result.session_deleted)
                 .{
                     .topic = "auth",
                     .tone = .neutral,
-                    .body = "Signed out of fx.",
+                    .body = "Signed out of chassis.",
                 }
             else
                 .{
                     .topic = "auth",
                     .tone = .neutral,
-                    .body = "No fx login session found.",
+                    .body = "No chassis login session found.",
                 });
             if (result.remote_revocation_failed) {
                 try writeAuthNotice(app, .{
@@ -645,7 +645,7 @@ pub fn Runtime(comptime App: type) type {
             const sign_in_source: credentials.Source = if (comptime @hasDecl(@TypeOf(app.auth), "pickerView"))
                 app.auth.pickerView().sign_in_source
             else
-                .fx_login;
+                .chassis_login;
             app.auth.pulseSignIn(app.alloc);
             switch (app.auth.pollSignInTransition(app.alloc)) {
                 .none => {},
@@ -950,7 +950,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (io_mod.getenv("CHASSIS_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
             }
         }
 
@@ -982,7 +982,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (io_mod.getenv("CHASSIS_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
             }
         }
 
@@ -995,7 +995,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (io_mod.getenv("CHASSIS_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
             }
         }
 
@@ -1008,7 +1008,7 @@ pub fn Runtime(comptime App: type) type {
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                if (io_mod.getenv("CHASSIS_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
             }
         }
 
@@ -1092,7 +1092,7 @@ pub fn Runtime(comptime App: type) type {
                 .models_path = app.model_cache.models_path,
                 .preferred_source = if (target == .gateway) settings.credential_source else null,
                 .primary_model = if (intent == .post_oauth and provider_runtime.provider(app) == target) provider_runtime.model(app) else null,
-                .preferred_model = if (intent == .post_oauth) settings.models.get(target) else io_mod.getenv("FX_MODEL") orelse settings.models.get(target),
+                .preferred_model = if (intent == .post_oauth) settings.models.get(target) else io_mod.getenv("CHASSIS_MODEL") orelse settings.models.get(target),
             });
         }
 
@@ -1220,7 +1220,7 @@ pub fn Runtime(comptime App: type) type {
                     try app.writeDomainNotice(.{
                         .topic = "provider",
                         .tone = .warning,
-                        .body = if (intent == .post_oauth) "Subscription sign-in completed, but its saved credential is unavailable. The current provider is unchanged." else if (target == .codex) "Run fx login codex, then try switching again." else if (target == .grok) "Run fx login grok, then try switching again." else credentials.missing_interactive_credential_message,
+                        .body = if (intent == .post_oauth) "Subscription sign-in completed, but its saved credential is unavailable. The current provider is unchanged." else if (target == .codex) "Run chassis login codex, then try switching again." else if (target == .grok) "Run chassis login grok, then try switching again." else credentials.missing_interactive_credential_message,
                     }, true);
                 }
                 return false;
@@ -1347,7 +1347,7 @@ pub fn Runtime(comptime App: type) type {
 
         pub fn loadTeamsForProviderPicker(app: *App) !TeamColumn {
             const view = app.auth.pickerView();
-            if (view.unavailable_sources.contains(.fx_login)) {
+            if (view.unavailable_sources.contains(.chassis_login)) {
                 const body = try auth_runtime.preparationFailureText(app.alloc, .gateway, error.CredentialStorageUnavailable);
                 defer app.alloc.free(body);
                 try writeAuthNotice(app, .{ .topic = "auth", .tone = .warning, .body = body });
@@ -1355,12 +1355,12 @@ pub fn Runtime(comptime App: type) type {
             }
             if (comptime @hasDecl(@TypeOf(app.auth), "credentialFailure")) {
                 if (app.auth.credentialFailure()) |failure| {
-                    if (failure.source == .fx_login and failure.requiresSignIn()) {
+                    if (failure.source == .chassis_login and failure.requiresSignIn()) {
                         return .needs_sign_in;
                     }
                 }
             }
-            if (!view.fx_login_session_available) return .needs_sign_in;
+            if (!view.chassis_login_session_available) return .needs_sign_in;
             try app.flushBeforeBlockingExternalWork();
 
             var selection = login_flow.loadTeamSelection(app.alloc, app.auth.oauthTransport()) catch |err| {
@@ -1368,7 +1368,7 @@ pub fn Runtime(comptime App: type) type {
                 // A session file that exists but can no longer be refreshed is
                 // not a listing failure: there is nothing to list until the
                 // user signs in again.
-                if (err == error.NoSession or auth_runtime.classifyCredentialFailure(.fx_login, err).requiresSignIn()) {
+                if (err == error.NoSession or auth_runtime.classifyCredentialFailure(.chassis_login, err).requiresSignIn()) {
                     return .needs_sign_in;
                 }
                 if (err != error.NoTeams and err != error.TeamRequestFailed) {
@@ -1402,7 +1402,7 @@ pub fn Runtime(comptime App: type) type {
         }
 
         fn beginTeamPicker(app: *App) !void {
-            if (!app.auth.pickerView().fx_login_session_available) return;
+            if (!app.auth.pickerView().chassis_login_session_available) return;
             try app.flushBeforeBlockingExternalWork();
 
             var selection = login_flow.loadTeamSelection(app.alloc, app.auth.oauthTransport()) catch |err| {
@@ -1411,7 +1411,7 @@ pub fn Runtime(comptime App: type) type {
                     .topic = "auth",
                     .tone = .@"error",
                     .body = switch (err) {
-                        error.NoSession => "The fx login session is no longer available. Sign in to change teams.",
+                        error.NoSession => "The chassis login session is no longer available. Sign in to change teams.",
                         error.NoTeams => "No Vercel teams are available for this account.",
                         else => "Could not load Vercel teams. The current team is unchanged.",
                     },
@@ -1455,7 +1455,7 @@ pub fn Runtime(comptime App: type) type {
                 defer settings.deinit(app.alloc);
                 try beginPreparation(app, .{
                     .intent = .{ .team = .{ .index = index, .activate_gateway = provider_runtime.provider(app) != .gateway } },
-                    .preferred_model = io_mod.getenv("FX_MODEL") orelse settings.models.get(.gateway),
+                    .preferred_model = io_mod.getenv("CHASSIS_MODEL") orelse settings.models.get(.gateway),
                     .catalog_provider = catalog_provider,
                     .models_path = app.model_cache.models_path,
                     .candidate = candidate,
@@ -1513,7 +1513,7 @@ pub fn Runtime(comptime App: type) type {
                     .topic = "auth",
                     .tone = .@"error",
                     .body = switch (err) {
-                        error.SessionChanged, error.NoSession => "The fx login session changed before the team could be saved.",
+                        error.SessionChanged, error.NoSession => "The chassis login session changed before the team could be saved.",
                         else => "Could not change the Vercel team. The current team is unchanged.",
                     },
                 }, true);
@@ -1525,7 +1525,7 @@ pub fn Runtime(comptime App: type) type {
                 if (activation) |task| {
                     task.input.intent = .{ .provider = .{ .target = .gateway, .allow_login = false, .origin = .manual } };
                     if (!try finishProviderSwitch(app, task)) return false;
-                    rememberCredentialSource(app, .fx_login);
+                    rememberCredentialSource(app, .chassis_login);
                     app.auth.closePicker(app.alloc);
                     try app.writeDomainNotice(.{ .topic = "auth", .tone = .neutral, .body = body }, true);
                     return true;
@@ -1557,17 +1557,17 @@ pub fn Runtime(comptime App: type) type {
                 }
             }
 
-            if (!try selectCredentialSource(app, .fx_login)) {
+            if (!try selectCredentialSource(app, .chassis_login)) {
                 cancelPromptRetryAfterAuth(app);
                 app.auth.closePicker(app.alloc);
                 try app.writeDomainNotice(.{
                     .topic = "auth",
                     .tone = .@"error",
-                    .body = "Changed the Vercel team, but the fx login credential could not be loaded.",
+                    .body = "Changed the Vercel team, but the chassis login credential could not be loaded.",
                 }, true);
                 return false;
             }
-            rememberCredentialSource(app, .fx_login);
+            rememberCredentialSource(app, .chassis_login);
             app.auth.closePicker(app.alloc);
             try app.writeDomainNotice(if (model_persistence_failed) .{
                 .topic = "auth",
@@ -1652,14 +1652,14 @@ pub fn Runtime(comptime App: type) type {
             if (started catch |err| {
                 cancelPromptRetryAfterAuth(app);
                 debug_trace.logf("auth", "login failed err={s}", .{@errorName(err)});
-                try writeLoginError(app, .fx_login, err);
+                try writeLoginError(app, .chassis_login, err);
                 return;
             }) {
                 app.shell.render_requests.request(.footer);
                 // Open the browser as soon as the device code is ready instead of
                 // waiting for Enter; Enter stays as a manual re-open, and
-                // FX_NO_OPEN_BROWSER opts out for headless/SSH sessions.
-                if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
+                // CHASSIS_NO_OPEN_BROWSER opts out for headless/SSH sessions.
+                if (io_mod.getenv("CHASSIS_NO_OPEN_BROWSER") == null) try openSignInBrowser(app);
             }
         }
 
@@ -1677,7 +1677,7 @@ pub fn Runtime(comptime App: type) type {
             return true;
         }
 
-        fn refreshFxLoginCredentialIfNeeded(app: *App) !void {
+        fn refreshChassisLoginCredentialIfNeeded(app: *App) !void {
             const change = try app.auth.refreshSelectedCredentialIfNeeded(app.alloc);
             applyCredentialRefreshChange(app, change);
         }
@@ -1702,7 +1702,7 @@ pub fn Runtime(comptime App: type) type {
                 try app.writeDomainNotice(.{
                     .topic = "auth",
                     .tone = .warning,
-                    .body = "Missing FX_API_KEY. Supply it through createFxTerminal().",
+                    .body = "Missing CHASSIS_API_KEY. Supply it through createChassisTerminal().",
                 }, true);
                 return false;
             }
@@ -1801,7 +1801,7 @@ pub fn Runtime(comptime App: type) type {
                 }
             }
             for (0..2) |_| {
-                refreshFxLoginCredentialIfNeeded(app) catch |err| switch (err) {
+                refreshChassisLoginCredentialIfNeeded(app) catch |err| switch (err) {
                     error.OutOfMemory => return err,
                     else => return recoverPromptCredentialRefreshFailure(app, err),
                 };
@@ -1816,7 +1816,7 @@ pub fn Runtime(comptime App: type) type {
         ) !void {
             requestPromptRetryAfterAuth(app);
             switch (failure.source) {
-                .fx_login => try beginSignIn(app, false),
+                .chassis_login => try beginSignIn(app, false),
                 .chatgpt_subscription => try beginChatGptSignIn(app),
                 .grok_subscription => try beginGrokSignIn(app),
                 .vercel_oidc_token,
@@ -1848,9 +1848,9 @@ pub fn Runtime(comptime App: type) type {
         fn recoverPromptCredentialRefreshFailure(app: *App, err: anyerror) !bool {
             const active_source = app.auth.credentialSource();
             const source = if (active_source) |active|
-                if (credentials.sourceRefreshable(active)) active else .fx_login
+                if (credentials.sourceRefreshable(active)) active else .chassis_login
             else
-                .fx_login;
+                .chassis_login;
             return recoverCredentialFailure(app, source, err);
         }
 
@@ -1998,7 +1998,7 @@ pub fn Runtime(comptime App: type) type {
                     else => .{ .topic = "auth", .tone = .@"error", .body = "Grok sign-in failed. The current credential is unchanged." },
                 }
             else switch (err) {
-                error.ClientIdMissing => .{ .topic = "auth", .tone = .@"error", .body = "fx login is not configured yet. The current credential is unchanged." },
+                error.ClientIdMissing => .{ .topic = "auth", .tone = .@"error", .body = "chassis login is not configured yet. The current credential is unchanged." },
                 error.AccessDenied => .{ .topic = "auth", .tone = .@"error", .body = "Vercel sign-in was denied. The current credential is unchanged." },
                 error.ExpiredToken, error.LoginTimedOut => .{ .topic = "auth", .tone = .warning, .body = "The Vercel sign-in code expired. The current credential is unchanged; run /login to try again." },
                 else => .{ .topic = "auth", .tone = .@"error", .body = "Vercel sign-in failed. The current credential is unchanged." },
@@ -2254,7 +2254,7 @@ const TestTeamSelection = struct {
         if (index >= self.teams.items.len) return error.InvalidTeamSelection;
         return .{
             .token = try alloc.dupe(u8, "candidate-token"),
-            .source = .fx_login,
+            .source = .chassis_login,
             .team_slug = try alloc.dupe(u8, self.teams.items[index].slug),
         };
     }
@@ -2319,7 +2319,7 @@ const TestAuth = struct {
             else
                 false,
             .stored_key_status = .not_attempted,
-            .fx_login_status = .not_attempted,
+            .chassis_login_status = .not_attempted,
             .onboarding_skipped = self.onboarding_skipped,
         };
     }
@@ -2465,12 +2465,12 @@ const TestAuth = struct {
 
     fn modelCatalogAccess(self: *const TestAuth) credentials.CatalogAccess {
         return if (self.catalog_ready)
-            credentials.catalogAccessForCredential(.fx_login, "refreshed-key", "team_123")
+            credentials.catalogAccessForCredential(.chassis_login, "refreshed-key", "team_123")
         else
-            .{ .public_only = .fx_login_team_required };
+            .{ .public_only = .chassis_login_team_required };
     }
 
-    fn reconcileAfterFxLoginLogout(self: *TestAuth, _: std.mem.Allocator) !bool {
+    fn reconcileAfterChassisLoginLogout(self: *TestAuth, _: std.mem.Allocator) !bool {
         self.logout_reconcile_count += 1;
         return self.logout_changed;
     }
@@ -3016,8 +3016,8 @@ test "auth source changes invalidate the catalog and failed selection preserves 
     const runtime = Runtime(TestApp);
 
     app.auth.select_result = true;
-    try std.testing.expect(try runtime.selectCredentialSource(&app, .fx_login));
-    try std.testing.expectEqual(credentials.Source.fx_login, app.auth.selected_source.?);
+    try std.testing.expect(try runtime.selectCredentialSource(&app, .chassis_login));
+    try std.testing.expectEqual(credentials.Source.chassis_login, app.auth.selected_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
 
@@ -3073,7 +3073,7 @@ test "completed credential switch emits exactly one transcript line" {
     try std.testing.expectEqualStrings(expected, app.transcript.items);
 }
 
-test "team change from an environment source activates and remembers fx login" {
+test "team change from an environment source activates and remembers chassis login" {
     var app: TestApp = .{};
     defer app.deinit();
     app.auth.select_result = true;
@@ -3081,10 +3081,10 @@ test "team change from an environment source activates and remembers fx login" {
     try std.testing.expect(try Runtime(TestApp).applyTeamChoice(&app, 0));
 
     try std.testing.expectEqual(@as(usize, 1), app.auth.team_selection.select_count);
-    try std.testing.expectEqual(credentials.Source.fx_login, app.auth.active_source.?);
-    try std.testing.expectEqual(credentials.Source.fx_login, app.auth.selected_source.?);
+    try std.testing.expectEqual(credentials.Source.chassis_login, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.chassis_login, app.auth.selected_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
-    try std.testing.expectEqual(credentials.Source.fx_login, app.last_preference_source.?);
+    try std.testing.expectEqual(credentials.Source.chassis_login, app.last_preference_source.?);
     try std.testing.expect(app.auth.picker_closed);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
@@ -3095,16 +3095,16 @@ test "team change from an environment source activates and remembers fx login" {
     );
 }
 
-test "team change on an active fx login reloads and remembers the selected credential" {
+test "team change on an active chassis login reloads and remembers the selected credential" {
     var app: TestApp = .{};
     defer app.deinit();
-    app.auth.active_source = .fx_login;
+    app.auth.active_source = .chassis_login;
 
     try std.testing.expect(try Runtime(TestApp).applyTeamChoice(&app, 0));
 
-    try std.testing.expectEqual(credentials.Source.fx_login, app.auth.selected_source.?);
+    try std.testing.expectEqual(credentials.Source.chassis_login, app.auth.selected_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
-    try std.testing.expectEqual(credentials.Source.fx_login, app.last_preference_source.?);
+    try std.testing.expectEqual(credentials.Source.chassis_login, app.last_preference_source.?);
 }
 
 test "teamless direct login does not activate or persist an unvalidated authority" {
@@ -3129,7 +3129,7 @@ test "failed preference persistence keeps a validated team credential active" {
 
     _ = try Runtime(TestApp).applyTeamChoice(&app, 0);
 
-    try std.testing.expectEqual(credentials.Source.fx_login, app.auth.active_source.?);
+    try std.testing.expectEqual(credentials.Source.chassis_login, app.auth.active_source.?);
     try std.testing.expectEqual(@as(usize, 1), app.preference_write_count);
     try std.testing.expectEqual(@as(?credentials.Source, null), app.last_preference_source);
 }
@@ -3205,9 +3205,9 @@ test "prompt credential prewarm ignores the previous provider credential" {
         auth: TestAuth = .{},
     };
     const cases = .{
-        .{ model_provider.ProviderId.gateway, credentials.Source.chatgpt_subscription, credentials.Source.fx_login },
-        .{ model_provider.ProviderId.codex, credentials.Source.fx_login, credentials.Source.chatgpt_subscription },
-        .{ model_provider.ProviderId.grok, credentials.Source.fx_login, credentials.Source.grok_subscription },
+        .{ model_provider.ProviderId.gateway, credentials.Source.chatgpt_subscription, credentials.Source.chassis_login },
+        .{ model_provider.ProviderId.codex, credentials.Source.chassis_login, credentials.Source.chatgpt_subscription },
+        .{ model_provider.ProviderId.grok, credentials.Source.chassis_login, credentials.Source.grok_subscription },
     };
     inline for (cases) |case| {
         var app = ProviderApp{ .selected_provider = case[0] };
@@ -3225,19 +3225,19 @@ test "prompt credential refresh preserves catalog for secret rotation" {
     defer app.deinit();
     const runtime = Runtime(TestApp);
 
-    try runtime.refreshFxLoginCredentialIfNeeded(&app);
+    try runtime.refreshChassisLoginCredentialIfNeeded(&app);
     try std.testing.expectEqual(@as(usize, 1), app.auth.refresh_count);
     try std.testing.expectEqual(@as(usize, 0), app.model_cache.reset_count);
 
     app.auth.refresh_change = .secret_only;
-    try runtime.refreshFxLoginCredentialIfNeeded(&app);
+    try runtime.refreshChassisLoginCredentialIfNeeded(&app);
     try std.testing.expectEqual(@as(usize, 2), app.auth.refresh_count);
     try std.testing.expectEqual(@as(usize, 0), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
     try std.testing.expectEqual(@as(usize, 1), app.session.usage.refresh_count);
 
     app.auth.refresh_change = .authority;
-    try runtime.refreshFxLoginCredentialIfNeeded(&app);
+    try runtime.refreshChassisLoginCredentialIfNeeded(&app);
     try std.testing.expectEqual(@as(usize, 3), app.auth.refresh_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 2), app.model_cache_warmup_count);
@@ -3267,7 +3267,7 @@ test "logout result reconciles live auth and renders only sanitized notices" {
     try std.testing.expectEqual(@as(usize, 1), app.auth.logout_reconcile_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache_warmup_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Signed out of fx.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Signed out of chassis.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, login_flow.remote_revocation_warning) != null);
     for ([_][]const u8{ "access-secret", "refresh-secret", "RemoteRevokeFailed", "https://issuer.example" }) |detail| {
         try std.testing.expect(std.mem.find(u8, app.transcript.items, detail) == null);
@@ -3287,7 +3287,7 @@ test "logout durability failure still reconciles live auth" {
 
     try std.testing.expectEqual(@as(usize, 1), app.auth.logout_reconcile_count);
     try std.testing.expectEqual(@as(usize, 1), app.model_cache.reset_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Could not confirm durable fx logout.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "Could not confirm durable chassis logout.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, login_flow.remote_revocation_warning) != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "current source is unchanged") == null);
 }
@@ -3298,7 +3298,7 @@ test "prompt credential refresh failure is recoverable and detail-free" {
     app.auth.refresh_error = error.OAuthRequestFailed;
 
     try std.testing.expect(!try Runtime(TestApp).preparePromptCredential(&app));
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "fx login credential refresh failed.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "chassis login credential refresh failed.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "press enter to retry.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Your prompt is saved.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Choose another source") == null);
@@ -3313,7 +3313,7 @@ test "prompt credential refresh failure is recoverable and detail-free" {
 test "permanent prompt credential failure is one repair episode" {
     var app: TestApp = .{};
     defer app.deinit();
-    app.auth.active_source = .fx_login;
+    app.auth.active_source = .chassis_login;
     app.auth.refresh_error = error.InvalidGrant;
 
     try std.testing.expect(!try Runtime(TestApp).preparePromptCredential(&app));
@@ -3328,7 +3328,7 @@ test "permanent prompt credential failure is one repair episode" {
     );
     try std.testing.expectEqual(
         @as(usize, 1),
-        std.mem.count(u8, app.transcript.items, "fx login sign-in expired."),
+        std.mem.count(u8, app.transcript.items, "chassis login sign-in expired."),
     );
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Your prompt is saved.") != null);
 }
@@ -3352,7 +3352,7 @@ test "prompt credential admission rejects a credential that remains unavailable"
 
     try std.testing.expect(!try Runtime(TestApp).preparePromptCredential(&app));
     try std.testing.expectEqual(@as(usize, 2), app.auth.refresh_count);
-    try std.testing.expect(std.mem.find(u8, app.transcript.items, "fx login sign-in expired.") != null);
+    try std.testing.expect(std.mem.find(u8, app.transcript.items, "chassis login sign-in expired.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "press enter to sign in again.") != null);
     try std.testing.expect(std.mem.find(u8, app.transcript.items, "Your prompt is saved.") != null);
     try std.testing.expect(!app.auth.picker_opened);
@@ -3403,8 +3403,8 @@ test "manual compaction credential failure leaves feedback to its lifecycle owne
     var app: TestApp = .{};
     defer app.deinit();
     app.submission.compaction_pending = true;
-    app.auth.active_source = .fx_login;
-    try std.testing.expect(!try Runtime(TestApp).recoverCredentialFailure(&app, .fx_login, error.CredentialRefreshUnavailable));
+    app.auth.active_source = .chassis_login;
+    try std.testing.expect(!try Runtime(TestApp).recoverCredentialFailure(&app, .chassis_login, error.CredentialRefreshUnavailable));
     try std.testing.expect(app.auth.credential_failure != null);
     try std.testing.expectEqual(@as(usize, 0), app.notice_write_count);
     try std.testing.expectEqual(@as(usize, 0), app.transcript.items.len);
@@ -3430,15 +3430,15 @@ test "compaction credential failure preserves the first ordinary recovery notice
     defer app.transcript.deinit(app.alloc);
     var credential: credentials.Credential = .{
         .token = try app.alloc.dupe(u8, "login-token"),
-        .source = .fx_login,
+        .source = .chassis_login,
     };
     defer credential.deinit(app.alloc);
     _ = app.auth.adoptCredential(app.alloc, &credential);
     const runtime = Runtime(AuthApp);
-    const failure = auth_runtime.classifyCredentialFailure(.fx_login, error.OAuthRequestFailed);
+    const failure = auth_runtime.classifyCredentialFailure(.chassis_login, error.OAuthRequestFailed);
 
     app.submission.compaction_pending = true;
-    try std.testing.expect(!try runtime.recoverCredentialFailure(&app, .fx_login, error.OAuthRequestFailed));
+    try std.testing.expect(!try runtime.recoverCredentialFailure(&app, .chassis_login, error.OAuthRequestFailed));
     try std.testing.expectEqual(@as(usize, 0), app.notice_write_count);
     try std.testing.expectEqual(@as(usize, 0), app.transcript.items.len);
     try std.testing.expectEqual(failure, app.auth.credentialFailure().?);
@@ -3459,10 +3459,10 @@ test "compaction credential failure preserves the first ordinary recovery notice
         .phase = .awaiting_auth,
     };
     defer app.submission.pending.?.deinit(app.alloc);
-    try std.testing.expect(!try runtime.recoverCredentialFailure(&app, .fx_login, error.OAuthRequestFailed));
+    try std.testing.expect(!try runtime.recoverCredentialFailure(&app, .chassis_login, error.OAuthRequestFailed));
     try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
     try std.testing.expectEqualStrings(
-        "fx login credential refresh failed.\npress enter to retry. Your prompt is saved.",
+        "chassis login credential refresh failed.\npress enter to retry. Your prompt is saved.",
         app.transcript.items,
     );
     try std.testing.expectEqualStrings("keep this ordinary prompt", app.submission.pending.?.draft.prompt);
@@ -3471,14 +3471,14 @@ test "compaction credential failure preserves the first ordinary recovery notice
     try std.testing.expectEqual(failure, app.auth.credentialFailure().?);
     try std.testing.expect(app.shell.render_requests.footer_requested);
 
-    try std.testing.expect(!try runtime.recoverCredentialFailure(&app, .fx_login, error.OAuthRequestFailed));
+    try std.testing.expect(!try runtime.recoverCredentialFailure(&app, .chassis_login, error.OAuthRequestFailed));
     try std.testing.expectEqual(@as(usize, 1), app.notice_write_count);
 }
 
 test "prompt credential refresh falls back when its task cannot start" {
     var app: TestApp = .{};
     defer app.deinit();
-    app.auth.active_source = .fx_login;
+    app.auth.active_source = .chassis_login;
     app.auth.prompt_refresh_start = .failed;
     app.auth.gateway_ready = false;
     app.auth.gateway_ready_after_refresh_count = 1;

@@ -1,10 +1,10 @@
-# fx
+# chassis
 
 ## 0.0.9
 
 <!-- release:start -->
 
-**fx can now use a frontier model for steering, then delegate to cheaper models to implement. Subagents keep running while you steer, can have different models and reasoning levels, and take feedback mid-task. We're accomplishing this without any new commands or concepts, just chat with fx.**
+**chassis can now use a frontier model for steering, then delegate to cheaper models to implement. Subagents keep running while you steer, can have different models and reasoning levels, and take feedback mid-task. We're accomplishing this without any new commands or concepts, just chat with chassis.**
 
 ### Breaking Changes
 
@@ -17,15 +17,15 @@
 - New conversations get a short title from the first prompt. Turn generated session titles off in `/settings`.
 - Press `ctrl+p` while writing to open the model picker. Your draft and attached images stay where they are.
 - ACP clients can set reasoning effort on supported models. They can also replay earlier tool calls as structured events.
-- New runnable `libfx` examples for [Node.js](https://fx-demo-node-chat.vercel.app/), [browsers](https://fx-demo-browser-agent.vercel.app/), [Next.js](https://fx-demo-nextjs-agent.vercel.app/), and [Nuxt](https://fx-demo-nuxt-agent.vercel.app/).
+- New runnable `libchassis` examples for [Node.js](https://chassis-demo-node-chat.vercel.app/), [browsers](https://chassis-demo-browser-agent.vercel.app/), [Next.js](https://chassis-demo-nextjs-agent.vercel.app/), and [Nuxt](https://chassis-demo-nuxt-agent.vercel.app/).
 
 ### Improvements
 
-- `fx -c` and `fx --continue` now resume the workspace’s remembered conversation without a full session scan.
+- `chassis -c` and `chassis --continue` now resume the workspace’s remembered conversation without a full session scan.
 - Compaction now shows in the activity row. If you send a message while it's running, it waits, then runs with the compacted context.
 - Assistant Markdown now renders nested emphasis, links, code spans, lists, fenced code blocks, and entities the way GitHub does.
 - `@~`, `@.`, and `@..` open the home directory, workspace, and parent directory. No trailing slash needed. File suggestions also stay put while you browse and refine them.
-- Escape needs a second press within one second to interrupt active work. ctrl+c clears a non-empty composer first; with an empty composer, it interrupts active work, then exits fx on the next press.
+- Escape needs a second press within one second to interrupt active work. ctrl+c clears a non-empty composer first; with an empty composer, it interrupts active work, then exits chassis on the next press.
 
 ### Bug Fixes
 
@@ -44,39 +44,39 @@
 
 ## 0.0.8
 
-**fx is smaller, simpler, and faster. libfx initialization in Node / browser is over 40× faster; fx binary is 7.49% smaller. fx uses a smaller three-action shell, context compaction is optimized per model, and Enter steers active turns instead of queuing follow-ups.**
+**chassis is smaller, simpler, and faster. libchassis initialization in Node / browser is over 40× faster; chassis binary is 7.49% smaller. chassis uses a smaller three-action shell, context compaction is optimized per model, and Enter steers active turns instead of queuing follow-ups.**
 
 ### Breaking Changes
 
-- fx now uses a smaller shell tool with 75% fewer actions (3 vs 12), replacing the old terminal tool.
+- chassis now uses a smaller shell tool with 75% fewer actions (3 vs 12), replacing the old terminal tool.
 - Enter now steers active turns instead of queuing follow-ups, and ctrl+enter does the same.
 - The subagent interface now has 67% fewer commands (2 vs 6), with direct delegation replacing the ctrl+x manager.
 - The memory tool has been removed without deleting existing saved memories.
-- createFxAgent() now exposes prompt, checkpoint, and close instead of the old session, model, and config APIs.
-- createFxAgent() now takes apiKey and an optional model directly; Agent configuration through env is no longer accepted.
+- createChassisAgent() now exposes prompt, checkpoint, and close instead of the old session, model, and config APIs.
+- createChassisAgent() now takes apiKey and an optional model directly; Agent configuration through env is no longer accepted.
 - capability_search replaces the retired skill_search and mcp_search_tools.
 - The public --record startup flag has been removed.
 
 ### New Features
 
 - Compaction now keeps recent tool exchanges intact, preserves the full transcript, and continues the same turn in a fresh context window.
-- fx can run one-off tasks or continue named agents directly from the conversation.
+- chassis can run one-off tasks or continue named agents directly from the conversation.
 - The shell now supports up to 64 live executions.
 - /mcp now opens a terminal browser for servers, tools, resources, prompts, authentication, and project trust.
 - MCP tool images now reach supported models and remain available after resume.
 - JavaScript hosts can now add their own tools, MCP clients, and skills across Node, Bun, and browsers.
-- The libfx package has no runtime dependencies; host-supplied tools and MCP clients may have their own.
+- The libchassis package has no runtime dependencies; host-supplied tools and MCP clients may have their own.
 - ACP image prompts now support up to 3.75 MiB per image.
 - /provider, /setup, and /login now open the same column picker for providers, sign-in methods, API keys, and Vercel teams.
-- libfx now provides listModels() for explicit model discovery without creating an Agent.
-- Embedding hosts can use FX_AUTH_MODE=host-managed without reading or writing local provider credentials.
+- libchassis now provides listModels() for explicit model discovery without creating an Agent.
+- Embedding hosts can use CHASSIS_AUTH_MODE=host-managed without reading or writing local provider credentials.
 - --full-access and /permissions full-access replace YOLO in the UI and commands; the old aliases still work.
-- fx ask --json now reports input and output tokens.
+- chassis ask --json now reports input and output tokens.
 
-- libfx now supports both ESM imports and CommonJS `require()` in Node.
-- Native libfx Agents now run in Next.js 15 and 16 server routes without extra bundler configuration.
-- `getBackendInfo()` now reports available libfx backends and loading errors without creating an Agent.
-- `fx session recover <id>` can recover damaged conversations into a new session while leaving the original intact.
+- libchassis now supports both ESM imports and CommonJS `require()` in Node.
+- Native libchassis Agents now run in Next.js 15 and 16 server routes without extra bundler configuration.
+- `getBackendInfo()` now reports available libchassis backends and loading errors without creating an Agent.
+- `chassis session recover <id>` can recover damaged conversations into a new session while leaving the original intact.
 
 ### Improvements
 
@@ -90,33 +90,33 @@
 - AI Gateway now uses Exa by default for web searches, with Parallel as the fallback.
 - AI Gateway caching is now enabled automatically for agent conversations.
 - New sessions use shorter 12-character IDs while existing IDs remain resumable.
-- File and model pickers remain available while fx is working, and model changes apply to the next turn.
+- File and model pickers remain available while chassis is working, and model changes apply to the next turn.
 - Steering messages now appear in chat immediately and wait only while a tool is running.
 - Codex and Grok model lists refresh in open terminal and ACP sessions without requiring their CLIs.
 - Stable Wasm sources compile once per JavaScript realm while each Agent keeps separate state and memory.
 - MCP servers now connect independently, and optional servers start only when needed.
 - Subagent tasks and replies now appear in chat, with failures and partial results preserved.
 - The /resume picker now reuses cached session summaries instead of rescanning every time.
-- Terminal tabs now show the fx version and workspace folder.
-- libfx now pauses large streams when hosts fall behind instead of losing output.
+- Terminal tabs now show the chassis version and workspace folder.
+- libchassis now pauses large streams when hosts fall behind instead of losing output.
 - ctrl+c now clears the composer first and cancels active work only when the composer is empty.
 
-- Long saved conversations now resume faster, including repeated `fx -c` continuation.
+- Long saved conversations now resume faster, including repeated `chassis -c` continuation.
 - Scoped project instructions now refresh before continued turns, including rules changed since the last tool call.
 
 ### Bug Fixes
 
 - Models with native image support no longer receive the redundant vision tool.
-- Terminal fx ask now loads approved MCP servers before the first model request.
+- Terminal chassis ask now loads approved MCP servers before the first model request.
 - The footer now shows Fast mode only when it matches the active model.
-- fx now keeps replies in the language of the latest user request.
+- chassis now keeps replies in the language of the latest user request.
 - AI Gateway requests can run for up to 30 minutes, and timed-out streams pause instead of retrying automatically.
 - Partial command output and known process status are preserved when output reading fails.
 - Forced shell termination now stops waiting after 6 seconds and reports when termination cannot be confirmed.
 - Tools that fail before execution now show why they did not run.
 - Cancelling an ACP prompt now stops the work instead of leaving it running.
 - Gateway, Codex, and Grok no longer fall back to another credential source when the selected one is unavailable.
-- New sessions remain saved when another fx process is updating session history.
+- New sessions remain saved when another chassis process is updating session history.
 - Older sessions now upgrade without losing conversation history or tool output.
 - Explicitly requested skills now load completely and show their status before the reply begins.
 - Cancellation feedback now appears immediately after esc, while completed tool results remain intact.
@@ -124,9 +124,9 @@
 - Recovered responses no longer join text from separate attempts or repeat completed tool calls.
 - Provider selection remains responsive while credentials and models load, and sign-in can resume after logout, cancellation, or credential failures.
 - Large session reads no longer block concurrent saves.
-- Cancelled libfx prompts stop waiting on host tools and cannot affect later turns.
+- Cancelled libchassis prompts stop waiting on host tools and cannot affect later turns.
 - Native streaming preserves Unicode split across output chunks and continues after delayed cleanup.
-- Closed libfx Agents now release native threads, notification descriptors, and Wasm instances.
+- Closed libchassis Agents now release native threads, notification descriptors, and Wasm instances.
 - Pending MCP authentication no longer blocks a newer reload.
 - ctrl+o history now survives ctrl+l, terminal resizing, reopening, compaction, and resume without missing or duplicate entries.
 - Provider streams and parallel tool calls no longer lose or duplicate text, reasoning, and tool results.
@@ -137,16 +137,16 @@
 - Manual compaction now refreshes the selected login and keeps the conversation unchanged if sign-in fails.
 - Cancelled tools no longer prevent manual or automatic compaction, including after resume.
 - Long reasoning sessions no longer hit false context limits or leave too little room for compaction.
-- `fx -c` now skips incomplete sessions and reports errors for the selected session instead of opening an older conversation.
+- `chassis -c` now skips incomplete sessions and reports errors for the selected session instead of opening an older conversation.
 - Missing or incompatible usage data no longer blocks valid conversations from resuming; unavailable historical totals are marked explicitly.
 - Session recovery now handles corrupt usage data and reports unreadable saved state instead of claiming no repair is needed.
-- Suspending fx with `Ctrl+Z` now keeps the session locked, preventing another process from changing it before foregrounding.
+- Suspending chassis with `Ctrl+Z` now keeps the session locked, preventing another process from changing it before foregrounding.
 - Failed session writes preserve existing history and pause work when saving cannot be confirmed.
 - Completed turns remain saved after rendering failures, and save failures on exit now return an error.
-- Multiline steering around tool completion no longer crashes fx or loses the submitted message.
+- Multiline steering around tool completion no longer crashes chassis or loses the submitted message.
 - Web searches no longer fail when the model restarts its streamed reply after a tool call.
 - Failed or interrupted subagents no longer appear as successful empty replies.
-- libfx checkpoints now preserve reasoning and provider tool results, including responses without visible text.
+- libchassis checkpoints now preserve reasoning and provider tool results, including responses without visible text.
 - Promised Wasm assets now load correctly in Node, and CommonJS deployments retain their native addon.
 - Embedded terminals now clean up after startup failures and cancel pending requests when output fails.
 - Credential recovery guidance now names the selected source and explains how to repair it.
@@ -158,12 +158,12 @@
 - ACP requests must target the active session, and managed child sessions stay private to their parent.
 - MCP resources and prompts enter the composer only after an explicit Insert action.
 - OAuth discovery accepts a single trailing-slash difference while keeping authorization responses exact.
-- Importing libfx does not connect MCP, scan skills, spawn processes, or read files.
+- Importing libchassis does not connect MCP, scan skills, spawn processes, or read files.
 - Command output is escaped before reaching the model or terminal.
-- Host-owned instructions are the complete libfx system context; libfx adds no hidden coding prompt.
+- Host-owned instructions are the complete libchassis system context; libchassis adds no hidden coding prompt.
 - Browser sign-in reports success only after the credential is saved, and unusable refresh credentials are retired.
-- libfx sends Agent network requests only through the host-provided fetch function.
-- Inherited fx tracing settings no longer create unexpected libfx output or trace files.
+- libchassis sends Agent network requests only through the host-provided fetch function.
+- Inherited chassis tracing settings no longer create unexpected libchassis output or trace files.
 
 - Resuming legacy sessions no longer restores old credential references or sends unfinished requests under unverified credentials.
 - Internal subagent sessions stay out of latest-session selection.
@@ -172,36 +172,36 @@
 ### Ecosystem highlights
 
 - [Cal.com](https://cal.com/docs/mcp-server)
-- [Clerk](https://clerk.com/docs/guides/ai/mcp/clerk-mcp-server#connecting-fx-to-clerks-mcp-server)
-- [Kernel](https://www.kernel.sh/docs/reference/mcp-server/clients/fx)
-- [Knock](https://docs.knock.app/ai/mcp-server#fx)
-- [MongoDB](https://www.mongodb.com/docs/mcp-server/get-started/?ai-client=fx)
+- [Clerk](https://clerk.com/docs/guides/ai/mcp/clerk-mcp-server#connecting-chassis-to-clerks-mcp-server)
+- [Kernel](https://www.kernel.sh/docs/reference/mcp-server/clients/chassis)
+- [Knock](https://docs.knock.app/ai/mcp-server#chassis)
+- [MongoDB](https://www.mongodb.com/docs/mcp-server/get-started/?ai-client=chassis)
 - [Neon](https://neon.com/docs/ai/connect-mcp-clients-to-neon)
-- [Plain](https://www.plain.com/docs/agents/mcp-server#fx)
-- [Prisma](https://www.prisma.io/docs/ai/tools/mcp-server#fx)
-- [Sentry](https://mcp.sentry.dev/?ide=fx)
-- [Stagehand](https://docs.stagehand.dev/v4/integrations/fx)
+- [Plain](https://www.plain.com/docs/agents/mcp-server#chassis)
+- [Prisma](https://www.prisma.io/docs/ai/tools/mcp-server#chassis)
+- [Sentry](https://mcp.sentry.dev/?ide=chassis)
+- [Stagehand](https://docs.stagehand.dev/v4/integrations/chassis)
 - [Supabase](https://supabase.com/docs/guides/ai-tools/mcp)
-- [Upstash](https://upstash.com/docs/agent-resources/clients#fx)
+- [Upstash](https://upstash.com/docs/agent-resources/clients#chassis)
 
 ## 0.0.7
 
-**MCP is safer, easier to manage and more compatible; project servers require explicit trust, `fx mcp` is now a top-level command, `Enter` steers active turns and fx uses eight fewer tools to preserve context.**
+**MCP is safer, easier to manage and more compatible; project servers require explicit trust, `chassis mcp` is now a top-level command, `Enter` steers active turns and chassis uses eight fewer tools to preserve context.**
 
 ### Breaking Changes
 
 - **Model selection**: `/model` now handles the full selection flow, from quick choices to the complete catalog.
-- **Fewer filesystem tools**: fx now advertises eight fewer tools for better accuracy and more context, with `terminal` handling core filesystem operations.
+- **Fewer filesystem tools**: chassis now advertises eight fewer tools for better accuracy and more context, with `terminal` handling core filesystem operations.
 
 ### New Features
 
-- **Active-turn steering**: While fx is working, `Enter` steers the active turn at the next safe model boundary. If a tool is running, fx waits for it to finish; `Escape` interrupts the active work and applies the update as soon as the turn settles.
+- **Active-turn steering**: While chassis is working, `Enter` steers the active turn at the next safe model boundary. If a tool is running, chassis waits for it to finish; `Escape` interrupts the active work and applies the update as soon as the turn settles.
 - **Collapsed tool calls**: `/settings` now includes `Collapse tool calls`, which shows one summary per tool-call group in the main transcript. Individual calls remain available in the full transcript with `Ctrl+O`.
 - **Project MCP configuration**: Workspaces can now define project MCP servers in `.mcp.json` alongside profile servers.
-- **Top-level MCP management**: `fx mcp` is now a top-level command with `add`, `list`, `path`, `remove`, `auth`, `logout`, and `trust`.
-- **Capability discovery**: fx can now search installed skills and configured MCP tools together from a natural-language request, then load or select the exact match before use.
-- **Passive MCP listings**: `fx mcp list` reports configuration and saved authentication without connecting to servers. Add `--connect` for live discovery and health checks.
-- **Structured final output**: In `fx ask --json`, `output` contains all assistant Markdown and `final_output` contains only a completed final response. Interrupted, failed, and background turns return an empty `final_output`.
+- **Top-level MCP management**: `chassis mcp` is now a top-level command with `add`, `list`, `path`, `remove`, `auth`, `logout`, and `trust`.
+- **Capability discovery**: chassis can now search installed skills and configured MCP tools together from a natural-language request, then load or select the exact match before use.
+- **Passive MCP listings**: `chassis mcp list` reports configuration and saved authentication without connecting to servers. Add `--connect` for live discovery and health checks.
+- **Structured final output**: In `chassis ask --json`, `output` contains all assistant Markdown and `final_output` contains only a completed final response. Interrupted, failed, and background turns return an empty `final_output`.
 - **ACP session discovery**: ACP `session/list` now lists sessions across workspaces when `cwd` is omitted, includes saved titles, and paginates results in groups of 100.
 
 ### Improvements
@@ -209,8 +209,8 @@
 - **Transcript visibility**: Menus now open inline, so the transcript stays visible while you browse.
 - **Focused menus**: Menus now use category, scope, and provider filters to show more relevant options.
 - **Usage visibility**: Usage data now loads without blocking the interface and tracks token and request totals without double counting.
-- **MCP diagnostics**: `fx status` and `fx doctor` now report configured servers and project configuration errors without starting servers or loading credentials.
-- **MCP profile compatibility**: `~/.fx/mcp.json` now accepts `mcpServers` as an alias for `mcp`, while every write uses `mcp`.
+- **MCP diagnostics**: `chassis status` and `chassis doctor` now report configured servers and project configuration errors without starting servers or loading credentials.
+- **MCP profile compatibility**: `~/.chassis/mcp.json` now accepts `mcpServers` as an alias for `mcp`, while every write uses `mcp`.
 - **Live turn feedback**: Submitted prompts, turn progress, elapsed time, and token usage now stay visible throughout the turn.
 - **Smoother response streaming**: Assistant output now appears in complete blocks instead of character by character.
 - **Code blocks**: Code blocks now use solid horizontal rules instead of side rails, keeping language labels and copied source clean.
@@ -221,7 +221,7 @@
 ### Bug Fixes
 
 - **Transcript stability**: Streaming responses no longer move scrollback or rewrite completed output.
-- **Environment compatibility**: Interactive input now works correctly on WSL, and browser-hosted fx stops unsupported network work instead of retrying it.
+- **Environment compatibility**: Interactive input now works correctly on WSL, and browser-hosted chassis stops unsupported network work instead of retrying it.
 - **Retry recovery**: Automatic retries now show progress, clear stale state, and stop silent Gateway attempts.
 - **Terminal cleanup**: Timed-out and cancelled commands stop cleanly, keep accurate outcomes after resume, and avoid unsafe retries when completion cannot be confirmed.
 - **Terminal recovery**: Sessions recover from host shutdown, accept input without a helper restart, and return control when the turn ends.
@@ -249,13 +249,13 @@
 
 ### Breaking Changes
 
-- **Terminal presentation**: `/appearance`, `/input`, and `/maxxing` have been removed along with their saved settings. fx now uses the same input and transcript layout everywhere.
+- **Terminal presentation**: `/appearance`, `/input`, and `/maxxing` have been removed along with their saved settings. chassis now uses the same input and transcript layout everywhere.
 - **Foreground command timeouts**: `terminal.exec` calls now require `timeout_ms` between 1 millisecond and 10 minutes. Use `terminal.start` for services, watchers, GUI apps, and other long-running work.
 
 ### New Features
 
 - **Remote MCP servers**: `/mcp add --transport http <name> <url>` now saves or replaces a remote Streamable HTTP server and reloads MCP immediately. The existing local stdio form is unchanged.
-- **Retained command output**: Captured command output can now be read later with `read_tool_result`, including after a saved session resumes. With `--no-save`, output remains available until fx exits.
+- **Retained command output**: Captured command output can now be read later with `read_tool_result`, including after a saved session resumes. With `--no-save`, output remains available until chassis exits.
 
 ### Improvements
 
@@ -267,7 +267,7 @@
 - **Subscription session longevity**: Codex and Grok sessions remain usable beyond 64 consecutive requests.
 - **Usage tracking**: Rejected completions no longer appear in usage tracking, and duplicate completion callbacks are recorded once.
 - **MCP discovery**: MCP searches still find the selected tool when a request includes surrounding context, and another server's authentication failure no longer replaces an empty search result.
-- **MCP authentication**: MCP authentication stays responsive while configuration reloads or logout is in progress, and pending authentication stops when MCP reloads or fx exits.
+- **MCP authentication**: MCP authentication stays responsive while configuration reloads or logout is in progress, and pending authentication stops when MCP reloads or chassis exits.
 - **Linked skill errors**: Linked skill errors now distinguish an unavailable linked directory from an unreadable `SKILL.md` and explain whether to repair, remove, or authorize the link.
 - **Live permission modes**: `Shift+Tab` permission-mode changes now apply to later tool calls in the current turn. Actions already in progress keep the mode under which they were admitted.
 - **Tool action summaries**: Denied and deferred tool rows now show the actual command or target, and those details and denial labels survive session resume.
@@ -275,10 +275,10 @@
 ### Bug Fixes
 
 - **Terminal resize**: Terminal resizing no longer leaves empty scrollback behind.
-- **Subscription sign-in**: Codex and Grok sign-ins now survive unrelated, stalled, reset, or stale browser connections. Grok authorization codes can also be pasted when the browser cannot return to fx.
+- **Subscription sign-in**: Codex and Grok sign-ins now survive unrelated, stalled, reset, or stale browser connections. Grok authorization codes can also be pasted when the browser cannot return to chassis.
 - **OAuth callback pages**: OAuth callbacks now show a completion or failure page after returning from the browser.
-- **Nested rebuilds**: Interactive terminal helpers continue working after a nested rebuild replaces the fx binary on disk.
-- **Terminal recovery**: fx recovery no longer pauses commands already running in tmux.
+- **Nested rebuilds**: Interactive terminal helpers continue working after a nested rebuild replaces the chassis binary on disk.
+- **Terminal recovery**: chassis recovery no longer pauses commands already running in tmux.
 - **Terminal cancellation**: Terminal cancellation no longer reports failure when the command exits during cancellation.
 - **MCP resource compatibility**: MCP resources and prompts no longer fail on servers that require their configured name.
 - **MCP credential recovery**: MCP credentials with no advertised scopes remain usable after restart. Malformed stored entries no longer prevent valid servers from loading and are removed on the next successful credential write.
@@ -292,7 +292,7 @@
 - **Blocked cautions**: Cautioned or unavailable actions remain blocked without opening a permission prompt or ending the turn.
 - **Untrusted tool output**: Actions copied from untrusted tool output remain blocked unless the user's request independently authorizes them.
 - **Current-branch pushes**: Explicit pushes to the current branch use the branch reported by the local Git checkout rather than repository text.
-- **Provider recovery authority**: After restart, fx continues unfinished Codex or Grok work only for the account that started it. If that account cannot be verified, fx preserves completed work and sends nothing.
+- **Provider recovery authority**: After restart, chassis continues unfinished Codex or Grok work only for the account that started it. If that account cannot be verified, chassis preserves completed work and sends nothing.
 - **Sensitive command output**: Command output flagged as sensitive is not saved with the session, including secrets split across output chunks or oversized lines.
 - **OAuth callback validation**: OAuth authorization denials and successes apply only when the callback state matches the active sign-in attempt, and Grok browser callbacks accept only the expected xAI origin.
 - **MCP issuer validation**: MCP sign-in stops before exchanging a token or saving credentials when the authorization response comes from a different issuer than the server advertised.
@@ -302,15 +302,15 @@
 ### Breaking Changes
 
 - **Host command execution:** Run approved captured, background, and monitor commands as ordinary host subprocesses, and retire sandbox configuration, status fields, and commands
-- **Interactive provider switching:** Move provider selection to `/setup` and remove the `/provider` slash command while keeping the top-level `fx provider` command
+- **Interactive provider switching:** Move provider selection to `/setup` and remove the `/provider` slash command while keeping the top-level `chassis provider` command
 
 ### New Features
 
-- **Codex subscriptions:** Sign in with an eligible subscription through `fx login codex`, then use authenticated Codex models for interactive sessions, `fx ask`, native ACP, images, subagents, and automatic reviews
-- **Grok subscriptions:** Sign in with an eligible Grok subscription through `fx login grok`, then use authenticated xAI models, effort levels, images, local tools, persistent sessions, and automatic reviews
+- **Codex subscriptions:** Sign in with an eligible subscription through `chassis login codex`, then use authenticated Codex models for interactive sessions, `chassis ask`, native ACP, images, subagents, and automatic reviews
+- **Grok subscriptions:** Sign in with an eligible Grok subscription through `chassis login grok`, then use authenticated xAI models, effort levels, images, local tools, persistent sessions, and automatic reviews
 - **Workspace status line:** Opt in to the active workspace path and Git branch through `/settings`, `/statusline workspace`, or `statusLine.workspace`
-- **fx-native workspace skills:** Discover project skills from `.fx/skills` before other workspace and compatibility roots
-- **External skill authorities:** Allow symlinked skills under explicitly trusted external directories through `FX_SKILL_SYMLINK_AUTHORITIES`
+- **chassis-native workspace skills:** Discover project skills from `.chassis/skills` before other workspace and compatibility roots
+- **External skill authorities:** Allow symlinked skills under explicitly trusted external directories through `CHASSIS_SKILL_SYMLINK_AUTHORITIES`
 
 ### Improvements
 
@@ -320,7 +320,7 @@
 - **Session cache reads:** Keep session listings and latest-session resume responsive while another session defers cache publication
 - **Terminal tab titles:** Label interactive tabs with the session or workspace and active model, keep them current across rename, resume, and model changes, and clear them on exit
 - **Terminal activity:** Keep each command or shell attached to its terminal activity row through completion, distinguish graceful close from force close, and hide no-op `cd . &&` prefixes
-- **Terminal action arguments:** Advertise only the fields relevant to the selected action and limit unsaved `fx ask` sessions to `terminal.exec`
+- **Terminal action arguments:** Advertise only the fields relevant to the selected action and limit unsaved `chassis ask` sessions to `terminal.exec`
 - **Auto mode reads:** Run routine read-only commands and hardened Git inspection directly without automatic review
 - **Automatic denial recovery:** Return destructive actions to the agent for replanning and finish repeated no-progress denials as normal assistant output instead of opening a permission prompt
 - **One-off subagents:** Keep active one-off subagents visible, deliver one final result, and retire them after completion while leaving persistent subagents reusable
@@ -339,7 +339,7 @@
 - **Malformed tool loops:** End a turn after three consecutive malformed-only tool batches and reset recovery after a valid batch
 - **Terminal null placeholders:** Treat textual `"null"` values as absent for unused terminal fields while preserving real command text that contains the word
 - **Terminal keyboard input:** Ignore unknown completed escape sequences and handle Ghostty kitty Escape reports with Caps Lock, Num Lock, and event suffixes
-- **Credential fallback:** Continue to a stored API key when saved `fx login` credentials cannot load or refresh while keeping the login failure available for diagnostics
+- **Credential fallback:** Continue to a stored API key when saved `chassis login` credentials cannot load or refresh while keeping the login failure available for diagnostics
 - **Vision recovery:** Retry replay-safe requests once after a post-Vision assistant-prefill rejection
 - **Thinking status:** Keep the Thinking indicator and elapsed timer visible while automatic command review runs
 - **Terminal helper compatibility:** Reject unsupported start, signal, and force-close requests from stale terminal helpers without losing unrelated sessions
@@ -349,8 +349,8 @@
 ### Security
 
 - **Command approval patterns:** Restrict wildcard command allows to static shell words and keep destructive shell commands and file deletion outside automatic review
-- **macOS login storage:** Store native `fx login` sessions in Keychain with verified migration, refresh, restart, and logout behavior
-- **MCP configuration writes:** Save `~/.fx/mcp.json` atomically with private permissions, reject linked targets, and preserve the previous configuration when a write fails
+- **macOS login storage:** Store native `chassis login` sessions in Keychain with verified migration, refresh, restart, and logout behavior
+- **MCP configuration writes:** Save `~/.chassis/mcp.json` atomically with private permissions, reject linked targets, and preserve the previous configuration when a write fails
 - **MCP session retirement:** Keep retired HTTP session IDs alive until in-flight requests drain
 - **Provider response limits:** Reject oversized Codex and Grok catalogs, streams, tool data, and replay state while keeping later input usable
 - **ACP permission validation:** Validate permission input before writing JSON-RPC frames
@@ -359,14 +359,14 @@
 
 ### New Features
 
-- **Session resume command:** Resume the latest workspace session or an exact session ID with `fx session resume`
-- **Headless permission prompts:** Add `--prompt-permissions` so JSON and quiet `fx ask` runs can request Y/N approval on a TTY while keeping stdout clean
+- **Session resume command:** Resume the latest workspace session or an exact session ID with `chassis session resume`
+- **Headless permission prompts:** Add `--prompt-permissions` so JSON and quiet `chassis ask` runs can request Y/N approval on a TTY while keeping stdout clean
 
 ### Improvements
 
 - **Auto mode permissions:** Run routine reversible development commands and new-file creation directly, then ask for human approval after repeated automatic review denials
 - **Command discovery:** Rank exact, prefix, and substring slash-command matches and highlight the selected help description
-- **Terminal attention bells:** Emit one terminal bell when fx pauses for permission or other input so terminal multiplexers can flag waiting panes
+- **Terminal attention bells:** Emit one terminal bell when chassis pauses for permission or other input so terminal multiplexers can flag waiting panes
 - **Transcript scrollback:** Preserve retained transcript rows in native scrollback across pruning, resize, and reflow
 
 ### Bug Fixes
@@ -374,9 +374,9 @@
 - **Session cache contention:** Continue same-workspace session writes and keep listing and resume results current while another process holds the latest-session cache lock
 - **Reasoning effort settings:** Change reasoning effort without crashing or replacing the selected model
 - **Web redirects:** Follow HTTP 303 redirects in `web_fetch`
-- **Command output separation:** End command output that lacks a trailing newline before rendering the next `fx ask` tool header
+- **Command output separation:** End command output that lacks a trailing newline before rendering the next `chassis ask` tool header
 - **Skill discovery:** Show one entry for skills reached through symlinked compatibility roots while preserving distinct same-name skills
-- **libfx session transitions:** Cancel active cooperative turns before starting a fresh session so the terminal remains responsive
+- **libchassis session transitions:** Cancel active cooperative turns before starting a fresh session so the terminal remains responsive
 - **Memory activity:** Present `memory list` as a read instead of a write
 - **Unsupported login shells:** Fall back to zsh on macOS or Bash elsewhere when the configured login shell is unsupported
 - **Process cleanup:** Cancel and reap headless terminal commands on SIGTERM, preserve signal status, and tolerate short-lived Linux processes disappearing during cleanup
@@ -387,7 +387,7 @@
 
 ### Improvements
 
-- **JSON recovery progress:** Report retry, recovery, and safety-pause status on stderr during `fx ask --json` while keeping stdout parseable
+- **JSON recovery progress:** Report retry, recovery, and safety-pause status on stderr during `chassis ask --json` while keeping stdout parseable
 - **Notification sounds:** Use clearer 48 kHz AAC cues with full tails and the intended volume differences between actions
 
 ### Bug Fixes
@@ -396,7 +396,7 @@
 - **Background URLs:** Refuse `/background open` for stopped or stale tasks so saved URLs cannot open an unrelated process after port reuse
 - **Model catalogs:** Reject malformed catalog responses with a nonzero exit instead of treating them as an empty model list
 - **Skill creation:** Show invalid `/skills create` names inline and keep the current session, transcript, and composer usable
-- **GLM 5.2 responses:** Restore responses for fx login sessions without changing requests for other models
+- **GLM 5.2 responses:** Restore responses for chassis login sessions without changing requests for other models
 
 ## 0.0.2
 
@@ -418,13 +418,13 @@
 ### Bug Fixes
 
 - **WebAssembly terminal input:** Keep input responsive during continuous streams, queue follow-up prompts until the active response completes, and preserve the queued prompt text
-- **Terminal job cleanup:** Force-close descendant jobs spawned by any Linux thread and return `session_lost` when fx cannot confirm complete cleanup
+- **Terminal job cleanup:** Force-close descendant jobs spawned by any Linux thread and return `session_lost` when chassis cannot confirm complete cleanup
 
 ## 0.0.1
 
 ### New Features
 
-- **Current fx documentation:** Route questions about fx through the public documentation index before answering
+- **Current chassis documentation:** Route questions about chassis through the public documentation index before answering
 
 ### Improvements
 

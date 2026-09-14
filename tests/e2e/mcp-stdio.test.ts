@@ -137,7 +137,7 @@ function createRoot(
   scriptPath: string,
   options: RootOptions = {},
 ): FixtureRoot {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), `fx-mcp-${label}-`)));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), `chassis-mcp-${label}-`)));
   cleanupRoot = root;
   const home = join(root, "home");
   const workspace = join(root, "workspace");
@@ -149,17 +149,17 @@ function createRoot(
     ? [
       "/bin/sh",
       "-c",
-      `printf '%s\\n' "$$" >> "$FX_MCP_LAUNCH_LOG"; exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"`,
+      `printf '%s\\n' "$$" >> "$CHASSIS_MCP_LAUNCH_LOG"; exec "$CHASSIS_MCP_FIXTURE_RUNTIME" "$CHASSIS_MCP_FIXTURE_PATH"`,
     ]
     : [process.execPath, scriptPath];
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({}),
   );
   writeFileSync(
-    join(home, ".fx", "mcp.json"),
+    join(home, ".chassis", "mcp.json"),
     JSON.stringify({
       mcp: {
         fixture: {
@@ -168,45 +168,45 @@ function createRoot(
           enabled: true,
           required: options.required,
           environment: {
-            FX_MCP_WIRE_LOG: wireLogPath,
-            FX_MCP_LAUNCH_LOG: options.recordLaunchAttempts
+            CHASSIS_MCP_WIRE_LOG: wireLogPath,
+            CHASSIS_MCP_LAUNCH_LOG: options.recordLaunchAttempts
               ? launchLogPath
               : undefined,
-            FX_MCP_FIXTURE_RUNTIME: options.recordLaunchAttempts
+            CHASSIS_MCP_FIXTURE_RUNTIME: options.recordLaunchAttempts
               ? process.execPath
               : undefined,
-            FX_MCP_FIXTURE_PATH: options.recordLaunchAttempts
+            CHASSIS_MCP_FIXTURE_PATH: options.recordLaunchAttempts
               ? scriptPath
               : undefined,
-            FX_MCP_PID_PATH: join(root, "mcp.pid"),
-            FX_MCP_PROTOCOL_VERSION: "2026-07-28",
-            FX_MCP_MODE: options.mode ?? "normal",
-            FX_MCP_PROTOCOL_ERROR_MESSAGE: options.protocolErrorMessage,
-            FX_MCP_CRASH_MARKER: join(root, "mcp-crashed"),
-            FX_MCP_RECOVERY_READY_PATH: join(root, "mcp-recovery-ready"),
-            FX_MCP_INVALIDATION_RELEASE_PATH: invalidationReleasePath,
-            FX_MCP_RECOVERED_TOOL_NAME: options.recoveredToolName,
-            FX_MCP_EXPECT_ELICITATION: options.expectedElicitation,
-            FX_MCP_ELICITATION_URL: options.elicitationUrl,
-            FX_MCP_RESOURCES_SUBSCRIBE: options.resourcesSubscribe === false
+            CHASSIS_MCP_PID_PATH: join(root, "mcp.pid"),
+            CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28",
+            CHASSIS_MCP_MODE: options.mode ?? "normal",
+            CHASSIS_MCP_PROTOCOL_ERROR_MESSAGE: options.protocolErrorMessage,
+            CHASSIS_MCP_CRASH_MARKER: join(root, "mcp-crashed"),
+            CHASSIS_MCP_RECOVERY_READY_PATH: join(root, "mcp-recovery-ready"),
+            CHASSIS_MCP_INVALIDATION_RELEASE_PATH: invalidationReleasePath,
+            CHASSIS_MCP_RECOVERED_TOOL_NAME: options.recoveredToolName,
+            CHASSIS_MCP_EXPECT_ELICITATION: options.expectedElicitation,
+            CHASSIS_MCP_ELICITATION_URL: options.elicitationUrl,
+            CHASSIS_MCP_RESOURCES_SUBSCRIBE: options.resourcesSubscribe === false
               ? "0"
               : undefined,
-            FX_MCP_RESOURCE_TTL_MS: options.resourceTtlMs?.toString(),
-            FX_MCP_LEGACY_VERSION: options.legacyVersion,
-            FX_MCP_LEGACY_DISCOVERY_VERSIONS:
+            CHASSIS_MCP_RESOURCE_TTL_MS: options.resourceTtlMs?.toString(),
+            CHASSIS_MCP_LEGACY_VERSION: options.legacyVersion,
+            CHASSIS_MCP_LEGACY_DISCOVERY_VERSIONS:
               options.legacyDiscoveryVersions?.join(","),
-            FX_MCP_LEGACY_DISCOVERY_METHOD_NOT_FOUND:
+            CHASSIS_MCP_LEGACY_DISCOVERY_METHOD_NOT_FOUND:
               options.legacyDiscoveryMethodNotFound ? "1" : undefined,
-            FX_MCP_LEGACY_DISCOVERY_INVALID_PARAMS:
+            CHASSIS_MCP_LEGACY_DISCOVERY_INVALID_PARAMS:
               options.legacyDiscoveryInvalidParams ? "1" : undefined,
-            FX_MCP_LEGACY_REJECT_NEWER_INITIALIZE:
+            CHASSIS_MCP_LEGACY_REJECT_NEWER_INITIALIZE:
               options.legacyRejectNewerInitialize ? "1" : undefined,
-            FX_MCP_DRAFT7_PATTERN: options.draft7Pattern,
-            FX_MCP_URL_REQUIRED_OPERATION: options.urlRequiredOperation,
-            FX_MCP_ENV_CAPTURE: options.captureEnvironment
+            CHASSIS_MCP_DRAFT7_PATTERN: options.draft7Pattern,
+            CHASSIS_MCP_URL_REQUIRED_OPERATION: options.urlRequiredOperation,
+            CHASSIS_MCP_ENV_CAPTURE: options.captureEnvironment
               ? environmentCapturePath
               : undefined,
-            FX_MCP_ENV_SENTINEL: options.captureEnvironment
+            CHASSIS_MCP_ENV_SENTINEL: options.captureEnvironment
               ? "configured"
               : undefined,
           },
@@ -223,14 +223,14 @@ function createRoot(
     workspace,
     wireLogPath,
     launchLogPath,
-    traceLogPath: join(root, "fx-trace.log"),
+    traceLogPath: join(root, "chassis-trace.log"),
     invalidationReleasePath,
     environmentCapturePath,
   };
 }
 
 function moveProfileFixtureToWorkspace(root: FixtureRoot): void {
-  const profilePath = join(root.home, ".fx", "mcp.json");
+  const profilePath = join(root.home, ".chassis", "mcp.json");
   const profile = JSON.parse(readFileSync(profilePath, "utf8"));
   const fixture = profile.mcp.fixture;
   if (Array.isArray(fixture.command)) {
@@ -249,14 +249,14 @@ function fixtureEnv(root: FixtureRoot, activeGateway: ReturnType<typeof startFak
     HOME: root.home,
     AI_GATEWAY_API_KEY: "fake-mcp-stdio-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_AUTO_UPGRADE: "0",
-    FX_PERMISSION_MODE: "auto",
-    FX_GATEWAY_BASE_URL: activeGateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: activeGateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: activeGateway.chatUrl,
-    FX_MODEL: MODEL,
-    FX_TRACE_LOG: root.traceLogPath,
-    FX_TRACE_SCOPES: "mcp",
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_PERMISSION_MODE: "auto",
+    CHASSIS_GATEWAY_BASE_URL: activeGateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: activeGateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_CHAT_URL: activeGateway.chatUrl,
+    CHASSIS_MODEL: MODEL,
+    CHASSIS_TRACE_LOG: root.traceLogPath,
+    CHASSIS_TRACE_SCOPES: "mcp",
   };
 }
 
@@ -322,8 +322,8 @@ function preserveStdioFailure(
 ): void {
   if (result.code === 0) return;
   cleanupRoot = null;
-  writeFileSync(join(root.root, "fx-stdout.log"), result.stdout);
-  writeFileSync(join(root.root, "fx-stderr.log"), result.stderr);
+  writeFileSync(join(root.root, "chassis-stdout.log"), result.stdout);
+  writeFileSync(join(root.root, "chassis-stderr.log"), result.stderr);
   writeFileSync(
     join(root.root, "failure.json"),
     JSON.stringify({
@@ -333,7 +333,7 @@ function preserveStdioFailure(
       gatewayRequests: activeGateway.requests.map((request) => request.body),
     }, null, 2),
   );
-  throw new Error(`fx ${label} failed; retained artifacts: ${root.root}`);
+  throw new Error(`chassis ${label} failed; retained artifacts: ${root.root}`);
 }
 
 function isProcessAlive(pid: number): boolean {
@@ -375,7 +375,7 @@ async function waitForTtyAskExit(
     await Bun.sleep(25);
   }
   throw new Error(
-    `Timed out waiting for terminal fx ask to exit.\n${await session.captureFullScrollback()}`,
+    `Timed out waiting for terminal chassis ask to exit.\n${await session.captureFullScrollback()}`,
   );
 }
 
@@ -383,14 +383,14 @@ describe("modern MCP stdio compatibility", () => {
   for (const version of ["2025-11-25", "2025-06-18", "2024-11-05"] as const) {
     test(`default MCP v1 starts ${version} stdio without a discovery probe or process restart`, async () => {
       const root = createRoot(`default-v1-${version}`, LEGACY_FIXTURE, { legacyVersion: version });
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-      delete profile.mcp.fixture.environment.FX_MCP_PROTOCOL_VERSION;
+      delete profile.mcp.fixture.environment.CHASSIS_MCP_PROTOCOL_VERSION;
       writeFileSync(profilePath, JSON.stringify(profile));
       gateway = startToolGateway("Default MCP v1 complete.");
       const result = await runFx(
         ["ask", "--json", "--auto", "--no-save", "Use the MCP tool."],
-        { cwd: root.workspace, env: { ...fixtureEnv(root, gateway), FX_MCP_PROTOCOL_VERSION: undefined }, timeoutMs: 20_000 },
+        { cwd: root.workspace, env: { ...fixtureEnv(root, gateway), CHASSIS_MCP_PROTOCOL_VERSION: undefined }, timeoutMs: 20_000 },
       );
       expect(result.code).toBe(0);
       expect(JSON.parse(result.stdout).output).toContain("Default MCP v1 complete.");
@@ -414,22 +414,22 @@ describe("modern MCP stdio compatibility", () => {
       fakeDocker,
       `#!/bin/sh
 if [ "$1" = "rm" ]; then
-  printf '%s\\n' "$*" > "$FX_DOCKER_CLEANUP_LOG"
+  printf '%s\\n' "$*" > "$CHASSIS_DOCKER_CLEANUP_LOG"
   exit 0
 fi
-printf '%s\\n' "$$" >> "$FX_DOCKER_LAUNCH_LOG"
+printf '%s\\n' "$$" >> "$CHASSIS_DOCKER_LAUNCH_LOG"
 test "$1" = "run" || exit 21
 shift
 test "$1" = "--cidfile" || exit 22
 cidfile=$2
 shift 2
 printf '%s\\n' '0123456789abcdef' > "$cidfile"
-printf '%s\\n' "$cidfile" >> "$FX_DOCKER_CIDFILE_LOG"
-exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
+printf '%s\\n' "$cidfile" >> "$CHASSIS_DOCKER_CIDFILE_LOG"
+exec "$CHASSIS_MCP_FIXTURE_RUNTIME" "$CHASSIS_MCP_FIXTURE_PATH"
 `,
       { mode: 0o755 },
     );
-    const profilePath = join(root.home, ".fx", "mcp.json");
+    const profilePath = join(root.home, ".chassis", "mcp.json");
     const profile = JSON.parse(readFileSync(profilePath, "utf8"));
     profile.mcp.fixture.command = [
       fakeDocker,
@@ -438,11 +438,11 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       "-i",
       "fixture-image",
     ];
-    profile.mcp.fixture.environment.FX_DOCKER_CLEANUP_LOG = cleanupLog;
-    profile.mcp.fixture.environment.FX_DOCKER_CIDFILE_LOG = cidfileLog;
-    profile.mcp.fixture.environment.FX_DOCKER_LAUNCH_LOG = dockerLaunchLog;
-    profile.mcp.fixture.environment.FX_MCP_FIXTURE_RUNTIME = process.execPath;
-    profile.mcp.fixture.environment.FX_MCP_FIXTURE_PATH = MODERN_FIXTURE;
+    profile.mcp.fixture.environment.CHASSIS_DOCKER_CLEANUP_LOG = cleanupLog;
+    profile.mcp.fixture.environment.CHASSIS_DOCKER_CIDFILE_LOG = cidfileLog;
+    profile.mcp.fixture.environment.CHASSIS_DOCKER_LAUNCH_LOG = dockerLaunchLog;
+    profile.mcp.fixture.environment.CHASSIS_MCP_FIXTURE_RUNTIME = process.execPath;
+    profile.mcp.fixture.environment.CHASSIS_MCP_FIXTURE_PATH = MODERN_FIXTURE;
     writeFileSync(profilePath, JSON.stringify(profile));
 
     const result = await runFx(["mcp", "list", "--connect"], {
@@ -452,9 +452,9 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         TMPDIR: root.root,
         AI_GATEWAY_API_KEY: undefined,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_AUTO_UPGRADE: "0",
-        FX_TRACE_LOG: root.traceLogPath,
-        FX_TRACE_SCOPES: "mcp",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_TRACE_LOG: root.traceLogPath,
+        CHASSIS_TRACE_SCOPES: "mcp",
       },
       timeoutMs: 20_000,
     });
@@ -465,7 +465,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       "rm -f 0123456789abcdef",
     );
     expect(readdirSync(root.root).some((name) =>
-      name.startsWith("fx-mcp-") && name.endsWith(".cid")
+      name.startsWith("chassis-mcp-") && name.endsWith(".cid")
     )).toBe(false);
     expect(readFileSync(root.traceLogPath, "utf8")).toContain(
       "docker MCP container cleanup complete",
@@ -474,7 +474,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
 
     rmSync(cleanupLog);
     rmSync(cidfileLog);
-    profile.mcp.fixture.environment.FX_MCP_MODE = "stall_startup";
+    profile.mcp.fixture.environment.CHASSIS_MCP_MODE = "stall_startup";
     profile.mcp.fixture.startup_timeout_ms = 50;
     profile.mcp.fixture.restart_limit = 0;
     writeFileSync(profilePath, JSON.stringify(profile));
@@ -485,9 +485,9 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         TMPDIR: root.root,
         AI_GATEWAY_API_KEY: undefined,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_AUTO_UPGRADE: "0",
-        FX_TRACE_LOG: root.traceLogPath,
-        FX_TRACE_SCOPES: "mcp",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_TRACE_LOG: root.traceLogPath,
+        CHASSIS_TRACE_SCOPES: "mcp",
       },
       timeoutMs: 20_000,
     });
@@ -501,7 +501,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       expect(existsSync(cleanupLog)).toBe(false);
     }
     expect(readdirSync(root.root).some((name) =>
-      name.startsWith("fx-mcp-") && name.endsWith(".cid")
+      name.startsWith("chassis-mcp-") && name.endsWith(".cid")
     )).toBe(false);
     await expectProcessesExited(readAttemptedPids(dockerLaunchLog));
   }, 30_000);
@@ -530,7 +530,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         stderrPath,
         env: {
           ...fixtureEnv(root, activeGateway),
-          FX_PERMISSION_MODE: "ask",
+          CHASSIS_PERMISSION_MODE: "ask",
         },
       });
 
@@ -545,7 +545,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       expect(approval).toContain("Allow this MCP tool call?");
       expect(approval).toContain(TOOL_NAME);
       expect(approval).toContain(
-        "This MCP tool needs approval before fx can send the request.",
+        "This MCP tool needs approval before chassis can send the request.",
       );
       expect(approval).toContain("3. Deny");
       expect(
@@ -571,15 +571,15 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   );
 
   test("repository-local MCP configuration never launches a process or network request", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-mcp-project-trust-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-mcp-project-trust-")));
     cleanupRoot = root;
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     const marker = join(root, "project-mcp-launched");
-    mkdirSync(join(home, ".fx"), { recursive: true });
-    mkdirSync(join(workspace, ".fx"), { recursive: true });
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({}));
-    writeFileSync(join(home, ".fx", "mcp.json"), JSON.stringify({ mcp: {} }));
+    mkdirSync(join(home, ".chassis"), { recursive: true });
+    mkdirSync(join(workspace, ".chassis"), { recursive: true });
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({}));
+    writeFileSync(join(home, ".chassis", "mcp.json"), JSON.stringify({ mcp: {} }));
 
     let projectRequestCount = 0;
     const projectEndpoint = Bun.serve({
@@ -608,7 +608,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       },
     });
     writeFileSync(join(workspace, ".mcp.json"), hostile);
-    writeFileSync(join(workspace, ".fx", "mcp.json"), hostile);
+    writeFileSync(join(workspace, ".chassis", "mcp.json"), hostile);
 
     gateway = startFakeGateway([fakeGatewayFinalText("Project MCP stayed inert.")], {
       models: [{ id: MODEL, type: "language", tags: ["tool-use"] }],
@@ -642,7 +642,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     }
   }, 20_000);
 
-  test("fx ask skips pending workspace MCP and uses it after explicit trust", async () => {
+  test("chassis ask skips pending workspace MCP and uses it after explicit trust", async () => {
     const root = createRoot("workspace-ask", MODERN_FIXTURE);
     moveProfileFixtureToWorkspace(root);
     const projectPath = join(root.workspace, ".mcp.json");
@@ -650,11 +650,11 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     project.mcpServers.fixture.command = "${WORKSPACE_MCP_COMMAND}";
     project.mcpServers.fixture.args = ["${WORKSPACE_MCP_FIXTURE}"];
     project.mcpServers.fixture.env = {
-      FX_MCP_RESULT_TEXT: "${WORKSPACE_MCP_RESULT:-MODERN_MCP_TOOL_RESULT}",
-      FX_MCP_WIRE_LOG: "${WORKSPACE_MCP_WIRE_LOG}",
-      FX_MCP_PID_PATH: "${WORKSPACE_MCP_PID_PATH}",
-      FX_MCP_PROTOCOL_VERSION: "2026-07-28",
-      FX_MCP_MODE: "${WORKSPACE_MCP_MODE:-normal}",
+      CHASSIS_MCP_RESULT_TEXT: "${WORKSPACE_MCP_RESULT:-MODERN_MCP_TOOL_RESULT}",
+      CHASSIS_MCP_WIRE_LOG: "${WORKSPACE_MCP_WIRE_LOG}",
+      CHASSIS_MCP_PID_PATH: "${WORKSPACE_MCP_PID_PATH}",
+      CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28",
+      CHASSIS_MCP_MODE: "${WORKSPACE_MCP_MODE:-normal}",
     };
     delete project.mcpServers.fixture.environment;
     writeFileSync(projectPath, JSON.stringify(project));
@@ -688,7 +688,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       "skipped unapproved project MCP servers: fixture",
     );
     expect(existsSync(root.wireLogPath)).toBe(false);
-    let settings = readFileSync(join(root.home, ".fx", "settings.json"), "utf8");
+    let settings = readFileSync(join(root.home, ".chassis", "settings.json"), "utf8");
     expect(settings).not.toContain("enabledMcpjsonServers");
     expect(settings).not.toContain("enableAllProjectMcpServers");
 
@@ -698,7 +698,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     );
     expect(trusted.code).toBe(0);
     expect(trusted.stdout).toContain("Approved project MCP server 'fixture'");
-    settings = readFileSync(join(root.home, ".fx", "settings.json"), "utf8");
+    settings = readFileSync(join(root.home, ".chassis", "settings.json"), "utf8");
     expect(settings).toContain("enabledMcpjsonServers");
 
     const result = await runFx(
@@ -714,7 +714,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     await expectFixtureProcessesExited(readWire(root.wireLogPath));
   }, 35_000);
 
-  test("fx ask reports rejected workspace MCP entries on stderr", async () => {
+  test("chassis ask reports rejected workspace MCP entries on stderr", async () => {
     const root = createRoot("workspace-invalid-entry", MODERN_FIXTURE);
     moveProfileFixtureToWorkspace(root);
     const projectPath = join(root.workspace, ".mcp.json");
@@ -787,16 +787,16 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   test("top-level mcp add persists stdio and a later ask calls it", async () => {
     const root = createRoot("top-level-add", MODERN_FIXTURE);
     writeFileSync(
-      join(root.home, ".fx", "mcp.json"),
+      join(root.home, ".chassis", "mcp.json"),
       JSON.stringify({ mcp: {} }),
     );
     gateway = startToolGateway("TOP_LEVEL_STDIO_MCP_READY");
     const env = {
       ...fixtureEnv(root, gateway),
-      FX_MCP_WIRE_LOG: root.wireLogPath,
-      FX_MCP_PID_PATH: join(root.root, "mcp.pid"),
-      FX_MCP_PROTOCOL_VERSION: "2026-07-28",
-      FX_MCP_MODE: "normal",
+      CHASSIS_MCP_WIRE_LOG: root.wireLogPath,
+      CHASSIS_MCP_PID_PATH: join(root.root, "mcp.pid"),
+      CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28",
+      CHASSIS_MCP_MODE: "normal",
     };
     const added = await runFx(
       ["mcp", "add", "fixture", process.execPath, MODERN_FIXTURE],
@@ -823,7 +823,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       `MCP slash add preserves scoped arguments with ${matchingPath ? "a matching" : "no matching"} local path`,
       async () => {
         const root = createRoot(`scoped-add-${matchingPath}`, LEGACY_FIXTURE);
-        const configPath = join(root.home, ".fx", "mcp.json");
+        const configPath = join(root.home, ".chassis", "mcp.json");
         writeFileSync(configPath, JSON.stringify({ mcp: {} }));
         const packageArg = "@modelcontextprotocol/server-memory@2026.8.31";
         if (matchingPath) {
@@ -842,10 +842,10 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
           height: 36,
           env: {
             ...fixtureEnv(root, gateway),
-            FX_MCP_PROTOCOL_VERSION: "2025-11-25",
-            FX_MCP_LEGACY_VERSION: "2025-11-25",
-            FX_MCP_WIRE_LOG: root.wireLogPath,
-            FX_MCP_PID_PATH: join(root.root, "literal.pid"),
+            CHASSIS_MCP_PROTOCOL_VERSION: "2025-11-25",
+            CHASSIS_MCP_LEGACY_VERSION: "2025-11-25",
+            CHASSIS_MCP_WIRE_LOG: root.wireLogPath,
+            CHASSIS_MCP_PID_PATH: join(root.root, "literal.pid"),
           },
         });
         await tui.waitForComposer(15_000);
@@ -916,13 +916,13 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     await expectFixtureProcessesExited(readWire(root.wireLogPath));
   }, 30_000);
 
-  test("fx ask skips workspace MCP when profile choices are unreadable", async () => {
+  test("chassis ask skips workspace MCP when profile choices are unreadable", async () => {
     const root = createRoot("workspace-choice-failure", MODERN_FIXTURE, {
       recordLaunchAttempts: true,
     });
     moveProfileFixtureToWorkspace(root);
     writeFileSync(
-      join(root.home, ".fx", "settings.json"),
+      join(root.home, ".chassis", "settings.json"),
       JSON.stringify({
         workspaces: {
           [root.workspace]: { disabledMcpjsonServers: "fixture" },
@@ -979,7 +979,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       await tui.sendText("/mcp list");
       let pane = await tui.waitForText("admission=approved", 10_000);
       expect(pane).toContain("state=ready");
-      expect(readFileSync(join(root.home, ".fx", "settings.json"), "utf8"))
+      expect(readFileSync(join(root.home, ".chassis", "settings.json"), "utf8"))
         .toContain("enabledMcpjsonServers");
 
       await tui.sendText("/mcp trust reset");
@@ -992,7 +992,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       await tui.sendText("/mcp list");
       pane = await tui.waitForText("admission=rejected", 10_000);
       expect(pane).toContain("state=disabled");
-      expect(readFileSync(join(root.home, ".fx", "settings.json"), "utf8"))
+      expect(readFileSync(join(root.home, ".chassis", "settings.json"), "utf8"))
         .toContain("disabledMcpjsonServers");
 
       await tui.kill();
@@ -1051,7 +1051,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       expect(pane).not.toContain("Project MCP approval prompts dismissed");
       await tui.sendLiteral("3");
       await tui.waitForPane((text) => text.includes("Rejecting project MCP server"), 10_000);
-      const settings = JSON.parse(readFileSync(join(root.home, ".fx", "settings.json"), "utf8"));
+      const settings = JSON.parse(readFileSync(join(root.home, ".chassis", "settings.json"), "utf8"));
       expect(settings.workspaces[root.workspace].disabledMcpjsonServers).toContain("fixture");
       expect(await tui.captureFullScrollback()).not.toContain("Project MCP approval prompts dismissed");
       await tui.kill();
@@ -1068,14 +1068,14 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         mode: "features",
         recordLaunchAttempts: true,
       });
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profileServer = JSON.parse(readFileSync(profilePath, "utf8")).mcp.fixture;
       moveProfileFixtureToWorkspace(root);
       writeFileSync(profilePath, JSON.stringify({ mcp: { library: profileServer } }));
       gateway = startFakeGateway([], {
         models: [{ id: MODEL, type: "language", tags: ["tool-use"] }],
       });
-      const env = { ...fixtureEnv(root, gateway), FX_MCP_PROTOCOL_VERSION: "2026-07-28" };
+      const env = { ...fixtureEnv(root, gateway), CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" };
       expect((await runFx(["mcp", "trust", "approve-all"], {
         cwd: root.workspace,
         env,
@@ -1099,7 +1099,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       expect(pane).toContain("RESOURCE_TEXT");
       await tui.sendLiteral("3");
       await tui.waitForText("Rejecting project MCP server", 10_000);
-      expect(JSON.parse(readFileSync(join(root.home, ".fx", "settings.json"), "utf8"))
+      expect(JSON.parse(readFileSync(join(root.home, ".chassis", "settings.json"), "utf8"))
         .workspaces[root.workspace].disabledMcpjsonServers).toContain("fixture");
       expect(await tui.captureFullScrollback()).not.toContain("Project MCP approval prompts dismissed");
       await tui.kill();
@@ -1133,7 +1133,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       await Bun.sleep(250);
       expect((await tui.capturePane())).toContain("[2] approve all");
       expect(existsSync(root.launchLogPath)).toBe(false);
-      expect(readFileSync(join(root.home, ".fx", "settings.json"), "utf8"))
+      expect(readFileSync(join(root.home, ".chassis", "settings.json"), "utf8"))
         .not.toContain("enableAllProjectMcpServers");
       await tui.sendKeys("Escape");
       await tui.waitForText("Project MCP approval prompts dismissed for this process", 10_000);
@@ -1179,10 +1179,10 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     initialGateway.stop();
     gateway = null;
 
-    const profilePath = join(root.home, ".fx", "mcp.json");
+    const profilePath = join(root.home, ".chassis", "mcp.json");
     const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-    profile.mcp.fixture.environment.FX_MCP_INITIAL_TOOL_NAME = "sum";
-    profile.mcp.fixture.environment.FX_MCP_RESULT_TEXT = "RESUMED_PROFILE_TOOL_RESULT";
+    profile.mcp.fixture.environment.CHASSIS_MCP_INITIAL_TOOL_NAME = "sum";
+    profile.mcp.fixture.environment.CHASSIS_MCP_RESULT_TEXT = "RESUMED_PROFILE_TOOL_RESULT";
     writeFileSync(profilePath, JSON.stringify(profile));
 
     const resumedTool = "mcp_fixture_sum";
@@ -1375,7 +1375,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         .toHaveLength(0);
       expect(wire.filter((entry) => entry.message.method === "resources/list"))
         .toHaveLength(2);
-      const evidenceDir = process.env.FX_S11_EVIDENCE_DIR;
+      const evidenceDir = process.env.CHASSIS_S11_EVIDENCE_DIR;
       if (evidenceDir) {
         mkdirSync(evidenceDir, { recursive: true });
         writeFileSync(
@@ -1400,7 +1400,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     const marker = "PERSISTENT";
     test(`${label} child with no configured MCP runtime fails closed before transport`, async () => {
       const root = createRoot(`${label}-mcp-disabled`, MODERN_FIXTURE);
-      writeFileSync(join(root.home, ".fx", "mcp.json"), JSON.stringify({ mcp: {} }));
+      writeFileSync(join(root.home, ".chassis", "mcp.json"), JSON.stringify({ mcp: {} }));
       const parentPrompt = `CREATE_DISABLED_MCP_${marker}`;
       const childPrompt = `DISABLED_MCP_${marker}_WORK`;
       let releaseParent!: (response: Response) => void;
@@ -1476,7 +1476,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       });
       const allowedWirePath = join(root.root, "allowed-wire.jsonl");
       const deniedWirePath = join(root.root, "denied-wire.jsonl");
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       const base = profile.mcp.fixture;
       profile.mcp = {
@@ -1484,26 +1484,26 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
           ...base,
           environment: {
             ...base.environment,
-            FX_MCP_WIRE_LOG: allowedWirePath,
-            FX_MCP_PID_PATH: join(root.root, "allowed.pid"),
-            FX_MCP_INITIAL_TOOL_NAME: "echo",
-            FX_MCP_RECOVERED_TOOL_NAME: "echo",
+            CHASSIS_MCP_WIRE_LOG: allowedWirePath,
+            CHASSIS_MCP_PID_PATH: join(root.root, "allowed.pid"),
+            CHASSIS_MCP_INITIAL_TOOL_NAME: "echo",
+            CHASSIS_MCP_RECOVERED_TOOL_NAME: "echo",
           },
         },
         denied: {
           ...base,
           environment: {
             ...base.environment,
-            FX_MCP_WIRE_LOG: deniedWirePath,
-            FX_MCP_PID_PATH: join(root.root, "denied.pid"),
-            FX_MCP_INITIAL_TOOL_NAME: "blocked",
-            FX_MCP_RECOVERED_TOOL_NAME: "blocked",
+            CHASSIS_MCP_WIRE_LOG: deniedWirePath,
+            CHASSIS_MCP_PID_PATH: join(root.root, "denied.pid"),
+            CHASSIS_MCP_INITIAL_TOOL_NAME: "blocked",
+            CHASSIS_MCP_RECOVERED_TOOL_NAME: "blocked",
           },
         },
       };
       writeFileSync(profilePath, JSON.stringify(profile));
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           permission: { mcp_denied_blocked: "deny" },
         }),
@@ -1654,13 +1654,13 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     await expectFixtureProcessesExited(wire);
   }, 30_000);
 
-  test("fx ask uses typed Resources Prompts and Completion flows", async () => {
+  test("chassis ask uses typed Resources Prompts and Completion flows", async () => {
     const root = createRoot("ask-features", MODERN_FIXTURE, {
       mode: "features",
     });
     const maliciousTarget = join(root.workspace, "malicious-resource-write.txt");
     writeFileSync(
-      join(root.home, ".fx", "settings.json"),
+      join(root.home, ".chassis", "settings.json"),
       JSON.stringify({
         permission: { edit: { "**": "deny" } },
       }),
@@ -1795,7 +1795,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     await expectFixtureProcessesExited(wire);
   }, 30_000);
 
-  test("fx ask cancels a bounded stalled resource read", async () => {
+  test("chassis ask cancels a bounded stalled resource read", async () => {
     const root = createRoot("ask-feature-cancel", MODERN_FIXTURE, {
       mode: "features",
       operationTimeoutMs: 200,
@@ -1952,9 +1952,9 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
 
   test("silent legacy discovery preserves time for initialization", async () => {
     const root = createRoot("silent-discovery", LEGACY_FIXTURE, { startupTimeoutMs: 1_500 });
-    const profilePath = join(root.home, ".fx", "mcp.json");
+    const profilePath = join(root.home, ".chassis", "mcp.json");
     const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-    profile.mcp.fixture.environment.FX_MCP_IGNORE_DISCOVERY = "1";
+    profile.mcp.fixture.environment.CHASSIS_MCP_IGNORE_DISCOVERY = "1";
     writeFileSync(profilePath, JSON.stringify(profile));
     gateway = startToolGateway("Silent discovery fallback worked.");
     const result = await runFx(["ask", "--json", "--auto", "--no-save", "Use the legacy tool"], {
@@ -2066,9 +2066,9 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   for (const action of ["resource_read", "prompt_get"] as const) {
     test(`MCP ${action} carries images through the shared result path`, async () => {
       const root = createRoot("feature-image", MODERN_FIXTURE, { mode: "features" });
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-      profile.mcp.fixture.environment.FX_MCP_FEATURE_IMAGES = "1";
+      profile.mcp.fixture.environment.CHASSIS_MCP_FEATURE_IMAGES = "1";
       writeFileSync(profilePath, JSON.stringify(profile));
       gateway = startFakeGateway([
         fakeGatewayToolCall("feature_image", "mcp_features", action === "resource_read"
@@ -2339,7 +2339,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   }, 15_000);
 
   test("a blocked write recovers before the next unsent runtime call", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-mcp-runtime-recovery-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-mcp-runtime-recovery-")));
     cleanupRoot = root;
     const proc = Bun.spawn(
       [
@@ -2386,7 +2386,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   test("catalog waits preserve operation timeout and cancellation", async () => {
     for (const control of ["timeout", "cancel"] as const) {
       const root = realpathSync(
-        mkdtempSync(join(tmpdir(), `fx-mcp-catalog-${control}-`)),
+        mkdtempSync(join(tmpdir(), `chassis-mcp-catalog-${control}-`)),
       );
       cleanupRoot = root;
       const proc = Bun.spawn(
@@ -2434,7 +2434,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   test("stalled recovery preserves startup timeout and local cancellation", async () => {
     for (const control of ["timeout", "cancel"] as const) {
       const root = realpathSync(
-        mkdtempSync(join(tmpdir(), `fx-mcp-recovery-${control}-`)),
+        mkdtempSync(join(tmpdir(), `chassis-mcp-recovery-${control}-`)),
       );
       cleanupRoot = root;
       const proc = Bun.spawn(
@@ -2479,7 +2479,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   }, 30_000);
 
   test("concurrent server recovery preserves whole-runtime tool-name uniqueness", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-mcp-recovery-collision-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-mcp-recovery-collision-")));
     cleanupRoot = root;
     const proc = Bun.spawn(
       [
@@ -2525,7 +2525,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   }, 30_000);
 
   test("a failed reconnect leaves the remaining restart budget reachable", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-mcp-recovery-budget-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-mcp-recovery-budget-")));
     cleanupRoot = root;
     const proc = Bun.spawn(
       [
@@ -2568,7 +2568,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   }, 30_000);
 
   test("a queued stale tool cannot cross a recovered connection generation", async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-mcp-stale-recovery-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-mcp-stale-recovery-")));
     cleanupRoot = root;
     const proc = Bun.spawn(
       [
@@ -2642,7 +2642,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       },
     ] as const
   ) {
-    test(`fx ask calls the ${fixture.label} stdio fixture`, async () => {
+    test(`chassis ask calls the ${fixture.label} stdio fixture`, async () => {
       const root = createRoot(`ask-${fixture.label}`, fixture.path, {
         recordLaunchAttempts: true,
       });
@@ -2705,7 +2705,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         env: {
           ...fixtureEnv(root, activeGateway),
           PATH: parentPath,
-          FX_MCP_INHERITED_SENTINEL: inheritedSentinel,
+          CHASSIS_MCP_INHERITED_SENTINEL: inheritedSentinel,
           HTTPS_PROXY: proxySentinel,
         },
         timeoutMs: 20_000,
@@ -2734,14 +2734,14 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   for (const discovery of ["select", "search"] as const) {
     test(`targeted MCP ${discovery} leaves unrelated optional servers dormant`, async () => {
       const root = createRoot("targeted-activation", MODERN_FIXTURE);
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       const unrelatedWire = join(root.root, "unrelated-wire.jsonl");
       profile.mcp.unrelated = { ...profile.mcp.fixture, environment: {
         ...profile.mcp.fixture.environment,
-        FX_MCP_PROTOCOL_VERSION: "2026-07-28",
-        FX_MCP_MODE: "stall_startup", FX_MCP_WIRE_LOG: unrelatedWire,
-        FX_MCP_PID_PATH: join(root.root, "unrelated.pid"),
+        CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28",
+        CHASSIS_MCP_MODE: "stall_startup", CHASSIS_MCP_WIRE_LOG: unrelatedWire,
+        CHASSIS_MCP_PID_PATH: join(root.root, "unrelated.pid"),
       } };
       writeFileSync(profilePath, JSON.stringify(profile));
       gateway = startFakeGateway([
@@ -2761,7 +2761,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     }, 30_000);
   }
 
-  test("fx ask does not start an unused optional MCP server", async () => {
+  test("chassis ask does not start an unused optional MCP server", async () => {
     const root = createRoot("ask-unused-optional", MODERN_FIXTURE, {
       recordLaunchAttempts: true,
     });
@@ -2789,7 +2789,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   }, 15_000);
 
   test.skipIf(!tmuxAvailable())(
-    "terminal fx ask starts an unused optional MCP server before its model request",
+    "terminal chassis ask starts an unused optional MCP server before its model request",
     async () => {
       const root = createRoot("ask-terminal-eager-optional", MODERN_FIXTURE, {
         recordLaunchAttempts: true,
@@ -2800,7 +2800,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         models: [{ id: MODEL, type: "language", tags: ["tool-use"] }],
       });
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       tui = await TmuxSession.create({
         isolated: true,
         cmd: `${JSON.stringify(binary)} ask --auto --no-save ${JSON.stringify("Answer without using MCP.")}`,
@@ -2833,7 +2833,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   );
 
   test.skipIf(process.platform === "win32" || !tmuxAvailable())(
-    "terminal fx ask cancels stalled optional MCP startup before its model request",
+    "terminal chassis ask cancels stalled optional MCP startup before its model request",
     async () => {
       const root = createRoot("ask-terminal-cancel-startup", MODERN_FIXTURE, {
         mode: "stall_startup",
@@ -2847,7 +2847,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         models: [{ id: MODEL, type: "language", tags: ["tool-use"] }],
       });
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       tui = await TmuxSession.create({
         isolated: true,
         cmd: `${JSON.stringify(binary)} ask --auto --no-save ${JSON.stringify("Cancel optional MCP startup.")}`,
@@ -2869,7 +2869,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
 
       const cancelStartedAt = Date.now();
       await tui.sendKeys("C-c");
-      // fx restores and re-delivers SIGINT after cleanup, so tmux records a
+      // chassis restores and re-delivers SIGINT after cleanup, so tmux records a
       // signal exit without a numeric pane status.
       await waitForTtyAskExit(tui, null, 5_000);
       expect(Date.now() - cancelStartedAt).toBeLessThan(5_000);
@@ -2883,7 +2883,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     20_000,
   );
 
-  test("fx ask accepts the official legacy SDK Draft 7 tool schema", async () => {
+  test("chassis ask accepts the official legacy SDK Draft 7 tool schema", async () => {
     const root = createRoot("ask-legacy-draft7", LEGACY_FIXTURE, {
       mode: "draft7_schema",
     });
@@ -2914,7 +2914,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     await expectFixtureProcessesExited(wire);
   });
 
-  test("fx ask lets the legacy server validate Draft 7 arguments", async () => {
+  test("chassis ask lets the legacy server validate Draft 7 arguments", async () => {
     const root = createRoot("ask-legacy-draft7-invalid", LEGACY_FIXTURE, {
       mode: "draft7_schema",
       draft7Pattern: "^\\S+$",
@@ -2947,7 +2947,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     await expectFixtureProcessesExited(wire);
   });
 
-  test("fx ask routes legacy stdio progress", async () => {
+  test("chassis ask routes legacy stdio progress", async () => {
     const root = createRoot("ask-legacy-progress", LEGACY_FIXTURE, {
       mode: "progress",
     });
@@ -2972,7 +2972,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     await expectFixtureProcessesExited(wire);
   }, 30_000);
 
-  test("noninteractive fx ask returns typed input-required without fabricating a continuation", async () => {
+  test("noninteractive chassis ask returns typed input-required without fabricating a continuation", async () => {
     const root = createRoot("ask-mrtr", MODERN_FIXTURE, {
       mode: "mrtr_input_required",
     });
@@ -3292,7 +3292,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         const activeGateway = startToolGateway(`${surface} terminal-safe elicitation complete.`);
         gateway = activeGateway;
         const stderrPath = join(root.root, "stderr.log");
-        const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+        const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
         tui = await TmuxSession.create({
           isolated: true,
           ...(surface === "Ask"
@@ -3369,7 +3369,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         const activeGateway = startToolGateway(`${surface} collision form complete.`);
         gateway = activeGateway;
         const stderrPath = join(root.root, "stderr.log");
-        const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+        const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
         tui = await TmuxSession.create({
           isolated: true,
           ...(surface === "Ask"
@@ -3649,7 +3649,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   }, 30_000);
 
   test.skipIf(!tmuxAvailable())(
-    "interactive fx ask validates and submits a modern MCP form elicitation",
+    "interactive chassis ask validates and submits a modern MCP form elicitation",
     async () => {
       const root = createRoot("ask-interactive-mrtr", MODERN_FIXTURE, {
         mode: "mrtr_input_required",
@@ -3657,7 +3657,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       });
       const activeGateway = startToolGateway("Interactive Ask elicitation complete.");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       const prompt = "Call the MRTR MCP fixture interactively.";
       tui = await TmuxSession.create({
         isolated: true,
@@ -3702,7 +3702,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
 
   for (const legacyVersion of ["2025-06-18", "2025-11-25"] as const) {
     test.skipIf(!tmuxAvailable())(
-      `interactive fx ask handles negotiated ${legacyVersion} direct elicitation/create`,
+      `interactive chassis ask handles negotiated ${legacyVersion} direct elicitation/create`,
       async () => {
         const root = createRoot(`ask-legacy-direct-${legacyVersion}`, LEGACY_FIXTURE, {
           mode: "direct_form",
@@ -3712,7 +3712,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         });
         const activeGateway = startToolGateway(`Legacy ${legacyVersion} elicitation complete.`);
         gateway = activeGateway;
-        const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+        const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
         tui = await TmuxSession.create({
           isolated: true,
           cmd: `${JSON.stringify(binary)} ask --auto --no-save ${JSON.stringify("Call the direct legacy elicitation fixture.")}`,
@@ -3779,11 +3779,11 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       mkdirSync(fakeBin);
       writeFakeUrlOpeners(
         fakeBin,
-        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$FX_E2E_OPEN_LOG\"\nexit 0\n",
+        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$CHASSIS_E2E_OPEN_LOG\"\nexit 0\n",
       );
       const activeGateway = startToolGateway("Legacy URL-required complete.");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       try {
         tui = await TmuxSession.create({
           isolated: true,
@@ -3795,7 +3795,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
           env: {
             ...fixtureEnv(root, activeGateway),
             PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-            FX_E2E_OPEN_LOG: openLog,
+            CHASSIS_E2E_OPEN_LOG: openLog,
           },
         });
 
@@ -3842,11 +3842,11 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       mkdirSync(fakeBin);
       writeFakeUrlOpeners(
         fakeBin,
-        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$FX_E2E_OPEN_LOG\"\nexit 0\n",
+        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$CHASSIS_E2E_OPEN_LOG\"\nexit 0\n",
       );
       const activeGateway = startToolGateway("Legacy multiple URL completion complete.");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       tui = await TmuxSession.create({
         isolated: true,
         cmd: `${JSON.stringify(binary)} ask --auto --no-save ${JSON.stringify("Call the multiple legacy URL fixture.")}`,
@@ -3857,7 +3857,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         env: {
           ...fixtureEnv(root, activeGateway),
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-          FX_E2E_OPEN_LOG: openLog,
+          CHASSIS_E2E_OPEN_LOG: openLog,
         },
       });
 
@@ -3911,11 +3911,11 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       mkdirSync(fakeBin);
       writeFakeUrlOpeners(
         fakeBin,
-        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$FX_E2E_OPEN_LOG\"\nexit 0\n",
+        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$CHASSIS_E2E_OPEN_LOG\"\nexit 0\n",
       );
       const activeGateway = startToolGateway("Legacy malformed completion complete.");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       tui = await TmuxSession.create({
         isolated: true,
         cmd: `${JSON.stringify(binary)} ask --auto --no-save ${JSON.stringify("Call the malformed completion fixture.")}`,
@@ -3926,7 +3926,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         env: {
           ...fixtureEnv(root, activeGateway),
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-          FX_E2E_OPEN_LOG: openLog,
+          CHASSIS_E2E_OPEN_LOG: openLog,
         },
       });
 
@@ -3968,7 +3968,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       });
       const activeGateway = startToolGateway("must not complete");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       const fakeBin = join(root.root, "fake-bin");
       mkdirSync(fakeBin);
       writeFakeUrlOpeners(fakeBin, "#!/bin/sh\nexit 0\n");
@@ -4010,7 +4010,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       });
       const activeGateway = startToolGateway("Legacy URL timeout handled.");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       const fakeBin = join(root.root, "fake-bin");
       mkdirSync(fakeBin);
       writeFakeUrlOpeners(fakeBin, "#!/bin/sh\nexit 0\n");
@@ -4060,7 +4060,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         mkdirSync(fakeBin);
         writeFakeUrlOpeners(
           fakeBin,
-          "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$FX_E2E_OPEN_LOG\"\nexit 0\n",
+          "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$CHASSIS_E2E_OPEN_LOG\"\nexit 0\n",
         );
         gateway = startFakeGateway([
           operation === "resources"
@@ -4088,7 +4088,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         ], {
           models: [{ id: MODEL, type: "language", tags: ["tool-use"] }],
         });
-        const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+        const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
         tui = await TmuxSession.create({
           isolated: true,
           cmd: `${JSON.stringify(binary)} ask --auto --no-save ${JSON.stringify(`Use the legacy ${operation} URL-required fixture.`)}`,
@@ -4099,7 +4099,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
           env: {
             ...fixtureEnv(root, gateway),
             PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-            FX_E2E_OPEN_LOG: openLog,
+            CHASSIS_E2E_OPEN_LOG: openLog,
           },
         });
 
@@ -4130,7 +4130,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   }
 
   test.skipIf(!tmuxAvailable())(
-    "interactive fx ask validates Unicode patterns, edits, and submits every form field kind",
+    "interactive chassis ask validates Unicode patterns, edits, and submits every form field kind",
     async () => {
       const root = createRoot("ask-interactive-full-form", MODERN_FIXTURE, {
         mode: "mrtr_full_form",
@@ -4138,7 +4138,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       });
       const activeGateway = startToolGateway("Interactive Ask full form complete.");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       tui = await TmuxSession.create({
         isolated: true,
         cmd: `${JSON.stringify(binary)} ask --auto --no-save ${JSON.stringify("Complete the full MCP form.")}`,
@@ -4244,7 +4244,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   );
 
   test.skipIf(!tmuxAvailable())(
-    "interactive fx ask retries a URL browser failure without prefetching",
+    "interactive chassis ask retries a URL browser failure without prefetching",
     async () => {
       let targetRequests = 0;
       const target = Bun.serve({
@@ -4267,11 +4267,11 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       mkdirSync(fakeBin);
       writeFakeUrlOpeners(
         fakeBin,
-        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$FX_E2E_OPEN_LOG\"\nif [ ! -e \"$FX_E2E_OPEN_STATE\" ]; then touch \"$FX_E2E_OPEN_STATE\"; exit 1; fi\nexit 0\n",
+        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$CHASSIS_E2E_OPEN_LOG\"\nif [ ! -e \"$CHASSIS_E2E_OPEN_STATE\" ]; then touch \"$CHASSIS_E2E_OPEN_STATE\"; exit 1; fi\nexit 0\n",
       );
       const activeGateway = startToolGateway("Interactive Ask URL elicitation complete.");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       try {
         tui = await TmuxSession.create({
           isolated: true,
@@ -4283,10 +4283,10 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
           env: {
             ...fixtureEnv(root, activeGateway),
             PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-            FX_E2E_OPEN_LOG: openLog,
-            FX_E2E_OPEN_STATE: openState,
-            FX_TRACE_LOG: traceLog,
-            FX_TRACE_SCOPES: "core",
+            CHASSIS_E2E_OPEN_LOG: openLog,
+            CHASSIS_E2E_OPEN_STATE: openState,
+            CHASSIS_TRACE_LOG: traceLog,
+            CHASSIS_TRACE_SCOPES: "core",
           },
         });
 
@@ -4327,7 +4327,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
   );
 
   test.skipIf(!tmuxAvailable())(
-    "interactive fx ask can refuse a URL without launching a browser",
+    "interactive chassis ask can refuse a URL without launching a browser",
     async () => {
       let targetRequests = 0;
       const target = Bun.serve({
@@ -4348,11 +4348,11 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       mkdirSync(fakeBin);
       writeFakeUrlOpeners(
         fakeBin,
-        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$FX_E2E_OPEN_LOG\"\nexit 0\n",
+        "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$CHASSIS_E2E_OPEN_LOG\"\nexit 0\n",
       );
       const activeGateway = startToolGateway("Interactive Ask URL refusal complete.");
       gateway = activeGateway;
-      const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+      const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
       try {
         tui = await TmuxSession.create({
           isolated: true,
@@ -4364,7 +4364,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
           env: {
             ...fixtureEnv(root, activeGateway),
             PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-            FX_E2E_OPEN_LOG: openLog,
+            CHASSIS_E2E_OPEN_LOG: openLog,
           },
         });
 
@@ -4392,7 +4392,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     35_000,
   );
 
-  test("fx ask routes progress and times out a stalled operation without leaking its child", async () => {
+  test("chassis ask routes progress and times out a stalled operation without leaking its child", async () => {
     const progressRoot = createRoot("ask-progress", MODERN_FIXTURE, {
       mode: "progress",
     });
@@ -4455,7 +4455,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       fakeGatewayToolCall("cancel_startup", "capability_search", { server: "fixture", query: "echo" }),
       fakeGatewayFinalText("Unexpected continuation."),
     ], { models: [{ id: MODEL, type: "language", tags: ["tool-use"] }] });
-    const proc = Bun.spawn([join(REPO_ROOT, "zig-out", "bin", "fx"), "ask", "--json", "--auto", "--no-save", "Find the fixture tool"], {
+    const proc = Bun.spawn([join(REPO_ROOT, "zig-out", "bin", "chassis"), "ask", "--json", "--auto", "--no-save", "Find the fixture tool"], {
       cwd: root.workspace, env: { ...process.env, ...fixtureEnv(root, gateway) }, stdout: "ignore", stderr: "ignore",
     });
     try {
@@ -4473,7 +4473,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     }
   }, 15_000);
 
-  test("fx ask bounds startup timeouts and reaps every attempted child", async () => {
+  test("chassis ask bounds startup timeouts and reaps every attempted child", async () => {
     const root = createRoot("ask-startup-timeout", MODERN_FIXTURE, {
       mode: "stall_startup",
       startupTimeoutMs: 50,
@@ -4562,7 +4562,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     25_000,
   );
 
-  test("required profile startup failure blocks fx ask before any Gateway request", async () => {
+  test("required profile startup failure blocks chassis ask before any Gateway request", async () => {
     const root = createRoot("ask-required-startup-timeout", MODERN_FIXTURE, {
       mode: "stall_startup",
       startupTimeoutMs: 50,
@@ -4850,7 +4850,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       const originalPid = beforeWire.find((entry) => entry.message.method === "tools/call")?.pid;
       expect(originalPid).toBeDefined();
 
-      writeFileSync(join(root.home, ".fx", "mcp.json"), "{not valid json");
+      writeFileSync(join(root.home, ".chassis", "mcp.json"), "{not valid json");
       await tui.sendText("/mcp reload");
       await tui.waitForText("MCP configuration could not be reloaded", 5_000);
       expect(isProcessAlive(originalPid!)).toBe(true);
@@ -4885,9 +4885,9 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       });
       await tui.waitForComposer(15_000);
 
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-      profile.mcp.fixture.environment.FX_MCP_MODE = "stall_startup";
+      profile.mcp.fixture.environment.CHASSIS_MCP_MODE = "stall_startup";
       profile.mcp.fixture.startup_timeout_ms = 60_000;
       writeFileSync(profilePath, JSON.stringify(profile));
 
@@ -4898,7 +4898,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
       await tui.waitForText("mcp.json", 1_000);
       expect(Date.now() - pathStarted).toBeLessThan(1_000);
 
-      profile.mcp.fixture.environment.FX_MCP_MODE = "normal";
+      profile.mcp.fixture.environment.CHASSIS_MCP_MODE = "normal";
       writeFileSync(profilePath, JSON.stringify(profile));
       const supersedeStarted = Date.now();
       await tui.sendText("/mcp reload");
@@ -4935,7 +4935,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
 
       await tui.waitForComposer(15_000);
       const originalPid = Number(readFileSync(join(root.root, "mcp.pid"), "utf8"));
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       profile.mcp.fixture.command = ["/definitely/missing-required-mcp-command"];
       profile.mcp.fixture.required = true;
@@ -5040,7 +5040,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     "/mcp list renders complete secret-free health after releasing runtime locks",
     async () => {
       const root = createRoot("health-output", MODERN_FIXTURE, { mode: "features" });
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       profile.mcp.fixture.environment.S11_SECRET_ENV = "HEALTH_SECRET_SENTINEL";
       writeFileSync(profilePath, JSON.stringify(profile));
@@ -5320,7 +5320,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     45_000,
   );
 
-  test("fx ask performs one fresh-discovery restart without replaying the failed call", async () => {
+  test("chassis ask performs one fresh-discovery restart without replaying the failed call", async () => {
     const root = createRoot("ask-restart", MODERN_FIXTURE, {
       mode: "crash_once",
       restartLimit: 1,
@@ -5365,7 +5365,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
 
   for (const childMode of ["persistent"] as const) {
     test(`revoked ${childMode} authority prevents stdio recovery effects`, async () => {
-      const root = realpathSync(mkdtempSync(join(tmpdir(), `fx-mcp-${childMode}-recovery-`)));
+      const root = realpathSync(mkdtempSync(join(tmpdir(), `chassis-mcp-${childMode}-recovery-`)));
       cleanupRoot = root;
       const proc = Bun.spawn(
         [
@@ -5420,7 +5420,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
         .filter((entry) => entry.message.id !== undefined)
         .map((entry) => entry.message.id);
       expect(new Set(requestIds).size).toBe(requestIds.length);
-      const evidenceDir = process.env.FX_S11_EVIDENCE_DIR;
+      const evidenceDir = process.env.CHASSIS_S11_EVIDENCE_DIR;
       if (evidenceDir) {
         mkdirSync(evidenceDir, { recursive: true });
         writeFileSync(
@@ -5439,7 +5439,7 @@ exec "$FX_MCP_FIXTURE_RUNTIME" "$FX_MCP_FIXTURE_PATH"
     }, 30_000);
   }
 
-  test("fx ask stops restarting after the configured stdio budget", async () => {
+  test("chassis ask stops restarting after the configured stdio budget", async () => {
     const root = createRoot("ask-restart-limit", MODERN_FIXTURE, {
       mode: "crash_always",
       restartLimit: 1,

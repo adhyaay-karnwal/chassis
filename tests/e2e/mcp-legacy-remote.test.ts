@@ -70,19 +70,19 @@ function createRoot(
   remoteOverrides: Record<string, unknown> = {},
 ) {
   const root = realpathSync(
-    mkdtempSync(join(tmpdir(), `fx-mcp-legacy-${label}-`)),
+    mkdtempSync(join(tmpdir(), `chassis-mcp-legacy-${label}-`)),
   );
   cleanupRoot = root;
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({}),
   );
   writeFileSync(
-    join(home, ".fx", "mcp.json"),
+    join(home, ".chassis", "mcp.json"),
     JSON.stringify({
       mcp: {
         fixture: {
@@ -96,7 +96,7 @@ function createRoot(
       },
     }),
   );
-  return { root, home, workspace, traceLogPath: join(root, "fx-trace.log") };
+  return { root, home, workspace, traceLogPath: join(root, "chassis-trace.log") };
 }
 
 function fixtureEnv(
@@ -107,14 +107,14 @@ function fixtureEnv(
     HOME: root.home,
     AI_GATEWAY_API_KEY: "fake-mcp-legacy-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_AUTO_UPGRADE: "0",
-    FX_PERMISSION_MODE: "auto",
-    FX_GATEWAY_BASE_URL: activeGateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: activeGateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: activeGateway.chatUrl,
-    FX_MODEL: MODEL,
-    FX_TRACE_LOG: root.traceLogPath,
-    FX_TRACE_SCOPES: "mcp",
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_PERMISSION_MODE: "auto",
+    CHASSIS_GATEWAY_BASE_URL: activeGateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: activeGateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_CHAT_URL: activeGateway.chatUrl,
+    CHASSIS_MODEL: MODEL,
+    CHASSIS_TRACE_LOG: root.traceLogPath,
+    CHASSIS_TRACE_SCOPES: "mcp",
   };
 }
 
@@ -155,8 +155,8 @@ function preserveLegacyFailure(
   activeGateway: ReturnType<typeof startFakeGateway>,
 ): void {
   cleanupRoot = null;
-  writeFileSync(join(root.root, "fx-stdout.log"), result.stdout);
-  writeFileSync(join(root.root, "fx-stderr.log"), result.stderr);
+  writeFileSync(join(root.root, "chassis-stdout.log"), result.stdout);
+  writeFileSync(join(root.root, "chassis-stderr.log"), result.stderr);
   writeFileSync(
     join(root.root, "failure.json"),
     JSON.stringify({
@@ -169,7 +169,7 @@ function preserveLegacyFailure(
       gatewayRequests: activeGateway.requests.map((request) => request.body),
     }, null, 2),
   );
-  throw new Error(`fx ${label} failed; retained artifacts: ${root.root}`);
+  throw new Error(`chassis ${label} failed; retained artifacts: ${root.root}`);
 }
 
 describe("version-scoped legacy MCP remote transports", () => {
@@ -199,9 +199,9 @@ describe("version-scoped legacy MCP remote transports", () => {
         sdkDiscoveryError,
       });
       const root = createRoot(`sdk-discovery-${sdkDiscoveryError}`, "http", streamable.url);
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-      profile.mcp.fixture.environment = { FX_MCP_PROTOCOL_VERSION: "2026-07-28" };
+      profile.mcp.fixture.environment = { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" };
       writeFileSync(profilePath, JSON.stringify(profile));
       gateway = startToolGateway("Stock SDK fallback complete.");
 
@@ -432,7 +432,7 @@ describe("version-scoped legacy MCP remote transports", () => {
   }, 30_000);
 
   for (const version of VERSIONS) {
-    test(`fresh fx ask calls Streamable HTTP ${version} with its lifecycle headers`, async () => {
+    test(`fresh chassis ask calls Streamable HTTP ${version} with its lifecycle headers`, async () => {
       streamable = startLegacyStreamableHttpFixture(version);
       const root = createRoot(`ask-${version}`, "http", streamable.url);
       gateway = startToolGateway(`${version} complete.`);
@@ -640,7 +640,7 @@ describe("version-scoped legacy MCP remote transports", () => {
             const openPath = join(fakeBin, name);
             writeFileSync(
               openPath,
-              "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$FX_E2E_OPEN_LOG\"\nexit 0\n",
+              "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$CHASSIS_E2E_OPEN_LOG\"\nexit 0\n",
             );
             chmodSync(openPath, 0o755);
           }
@@ -678,7 +678,7 @@ describe("version-scoped legacy MCP remote transports", () => {
           ], {
             models: [{ id: MODEL, type: "language", tags: ["tool-use"] }],
           });
-          const binary = join(REPO_ROOT, "zig-out", "bin", "fx");
+          const binary = join(REPO_ROOT, "zig-out", "bin", "chassis");
           tui = await TmuxSession.create({
             isolated: true,
             cwd: root.workspace,
@@ -689,7 +689,7 @@ describe("version-scoped legacy MCP remote transports", () => {
             env: {
               ...fixtureEnv(root, gateway),
               PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-              FX_E2E_OPEN_LOG: openLog,
+              CHASSIS_E2E_OPEN_LOG: openLog,
             },
           });
 
@@ -927,7 +927,7 @@ describe("version-scoped legacy MCP remote transports", () => {
     expect(gateway.requests[2]?.body).toContain("McpAuthenticationRequired");
   }, 30_000);
 
-  test("fresh fx ask uses explicit HTTP+SSE endpoint discovery and message routing", async () => {
+  test("fresh chassis ask uses explicit HTTP+SSE endpoint discovery and message routing", async () => {
     legacySse = startLegacyHttpSseFixture();
     const root = createRoot(
       "sse-ask",

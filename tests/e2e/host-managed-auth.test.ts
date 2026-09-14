@@ -23,7 +23,7 @@ describe("host-managed authentication", () => {
   let codexUnauthorizedResponses = 0;
 
   beforeAll(() => {
-    root = mkdtempSync(join(tmpdir(), "fx-host-managed-auth-"));
+    root = mkdtempSync(join(tmpdir(), "chassis-host-managed-auth-"));
     home = join(root, "home");
     workspace = join(root, "workspace");
     mkdirSync(home, { recursive: true });
@@ -118,18 +118,18 @@ describe("host-managed authentication", () => {
       HOME: home,
       AI_GATEWAY_API_KEY: undefined,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_AUTH_MODE: "host-managed",
-      FX_AUTO_UPGRADE: "0",
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_SOUND: "0",
-      FX_E2E_GATEWAY_MODELS_URL: `${baseUrl}/gateway/models`,
-      FX_E2E_GATEWAY_CHAT_URL: `${baseUrl}/gateway/responses`,
-      FX_E2E_OPENAI_CODEX_MODELS_URL: `${baseUrl}/codex/models`,
-      FX_E2E_OPENAI_CODEX_RESPONSES_URL: `${baseUrl}/codex/responses`,
-      FX_E2E_XAI_GROK_MODELS_URL: `${baseUrl}/grok/models`,
-      FX_E2E_XAI_GROK_MODALITIES_URL: `${baseUrl}/grok/modalities`,
-      FX_E2E_XAI_GROK_RESPONSES_URL: `${baseUrl}/grok/responses`,
+      CHASSIS_AUTH_MODE: "host-managed",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_SOUND: "0",
+      CHASSIS_E2E_GATEWAY_MODELS_URL: `${baseUrl}/gateway/models`,
+      CHASSIS_E2E_GATEWAY_CHAT_URL: `${baseUrl}/gateway/responses`,
+      CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: `${baseUrl}/codex/models`,
+      CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: `${baseUrl}/codex/responses`,
+      CHASSIS_E2E_XAI_GROK_MODELS_URL: `${baseUrl}/grok/models`,
+      CHASSIS_E2E_XAI_GROK_MODALITIES_URL: `${baseUrl}/grok/modalities`,
+      CHASSIS_E2E_XAI_GROK_RESPONSES_URL: `${baseUrl}/grok/responses`,
     };
   }
 
@@ -146,7 +146,7 @@ describe("host-managed authentication", () => {
       expect(result.stderr).toBe("");
       expect(result.stdout).toBe("Authentication is managed by the host.\n");
     }
-    expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
 
     for (const [provider, marker] of [
       ["gateway", "GATEWAY_HOST_MANAGED_OK"],
@@ -189,18 +189,18 @@ describe("host-managed authentication", () => {
       expect(request.headers.get("x-grok-user-id"), request.path).toBeNull();
       expect(request.headers.get("x-userid"), request.path).toBeNull();
     }
-    expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
   }, TIMEOUT);
 
   test("rejects malformed auth mode before provider I/O", async () => {
     const before = requests.length;
     const result = await runFx(["ask", "--json", "--no-save", "Do nothing."], {
       cwd: workspace,
-      env: { ...env(), FX_AUTH_MODE: "host_managed" },
+      env: { ...env(), CHASSIS_AUTH_MODE: "host_managed" },
       timeoutMs: TIMEOUT,
     });
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain("FX_AUTH_MODE must be local or host-managed");
+    expect(result.stderr).toContain("CHASSIS_AUTH_MODE must be local or host-managed");
     expect(requests.length).toBe(before);
   }, TIMEOUT);
 
@@ -223,7 +223,7 @@ describe("host-managed authentication", () => {
     expect(asked.code).toBe(1);
     const after = requests.filter((request) => request.path === "/codex/responses").length;
     expect(after - before).toBe(1);
-    expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
   }, TIMEOUT);
 
   test("interactive host-managed session streams through the same authority", async () => {
@@ -242,8 +242,8 @@ describe("host-managed authentication", () => {
       cwd: workspace,
       env: {
         ...childEnv,
-        FX_TRACE_LOG: tracePath,
-        FX_TRACE_SCOPES: "auth,session,worker,gateway",
+        CHASSIS_TRACE_LOG: tracePath,
+        CHASSIS_TRACE_SCOPES: "auth,session,worker,gateway",
       },
       stderrPath,
       isolated: true,

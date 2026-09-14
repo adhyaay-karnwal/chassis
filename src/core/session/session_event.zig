@@ -51,7 +51,7 @@ pub const ConversationToolCall = struct {
     provisional_id: ?[]const u8 = null,
     provider_result: ?[]const u8 = null,
     final_identity: types.FinalToolIdentity = .valid,
-    provenance: types.ToolExecutionProvenance = .fx_local,
+    provenance: types.ToolExecutionProvenance = .chassis_local,
 };
 
 pub const ConversationToolResult = struct {

@@ -1,23 +1,23 @@
 import {
-  createFxAgent as createWasmAgent,
-  createFxTerminal as createWasmTerminal,
+  createChassisAgent as createWasmAgent,
+  createChassisTerminal as createWasmTerminal,
   encodeXtermKeyEvent,
-  fxSdkApiVersion,
+  chassisSdkApiVersion,
   listModels,
   supportsJspi,
   xtermAdapter,
-} from "./fx-sdk.js";
+} from "./chassis-sdk.js";
 
-export { encodeXtermKeyEvent, fxSdkApiVersion, listModels, supportsJspi, xtermAdapter };
+export { encodeXtermKeyEvent, chassisSdkApiVersion, listModels, supportsJspi, xtermAdapter };
 export const libfxApiVersion = 2;
 
-const defaultCoreWasm = new URL("./fx-core.wasm", import.meta.url).href;
-const defaultTermWasm = new URL("./fx-term.wasm", import.meta.url).href;
+const defaultCoreWasm = new URL("./chassis-core.wasm", import.meta.url).href;
+const defaultTermWasm = new URL("./chassis-term.wasm", import.meta.url).href;
 
-export function createFxAgent(options = {}) {
+export function createChassisAgent(options = {}) {
   return createWasmAgent({ ...options, wasm: options.wasm ?? defaultCoreWasm });
 }
 
-export function createFxTerminal(options = {}) {
+export function createChassisTerminal(options = {}) {
   return createWasmTerminal({ ...options, wasm: options.wasm ?? defaultTermWasm });
 }

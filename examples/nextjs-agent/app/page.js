@@ -33,7 +33,7 @@ export default function Page() {
 
   return <main>
     <h1>Next.js agent</h1>
-    <p>A native libfx agent in an App Router route. Each request starts a new conversation.</p>
+    <p>A native libchassis agent in an App Router route. Each request starts a new conversation.</p>
     <form onSubmit={send}>
       <label htmlFor="prompt">Prompt</label><br />
       <textarea id="prompt" name="prompt" rows={3} cols={30} required maxLength={2000} defaultValue="Explain server components in two sentences." /><br />
@@ -42,6 +42,6 @@ export default function Page() {
     <p role="status">{status}</p>
     <label htmlFor="reply">Reply</label><br />
     <textarea id="reply" rows={12} cols={30} readOnly value={reply} />
-    <p><a href="https://github.com/vercel-labs/fx/blob/b9f8b733803f170d1a09cadf1bf5033e04bf44ed/examples/README.md#run-an-example">Code and setup</a></p>
+    <p><a href="https://github.com/adhyaay-karnwal/chassis/blob/b9f8b733803f170d1a09cadf1bf5033e04bf44ed/examples/README.md#run-an-example">Code and setup</a></p>
   </main>
 }

@@ -1148,7 +1148,7 @@ test "tool presentation formats permission labels" {
     const cwd = try formatPermissionLabel(alloc, test_tool_registry, .{
         .id = "command",
         .name = "run_command",
-        .arguments_json = "{\"command\":\"npm test\",\"cwd\":\"/tmp/fx\"}",
+        .arguments_json = "{\"command\":\"npm test\",\"cwd\":\"/tmp/chassis\"}",
     });
     defer alloc.free(cwd);
     try std.testing.expectEqualStrings("shell.run npm test", cwd);
@@ -1191,7 +1191,7 @@ test "tool presentation uses the resolved skill name for location calls" {
         .name = "workflow",
         .description = "",
         .path = "/skills/different-directory",
-        .source = .workspace_fx,
+        .source = .workspace_chassis,
     } };
     const cases = [_]struct { args: []const u8, expected: []const u8 }{
         .{ .args = "{\"location\":\"skill:0000000000000001:0/different-directory\"}", .expected = "Loading skill workflow" },

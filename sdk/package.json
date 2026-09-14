@@ -1,15 +1,15 @@
 {
-  "name": "libfx",
+  "name": "libchassis",
   "version": "0.0.0",
-  "description": "Embed fx agents and terminals in JavaScript hosts",
+  "description": "Embed chassis agents and terminals in JavaScript hosts",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vercel-labs/fx.git",
+    "url": "git+https://github.com/adhyaay-karnwal/chassis.git",
     "directory": "sdk"
   },
-  "homepage": "https://github.com/vercel-labs/fx/tree/main/sdk#readme",
-  "bugs": "https://github.com/vercel-labs/fx/issues",
+  "homepage": "https://github.com/adhyaay-karnwal/chassis/tree/main/sdk#readme",
+  "bugs": "https://github.com/adhyaay-karnwal/chassis/issues",
   "scripts": {
     "test:node-wasm": "node tests/test-node-wasm.mjs",
     "test:node-napi": "node tests/test-node-napi.mjs",
@@ -29,7 +29,7 @@
       "require": "./node.cjs"
     },
     "./browser": "./browser.js",
-    "./wasm": "./fx-sdk.js",
+    "./wasm": "./chassis-sdk.js",
     "./mcp": "./mcp.js",
     "./skills": "./skills.js",
     "./skills/node": "./skills-node.js"
@@ -38,14 +38,14 @@
     "browser.js",
     "node.js",
     "node.cjs",
-    "fx-sdk.js",
+    "chassis-sdk.js",
     "wasm-module.js",
     "core-output.js",
     "mcp.js",
     "skills.js",
     "skills-node.js",
-    "fx-core.wasm",
-    "fx-term.wasm",
+    "chassis-core.wasm",
+    "chassis-term.wasm",
     "*.node",
     "README.md",
     "LICENSE"

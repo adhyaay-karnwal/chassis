@@ -16,7 +16,7 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { FX_BIN, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, runFx } from "../evals/eval-helpers";
 import {
   startLegacyHttpSseFixture,
   startLegacyStreamableHttpFixture,
@@ -37,8 +37,8 @@ const ACCESS_REFRESHED = "mcp-access-refreshed-secret";
 const REFRESH_INITIAL = "mcp-refresh-initial-secret";
 const REFRESH_ROTATED = "mcp-refresh-rotated-secret";
 const REPO_ROOT = realpathSync(join(import.meta.dirname, "..", ".."));
-const MCP_KEYCHAIN_SERVICE = "FX_MCP_OAUTH_CREDENTIALS_V1";
-const inheritedKeychainDisable = process.env.FX_DISABLE_KEYCHAIN;
+const MCP_KEYCHAIN_SERVICE = "CHASSIS_MCP_OAUTH_CREDENTIALS_V1";
+const inheritedKeychainDisable = process.env.CHASSIS_DISABLE_KEYCHAIN;
 const MCP_KEYCHAIN_PROBE_SCRIPT = `
 ObjC.import("Security");
 ObjC.import("Foundation");
@@ -112,14 +112,14 @@ function runMcpKeychainProbe(
 }
 
 beforeAll(() => {
-  process.env.FX_DISABLE_KEYCHAIN = "1";
+  process.env.CHASSIS_DISABLE_KEYCHAIN = "1";
 });
 
 afterAll(() => {
   if (inheritedKeychainDisable === undefined) {
-    delete process.env.FX_DISABLE_KEYCHAIN;
+    delete process.env.CHASSIS_DISABLE_KEYCHAIN;
   } else {
-    process.env.FX_DISABLE_KEYCHAIN = inheritedKeychainDisable;
+    process.env.CHASSIS_DISABLE_KEYCHAIN = inheritedKeychainDisable;
   }
 });
 
@@ -589,7 +589,7 @@ function createRoot(
   serverUrl = activeAuth.url,
   followAuthorization = true,
 ) {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-mcp-auth-")));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-mcp-auth-")));
   cleanupRoot = root;
   const home = join(root, "home");
   const workspace = join(root, "workspace");
@@ -598,25 +598,25 @@ function createRoot(
   const openLog = join(root, "open.log");
   const callbackLog = join(root, "callback.html");
   const stderr = join(root, "stderr.log");
-  mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+  mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(bin, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({}),
   );
   writeFileSync(
-    join(home, ".fx", "mcp.json"),
+    join(home, ".chassis", "mcp.json"),
     JSON.stringify({
       mcp: {
         fixture: {
           type: transport,
           url: serverUrl,
-          environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+          environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
           ...(configureOauth
             ? {
                 oauth: {
-                  client_id: "fx-mcp-auth-test",
+                  client_id: "chassis-mcp-auth-test",
                   scopes: ["tools.read"],
                 },
               }
@@ -641,7 +641,7 @@ function createRoot(
 }
 
 function moveAuthFixtureToWorkspace(root: ReturnType<typeof createRoot>): void {
-  const profilePath = join(root.home, ".fx", "mcp.json");
+  const profilePath = join(root.home, ".chassis", "mcp.json");
   const profile = JSON.parse(readFileSync(profilePath, "utf8"));
   writeFileSync(
     join(root.workspace, ".mcp.json"),
@@ -656,12 +656,12 @@ function baseEnv(root: ReturnType<typeof createRoot>) {
     PATH: `${root.bin}${delimiter}${process.env.PATH ?? ""}`,
     AI_GATEWAY_API_KEY: "fake-mcp-auth-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_AUTO_UPGRADE: "0",
-    FX_MCP_PROTOCOL_VERSION: "2026-07-28",
-    FX_PERMISSION_MODE: "auto",
-    FX_MODEL: MODEL,
-    FX_TRACE_LOG: root.trace,
-    FX_TRACE_SCOPES: "mcp,core",
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28",
+    CHASSIS_PERMISSION_MODE: "auto",
+    CHASSIS_MODEL: MODEL,
+    CHASSIS_TRACE_LOG: root.trace,
+    CHASSIS_TRACE_SCOPES: "mcp,core",
   };
 }
 
@@ -672,7 +672,7 @@ function seedExpiredCredentials(
 ) {
   const endpoint = activeAuth.url;
   const origin = new URL(endpoint).origin;
-  const directory = join(root.home, ".fx", "mcp-credentials");
+  const directory = join(root.home, ".chassis", "mcp-credentials");
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const path = join(directory, "credentials.json");
   writeFileSync(
@@ -684,7 +684,7 @@ function seedExpiredCredentials(
         endpoint,
         resource: endpoint,
         issuer: origin,
-        client_id: "fx-mcp-auth-test",
+        client_id: "chassis-mcp-auth-test",
         client_secret: null,
         access_token: ACCESS_INITIAL,
         refresh_token: REFRESH_INITIAL,
@@ -796,8 +796,8 @@ function preserveAuthFailure(
 ): void {
   if (result.code === 0) return;
   cleanupRoot = null;
-  writeFileSync(join(root.root, "fx-stdout.log"), result.stdout);
-  writeFileSync(join(root.root, "fx-stderr.log"), result.stderr);
+  writeFileSync(join(root.root, "chassis-stdout.log"), result.stdout);
+  writeFileSync(join(root.root, "chassis-stderr.log"), result.stderr);
   writeFileSync(
     join(root.root, "failure.json"),
     JSON.stringify({
@@ -820,7 +820,7 @@ function preserveAuthFailure(
       gatewayRequests: activeGateway.requests.map((request) => request.body),
     }, null, 2),
   );
-  throw new Error(`fx ${label} failed; retained artifacts: ${root.root}`);
+  throw new Error(`chassis ${label} failed; retained artifacts: ${root.root}`);
 }
 
 async function preserveAuthTuiFailure(
@@ -846,7 +846,7 @@ async function preserveAuthTuiFailure(
       gatewayRequests: gateway?.requests.map((request) => request.body) ?? [],
     }, null, 2),
   );
-  throw new Error(`fx ${label} failed; retained artifacts: ${root.root}`);
+  throw new Error(`chassis ${label} failed; retained artifacts: ${root.root}`);
 }
 
 describe("MCP remote authentication lifecycle", () => {
@@ -858,9 +858,9 @@ describe("MCP remote authentication lifecycle", () => {
       writeFileSync(join(root.bin, name),
         `#!/bin/sh\nprintf '%s\\n' "$1" > '${root.openLog}'\nexit 1\n`);
     }
-    const authentication = Bun.spawn([FX_BIN, "mcp", "auth", "fixture"], {
+    const authentication = Bun.spawn([CHASSIS_BIN, "mcp", "auth", "fixture"], {
       cwd: root.workspace,
-      env: { ...process.env, ...baseEnv(root), AI_GATEWAY_API_KEY: undefined, FX_NO_OPEN_BROWSER: undefined },
+      env: { ...process.env, ...baseEnv(root), AI_GATEWAY_API_KEY: undefined, CHASSIS_NO_OPEN_BROWSER: undefined },
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
@@ -898,7 +898,7 @@ describe("MCP remote authentication lifecycle", () => {
     const response = await callback;
     expect(response?.status).toBe(200);
     expect(auth.tokenExchanges).toBe(1);
-    expect(existsSync(join(root.home, ".fx", "mcp-credentials", "credentials.json"))).toBe(true);
+    expect(existsSync(join(root.home, ".chassis", "mcp-credentials", "credentials.json"))).toBe(true);
   }, 15_000);
 
   test("top-level MCP auth and logout complete without TUI or Gateway", async () => {
@@ -938,12 +938,12 @@ describe("MCP remote authentication lifecycle", () => {
     expect(callbackPage).toContain("prefers-color-scheme:dark");
     const credentialPath = join(
       root.home,
-      ".fx",
+      ".chassis",
       "mcp-credentials",
       "credentials.json",
     );
     expect(existsSync(credentialPath)).toBe(true);
-    const profilePath = join(root.home, ".fx", "mcp.json");
+    const profilePath = join(root.home, ".chassis", "mcp.json");
     const profile = JSON.parse(readFileSync(profilePath, "utf8"));
     delete profile.mcp.fixture.oauth;
     writeFileSync(profilePath, JSON.stringify(profile));
@@ -976,7 +976,7 @@ describe("MCP remote authentication lifecycle", () => {
     auth = startAuthFixture(upstream.url);
     const root = createRoot(auth, true, "http", auth.url, false);
     const callbackPort = unusedCallbackPort();
-    const profilePath = join(root.home, ".fx", "mcp.json");
+    const profilePath = join(root.home, ".chassis", "mcp.json");
     const profile = JSON.parse(readFileSync(profilePath, "utf8"));
     profile.mcp.fixture.oauth.callback_port = callbackPort;
     writeFileSync(profilePath, JSON.stringify(profile));
@@ -1221,7 +1221,7 @@ describe("MCP remote authentication lifecycle", () => {
       const env = {
         ...baseEnv(root),
         AI_GATEWAY_API_KEY: undefined,
-        FX_DISABLE_KEYCHAIN: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: undefined,
       };
 
       const authenticated = await runFx(["mcp", "auth", "fixture"], {
@@ -1235,7 +1235,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(auth.tokenExchanges).toBe(1);
       const credentialPath = join(
         root.home,
-        ".fx",
+        ".chassis",
         "mcp-credentials",
         "credentials.json",
       );
@@ -1261,17 +1261,17 @@ describe("MCP remote authentication lifecycle", () => {
       const canary = startModernMcpHttpFixture("json");
       auth = startAuthFixture(upstream.url, { omitScopes: true });
       const root = createRoot(auth);
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
       delete profile.mcp.fixture.oauth.scopes;
       profile.mcp.canary = {
-        type: "http", environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+        type: "http", environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
         url: canary.url,
         startup_timeout_ms: 5_000,
         operation_timeout_ms: 5_000,
       };
       writeFileSync(profilePath, JSON.stringify(profile));
-      const credentialDir = join(root.home, ".fx", "mcp-credentials");
+      const credentialDir = join(root.home, ".chassis", "mcp-credentials");
       mkdirSync(credentialDir, { recursive: true, mode: 0o700 });
       const credentialPath = join(credentialDir, "credentials.json");
       writeFileSync(
@@ -1287,8 +1287,8 @@ describe("MCP remote authentication lifecycle", () => {
       try {
         const env = {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         };
         tui = await TmuxSession.create({
           isolated: true,
@@ -1363,8 +1363,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         timeoutMs: 25_000,
       },
@@ -1450,8 +1450,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         timeoutMs: 25_000,
       },
@@ -1539,9 +1539,9 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_E2E_MCP_AUTH_AUTOMATE: "1",
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_E2E_MCP_AUTH_AUTOMATE: "1",
         },
         timeoutMs: 25_000,
       },
@@ -1665,8 +1665,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         timeoutMs: 30_000,
       },
@@ -1758,8 +1758,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 25_000,
         },
@@ -1834,8 +1834,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         timeoutMs: 30_000,
       },
@@ -1890,9 +1890,9 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_E2E_MCP_AUTH_AUTOMATE: "1",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_E2E_MCP_AUTH_AUTOMATE: "1",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 20_000,
         },
@@ -1938,9 +1938,9 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_E2E_MCP_AUTH_AUTOMATE: "1",
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_E2E_MCP_AUTH_AUTOMATE: "1",
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         timeoutMs: 20_000,
       },
@@ -2005,8 +2005,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 20_000,
         },
@@ -2025,26 +2025,26 @@ describe("MCP remote authentication lifecycle", () => {
   }
 
   test(
-    "fx ask isolates failed-server authentication from healthy tool search",
+    "chassis ask isolates failed-server authentication from healthy tool search",
     async () => {
       upstream = startModernMcpHttpFixture("json");
       auth = startAuthFixture(upstream.url);
       const root = createRoot(auth);
       writeFileSync(
-        join(root.home, ".fx", "mcp.json"),
+        join(root.home, ".chassis", "mcp.json"),
         JSON.stringify({
           mcp: {
             linear: {
-              type: "http", environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+              type: "http", environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
               url: upstream.url,
               startup_timeout_ms: 5_000,
               operation_timeout_ms: 5_000,
             },
             slack: {
-              type: "http", environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" },
+              type: "http", environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" },
               url: auth.url,
               oauth: {
-                client_id: "fx-mcp-auth-test",
+                client_id: "chassis-mcp-auth-test",
                 scopes: ["tools.read"],
               },
               startup_timeout_ms: 5_000,
@@ -2080,8 +2080,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 20_000,
         },
@@ -2111,7 +2111,7 @@ describe("MCP remote authentication lifecycle", () => {
   );
 
   for (const targeted of [false, true]) test(
-    `fx ask reports an actionable auth requirement for ${targeted ? "named" : "broad"} search without opening a browser`,
+    `chassis ask reports an actionable auth requirement for ${targeted ? "named" : "broad"} search without opening a browser`,
     async () => {
       upstream = startModernMcpHttpFixture("json");
       auth = startAuthFixture(upstream.url);
@@ -2132,8 +2132,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 20_000,
         },
@@ -2146,10 +2146,10 @@ describe("MCP remote authentication lifecycle", () => {
       ).toHaveLength(1);
       expect(gateway.requests[1]?.body).toContain("authentication_required");
       expect(gateway.requests[1]?.body).toContain(
-        "Run /mcp auth fixture --open in an interactive fx session.",
+        "Run /mcp auth fixture --open in an interactive chassis session.",
       );
       expect(
-        existsSync(join(root.home, ".fx", "mcp-credentials")),
+        existsSync(join(root.home, ".chassis", "mcp-credentials")),
       ).toBe(false);
     },
     30_000,
@@ -2161,7 +2161,7 @@ describe("MCP remote authentication lifecycle", () => {
       upstream = startModernMcpHttpFixture("json");
       auth = startAuthFixture(upstream.url);
       const root = createRoot(auth);
-      const account = `fx-mcp-auth-${process.pid}-${Date.now()}`;
+      const account = `chassis-mcp-auth-${process.pid}-${Date.now()}`;
       mkdirSync(join(root.home, "Library"), { recursive: true });
       symlinkSync(
         join(homedir(), "Library", "Keychains"),
@@ -2178,7 +2178,7 @@ describe("MCP remote authentication lifecycle", () => {
       const keychainEnv = {
         ...baseEnv(root),
         USER: account,
-        FX_DISABLE_KEYCHAIN: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: undefined,
       };
 
       try {
@@ -2189,8 +2189,8 @@ describe("MCP remote authentication lifecycle", () => {
             cwd: root.workspace,
             env: {
               ...keychainEnv,
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
             },
             timeoutMs: 20_000,
           },
@@ -2217,7 +2217,7 @@ describe("MCP remote authentication lifecycle", () => {
         expect(persisted.credentials[0].access_token).toBe(ACCESS_INITIAL);
         expect(persisted.credentials[0].refresh_token).toBe(REFRESH_INITIAL);
 
-        const profilePath = join(root.home, ".fx", "mcp.json");
+        const profilePath = join(root.home, ".chassis", "mcp.json");
         const profile = JSON.parse(readFileSync(profilePath, "utf8"));
         delete profile.mcp.fixture.oauth;
         writeFileSync(profilePath, JSON.stringify(profile));
@@ -2243,8 +2243,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...keychainEnv,
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           width: 110,
           height: 34,
@@ -2293,8 +2293,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -2347,7 +2347,7 @@ describe("MCP remote authentication lifecycle", () => {
         expect(trace).not.toContain(secretMarker);
       }
       expect(
-        existsSync(join(root.home, ".fx", "mcp-credentials", "credentials.json")),
+        existsSync(join(root.home, ".chassis", "mcp-credentials", "credentials.json")),
       ).toBe(false);
       expect(readFileSync(root.stderr, "utf8")).toBe("");
     },
@@ -2374,8 +2374,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 120,
         height: 34,
@@ -2467,8 +2467,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
       });
       await tui.waitForComposer(15_000);
@@ -2496,9 +2496,9 @@ describe("MCP remote authentication lifecycle", () => {
       upstream = startModernMcpHttpFixture("json");
       auth = startAuthFixture(upstream.url);
       const root = createRoot(auth);
-      const profilePath = join(root.home, ".fx", "mcp.json");
+      const profilePath = join(root.home, ".chassis", "mcp.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-      profile.mcp.healthy = { type: "http", environment: { FX_MCP_PROTOCOL_VERSION: "2026-07-28" }, url: upstream.url, headers: { "x-test-healthy": "1" }, startup_timeout_ms: 5_000 };
+      profile.mcp.healthy = { type: "http", environment: { CHASSIS_MCP_PROTOCOL_VERSION: "2026-07-28" }, url: upstream.url, headers: { "x-test-healthy": "1" }, startup_timeout_ms: 5_000 };
       writeFileSync(profilePath, JSON.stringify(profile));
       gateway = startFakeGateway([
         fakeGatewayFinalText("TUI idle."),
@@ -2507,8 +2507,8 @@ describe("MCP remote authentication lifecycle", () => {
       });
       const tuiEnv = {
         ...baseEnv(root),
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
       };
       tui = await TmuxSession.create({
         isolated: true,
@@ -2537,7 +2537,7 @@ describe("MCP remote authentication lifecycle", () => {
       const menu = await tui.waitForText("Needs authentication", 10_000);
       expect(menu).toContain("fixture");
       await tui.sendKeys("Enter");
-      await tui.waitForText("Profile · ~/.fx/mcp.json", 5_000);
+      await tui.waitForText("Profile · ~/.chassis/mcp.json", 5_000);
       await tui.sendKeys("Enter");
       const authDeadline = Date.now() + 10_000;
       while (auth.authorizationRequests === 0 && Date.now() < authDeadline) {
@@ -2555,7 +2555,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(auth.tokenExchanges).toBe(1);
       const credentialPath = join(
         root.home,
-        ".fx",
+        ".chassis",
         "mcp-credentials",
         "credentials.json",
       );
@@ -2582,8 +2582,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 20_000,
         },
@@ -2617,8 +2617,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -2637,7 +2637,7 @@ describe("MCP remote authentication lifecycle", () => {
       await tui.sendText("/mcp");
       await tui.waitForText("[Servers]", 5_000);
       await tui.sendKeys("Enter");
-      await tui.waitForText("Profile · ~/.fx/mcp.json", 5_000);
+      await tui.waitForText("Profile · ~/.chassis/mcp.json", 5_000);
       await tui.sendKeys("L");
       await tui.waitForText("Log out of this MCP server?", 5_000);
       await tui.sendKeys("Enter");
@@ -2687,8 +2687,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 120,
         height: 34,
@@ -2699,7 +2699,7 @@ describe("MCP remote authentication lifecycle", () => {
       await tui.waitForText("Authenticated MCP server 'fixture'.", 15_000);
       expect(auth.authorizationRequests).toBe(1);
       expect(auth.tokenExchanges).toBe(1);
-      expect(existsSync(join(root.home, ".fx", "mcp-credentials", "credentials.json")))
+      expect(existsSync(join(root.home, ".chassis", "mcp-credentials", "credentials.json")))
         .toBe(true);
     },
     30_000,
@@ -2722,8 +2722,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 140,
         height: 36,
@@ -2740,7 +2740,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(compactMismatch).not.toContain('Add "oauth":{"issuer":');
       expect(auth.authorizationRequests).toBe(1);
       expect(auth.tokenExchanges).toBe(0);
-      expect(existsSync(join(root.home, ".fx", "mcp-credentials", "credentials.json")))
+      expect(existsSync(join(root.home, ".chassis", "mcp-credentials", "credentials.json")))
         .toBe(false);
     },
     30_000,
@@ -2762,8 +2762,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -2774,7 +2774,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(auth.authorizationRequests).toBe(1);
       expect(auth.tokenExchanges).toBe(0);
       expect(
-        existsSync(join(root.home, ".fx", "mcp-credentials", "credentials.json")),
+        existsSync(join(root.home, ".chassis", "mcp-credentials", "credentials.json")),
       ).toBe(false);
     },
     30_000,
@@ -2798,8 +2798,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -2810,7 +2810,7 @@ describe("MCP remote authentication lifecycle", () => {
       expect(auth.authorizationRequests).toBe(0);
       expect(auth.tokenExchanges).toBe(0);
       expect(
-        existsSync(join(root.home, ".fx", "mcp-credentials", "credentials.json")),
+        existsSync(join(root.home, ".chassis", "mcp-credentials", "credentials.json")),
       ).toBe(false);
     },
     30_000,
@@ -2854,7 +2854,7 @@ describe("MCP remote authentication lifecycle", () => {
             env: {
               ...process.env,
               ...baseEnv(root),
-              FX_E2E_MCP_AUTH_AUTOMATE: "1",
+              CHASSIS_E2E_MCP_AUTH_AUTOMATE: "1",
             },
             stdout: "pipe",
             stderr: "pipe",
@@ -2900,7 +2900,7 @@ describe("MCP remote authentication lifecycle", () => {
           ).toHaveLength(0);
         }
 
-        const evidenceDir = process.env.FX_S11_EVIDENCE_DIR;
+        const evidenceDir = process.env.CHASSIS_S11_EVIDENCE_DIR;
         if (evidenceDir) {
           mkdirSync(evidenceDir, { recursive: true });
           writeFileSync(
@@ -2946,9 +2946,9 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-            FX_E2E_MCP_AUTH_AUTOMATE: "1",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_E2E_MCP_AUTH_AUTOMATE: "1",
           },
           timeoutMs: 20_000,
         },
@@ -2983,8 +2983,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 20_000,
         },
@@ -3018,8 +3018,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 20_000,
         },
@@ -3125,7 +3125,7 @@ describe("MCP remote authentication lifecycle", () => {
       seedExpiredCredentials(root, auth, Date.now() + 3_600_000);
       const credentialStorePath = join(
         root.home,
-        ".fx",
+        ".chassis",
         "mcp-credentials",
         "credentials.json",
       );
@@ -3296,8 +3296,8 @@ describe("MCP remote authentication lifecycle", () => {
             cwd: root.workspace,
             env: {
               ...baseEnv(root),
-              FX_GATEWAY_BASE_URL: gateway.baseUrl,
-              FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+              CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+              CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
             },
             timeoutMs: 25_000,
           },
@@ -3339,8 +3339,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 25_000,
         },
@@ -3384,8 +3384,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -3447,8 +3447,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -3493,8 +3493,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -3553,8 +3553,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -3579,7 +3579,7 @@ describe("MCP remote authentication lifecycle", () => {
 
         const credentialDirectory = join(
           root.home,
-          ".fx",
+          ".chassis",
           "mcp-credentials",
         );
         mkdirSync(credentialDirectory, { recursive: true, mode: 0o700 });
@@ -3630,8 +3630,8 @@ describe("MCP remote authentication lifecycle", () => {
         cwd: root.workspace,
         env: {
           ...baseEnv(root),
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
         },
         width: 110,
         height: 34,
@@ -3676,8 +3676,8 @@ describe("MCP remote authentication lifecycle", () => {
           cwd: root.workspace,
           env: {
             ...baseEnv(root),
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
           },
           timeoutMs: 20_000,
         },

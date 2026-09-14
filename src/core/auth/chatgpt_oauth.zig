@@ -16,8 +16,8 @@ const Allocator = std.mem.Allocator;
 pub const client_id = "app_EMoamEEZ73f0CkXaXp7hrann";
 pub const token_url = "https://auth.openai.com/oauth/token";
 pub const issuer_url = "https://auth.openai.com";
-const e2e_token_url_env = "FX_E2E_CHATGPT_TOKEN_URL";
-const e2e_issuer_url_env = "FX_E2E_CHATGPT_ISSUER_URL";
+const e2e_token_url_env = "CHASSIS_E2E_CHATGPT_TOKEN_URL";
+const e2e_issuer_url_env = "CHASSIS_E2E_CHATGPT_ISSUER_URL";
 const jwt_auth_claim = "https://api.openai.com/auth";
 const browser_scope = "openid profile email offline_access api.connectors.read api.connectors.invoke";
 const browser_callback_ports = [_]u16{ 1455, 1457 };
@@ -380,7 +380,7 @@ pub fn runLogin(
     try writeStdout("Open this URL to sign in with Codex:\n");
     try writeStdout(authorization_url);
     try writeStdout("\n\nWaiting for browser authorization...\n");
-    if (io_mod.getenv("FX_NO_OPEN_BROWSER") == null) {
+    if (io_mod.getenv("CHASSIS_NO_OPEN_BROWSER") == null) {
         _ = url_opener.open(alloc, authorization_url) catch false;
     }
 
@@ -790,7 +790,7 @@ fn buildBrowserAuthorizationUrl(
     try form.append(&out.writer, "id_token_add_organizations", "true");
     try form.append(&out.writer, "codex_cli_simplified_flow", "true");
     try form.append(&out.writer, "state", state);
-    try form.append(&out.writer, "originator", "fx");
+    try form.append(&out.writer, "originator", "chassis");
     return out.toOwnedSlice();
 }
 
@@ -959,7 +959,7 @@ test "ChatGPT browser authorization URL uses PKCE without device authentication"
     try std.testing.expect(std.mem.find(u8, url, "code_challenge=challenge-value") != null);
     try std.testing.expect(std.mem.find(u8, url, "code_challenge_method=S256") != null);
     try std.testing.expect(std.mem.find(u8, url, "state=state-value") != null);
-    try std.testing.expect(std.mem.find(u8, url, "originator=fx") != null);
+    try std.testing.expect(std.mem.find(u8, url, "originator=chassis") != null);
     try std.testing.expect(std.mem.find(u8, url, "device") == null);
 }
 

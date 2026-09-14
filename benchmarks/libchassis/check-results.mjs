@@ -62,10 +62,10 @@ for (const runtime of ["node", "bun"]) {
 
   const competitive = await read(`competitive-${runtime}.json`);
   check(competitive.rounds?.length === 3, `${label} native versus Pi benchmark needs three rounds`);
-  const expectedOrder = [["libfx", "pi"], ["pi", "libfx"], ["libfx", "pi"]];
+  const expectedOrder = [["libchassis", "pi"], ["pi", "libchassis"], ["libchassis", "pi"]];
   check(competitive.rounds?.every((round, index) => JSON.stringify(round.order) === JSON.stringify(expectedOrder[index])), `${label} native versus Pi benchmark order is not alternating`);
   check(competitive.rounds?.every((round) => round.libfx_request_count === 103 && round.pi_request_count === 103), `${label} native versus Pi benchmark made unexpected inference requests`);
-  const libfxCompetitive = competitive.libfx?.prompt_to_first_text_ms;
+  const libfxCompetitive = competitive.libchassis?.prompt_to_first_text_ms;
   const piCompetitive = competitive.pi?.prompt_to_first_text_ms;
   check(libfxCompetitive?.count === 300 && piCompetitive?.count === 300, `${label} native versus Pi benchmark needs 300 samples per harness`);
   if (libfxCompetitive && piCompetitive) {
@@ -83,7 +83,7 @@ for (const runtime of ["node", "bun"]) {
 }
 
 if (failures.length) {
-  for (const failure of failures) process.stderr.write(`libfx benchmark failed: ${failure}\n`);
+  for (const failure of failures) process.stderr.write(`libchassis benchmark failed: ${failure}\n`);
   process.exit(1);
 }
-console.log("libfx deterministic performance contracts passed");
+console.log("libchassis deterministic performance contracts passed");

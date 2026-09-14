@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN } from "../evals/eval-helpers";
+import { CHASSIS_BIN } from "../evals/eval-helpers";
 import {
   assertPaneContains,
   assertSingleFooter,
@@ -49,21 +49,21 @@ async function launch(
   width: number,
   height: number,
 ): Promise<{ session: TmuxSession; tracePath: string }> {
-  const workDir = mkdtempSync(join(tmpdir(), `fx-render-stress-${run}-`));
+  const workDir = mkdtempSync(join(tmpdir(), `chassis-render-stress-${run}-`));
   workDirs.push(workDir);
   const home = join(workDir, "home");
   mkdirSync(home);
   const tracePath = join(workDir, "trace.log");
 
   const s = await TmuxSession.create({
-    cmd: `env -u AI_GATEWAY_API_KEY -u VERCEL_OIDC_TOKEN FX_DISABLE_KEYCHAIN=1 FX_SKIP_ONBOARDING=1 ${FX_BIN}`,
+    cmd: `env -u AI_GATEWAY_API_KEY -u VERCEL_OIDC_TOKEN CHASSIS_DISABLE_KEYCHAIN=1 CHASSIS_SKIP_ONBOARDING=1 ${CHASSIS_BIN}`,
     cwd: workDir,
     width,
     height,
     env: {
       HOME: home,
-      FX_TRACE_LOG: tracePath,
-      FX_TRACE_SCOPES: TRACE_SCOPES,
+      CHASSIS_TRACE_LOG: tracePath,
+      CHASSIS_TRACE_SCOPES: TRACE_SCOPES,
     },
   });
   await s.waitForComposer(10_000);
@@ -99,7 +99,7 @@ describe.skipIf(SKIP)("tui: render stress", () => {
 
         const firstPrompt = `visible_user_prompt_${run}`;
         await session.sendText(firstPrompt);
-        await session.waitForText("fx needs access to Vercel AI Gateway", 5_000);
+        await session.waitForText("chassis needs access to Vercel AI Gateway", 5_000);
 
         const tailToken = `tail_${run}_visibl`;
         await session.sendKeys(`-l '${longInput(run)}'`);

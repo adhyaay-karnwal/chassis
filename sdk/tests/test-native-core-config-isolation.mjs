@@ -5,17 +5,17 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createFxAgent } from "../node.js";
+import { createChassisAgent } from "../node.js";
 
 const marker = "LIBFX_EXPLICIT_HOST_INSTRUCTIONS";
 const workspaceMarker = "LIBFX_WORKSPACE_CONTEXT_MUST_NOT_LOAD";
 const originalCwd = process.cwd();
-const processWorkspace = await mkdtemp(join(tmpdir(), "libfx-process-workspace-"));
-const runtimeHome = await mkdtemp(join(tmpdir(), "libfx-runtime-home-"));
-const runtimeWorkspace = await mkdtemp(join(tmpdir(), "libfx-runtime-workspace-"));
+const processWorkspace = await mkdtemp(join(tmpdir(), "libchassis-process-workspace-"));
+const runtimeHome = await mkdtemp(join(tmpdir(), "libchassis-runtime-home-"));
+const runtimeWorkspace = await mkdtemp(join(tmpdir(), "libchassis-runtime-workspace-"));
 const projectMcpMarker = join(runtimeWorkspace, "project-mcp-launched");
-await writeFile(join(processWorkspace, ".fx.json"), `${JSON.stringify({ context: false })}\n`);
-await writeFile(join(runtimeWorkspace, ".fx.json"), `${JSON.stringify({ context: true })}\n`);
+await writeFile(join(processWorkspace, ".chassis.json"), `${JSON.stringify({ context: false })}\n`);
+await writeFile(join(runtimeWorkspace, ".chassis.json"), `${JSON.stringify({ context: true })}\n`);
 await writeFile(join(runtimeWorkspace, "AGENTS.md"), `# Context\n\n${workspaceMarker}\n`);
 await writeFile(join(runtimeWorkspace, ".mcp.json"), `${JSON.stringify({
   mcpServers: {
@@ -46,15 +46,15 @@ const server = createServer((request, response) => {
 });
 await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
 const { port } = server.address();
-const previousGatewayBase = process.env.FX_GATEWAY_BASE_URL;
-process.env.FX_GATEWAY_BASE_URL = `http://127.0.0.1:${port}`;
+const previousGatewayBase = process.env.CHASSIS_GATEWAY_BASE_URL;
+process.env.CHASSIS_GATEWAY_BASE_URL = `http://127.0.0.1:${port}`;
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const addon = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/lib/libfx.node"));
+const addon = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/lib/libchassis.node"));
 
 let agent;
 try {
   process.chdir(processWorkspace);
-  agent = await createFxAgent({
+  agent = await createChassisAgent({
     nativeAddon: addon,
     backend: "native",
     fetch(input, init) {
@@ -89,8 +89,8 @@ try {
   console.log("native config isolation passed: explicit instructions, no workspace scan, and no native billing lookup");
 } finally {
   await agent?.close();
-  if (previousGatewayBase === undefined) delete process.env.FX_GATEWAY_BASE_URL;
-  else process.env.FX_GATEWAY_BASE_URL = previousGatewayBase;
+  if (previousGatewayBase === undefined) delete process.env.CHASSIS_GATEWAY_BASE_URL;
+  else process.env.CHASSIS_GATEWAY_BASE_URL = previousGatewayBase;
   process.chdir(originalCwd);
   server.closeAllConnections();
   server.close();

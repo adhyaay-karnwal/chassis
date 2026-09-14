@@ -106,7 +106,7 @@ test "context notice body drops legacy markers from every line" {
 pub const CredentialSource = enum {
     vercel_oidc_token,
     ai_gateway_api_key,
-    fx_login,
+    chassis_login,
     stored_key,
     chatgpt_subscription,
     grok_subscription,
@@ -289,7 +289,7 @@ pub const StreamState = struct {
     /// When the turn started; 0 hides the elapsed counter and activity blink.
     /// Monotonic for the whole turn: phase and tool boundaries never reset it.
     turn_started_ms: i64 = 0,
-    /// When fx started waiting on user input (approval or question); 0 means
+    /// When chassis started waiting on user input (approval or question); 0 means
     /// not waiting. While set, the turn clock freezes at this instant;
     /// on resume the wait is excluded by shifting turn_started_ms forward.
     waiting_since_ms: i64 = 0,
@@ -686,7 +686,7 @@ pub const FinalToolIdentity = enum {
 };
 
 pub const ToolExecutionProvenance = enum {
-    fx_local,
+    chassis_local,
     provider_executed,
 };
 
@@ -759,7 +759,7 @@ pub const ToolCall = struct {
     provisional_id: ?[]const u8 = null,
     provider_result: ?[]const u8 = null,
     final_identity: FinalToolIdentity = .valid,
-    provenance: ToolExecutionProvenance = .fx_local,
+    provenance: ToolExecutionProvenance = .chassis_local,
     /// Borrowed only for this action. Copies and durable/provider encodings omit it.
     resolved_skill: ?*const skill_contract.PreparedSkill = null,
 };
@@ -945,7 +945,7 @@ pub const TerminalFailurePresentation = enum {
             .session_not_found => "terminal session not found",
             .invalid_lifecycle => "terminal session is in an invalid lifecycle state",
             .authority_denied => "terminal authority denied",
-            .authority_retired => "saved terminal authority is from an older fx version; start a new terminal",
+            .authority_retired => "saved terminal authority is from an older chassis version; start a new terminal",
             .lease_conflict => "terminal control lease conflict",
             .cursor_gap => "terminal output cursor gap",
             .screen_unavailable => "terminal screen is unavailable",
@@ -1720,7 +1720,7 @@ test "authoritative tool admission rejects unstorable names" {
         .{ .value = &oversized, .reason = .too_long },
         .{ .value = "\xff", .reason = .invalid_utf8 },
     };
-    for ([_]ToolExecutionProvenance{ .fx_local, .provider_executed }) |provenance| {
+    for ([_]ToolExecutionProvenance{ .chassis_local, .provider_executed }) |provenance| {
         for (cases) |case| {
             const calls = [_]ToolCall{.{ .id = "call", .name = case.value, .arguments_json = "{}", .provenance = provenance, .provider_result = "result" }};
             try std.testing.expectEqualDeep(
@@ -1760,7 +1760,7 @@ test "authoritative tool admission preserves bounded canonical identity formats"
     const boundary = [_]u8{'i'} ** 256;
     const unicode_boundary = "é" ** 128;
     for ([_][]const u8{ &boundary, unicode_boundary, "functions.read_file:0", "unknown/tool" }) |identity| {
-        for ([_]ToolExecutionProvenance{ .fx_local, .provider_executed }) |provenance| {
+        for ([_]ToolExecutionProvenance{ .chassis_local, .provider_executed }) |provenance| {
             const calls = [_]ToolCall{.{ .id = identity, .name = identity, .provisional_id = identity, .arguments_json = "{}", .provenance = provenance, .provider_result = "result" }};
             try std.testing.expectEqual(AuthoritativeToolAdmission.admitted, authoritativeToolAdmission(.{ .tool_calls = &calls }));
             try std.testing.expectEqualStrings(identity, calls[0].id);
@@ -2808,7 +2808,7 @@ test "dupeToolCall preserves argument integrity" {
 }
 
 test "dupeToolCall drops action scoped skill bindings" {
-    const skill: skill_contract.PreparedSkill = .{ .skill = .{ .name = "workflow", .description = "", .path = "/skills/workflow", .source = .global_fx } };
+    const skill: skill_contract.PreparedSkill = .{ .skill = .{ .name = "workflow", .description = "", .path = "/skills/workflow", .source = .global_chassis } };
     const source: ToolCall = .{ .id = "skill", .name = "skill", .arguments_json = "{\"location\":\"/skills/workflow\"}", .resolved_skill = &skill };
     const copy = try dupeToolCall(std.testing.allocator, source);
     defer freeToolCall(std.testing.allocator, copy);
@@ -3140,10 +3140,10 @@ test "HistoryTurn helpers duplicate and free owned turns" {
         } },
         .cancelled_command = .{
             .output_replay = .{ .available = .{
-                .handle = try alloc.dupe(u8, "fx-command-replay.bin"),
+                .handle = try alloc.dupe(u8, "chassis-command-replay.bin"),
                 .framed_bytes = 42,
             } },
-            .command_artifact_handle = try alloc.dupe(u8, "fx-command.log"),
+            .command_artifact_handle = try alloc.dupe(u8, "chassis-command.log"),
         },
         .terminal_reason = .failed,
     } };
@@ -3153,7 +3153,7 @@ test "HistoryTurn helpers duplicate and free owned turns" {
     const copied_presentation = interrupted_copy.interrupted.cancelled_command.?;
     const original_presentation = interrupted_original.interrupted.cancelled_command.?;
     try std.testing.expectEqualStrings(
-        "fx-command-replay.bin",
+        "chassis-command-replay.bin",
         copied_presentation.output_replay.?.available.handle,
     );
     try std.testing.expect(

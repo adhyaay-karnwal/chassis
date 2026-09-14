@@ -6,21 +6,21 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(scriptDir, "../..");
-const outputDir = resolve(process.argv[2] || resolve(repoRoot, "sdk/dist/libfx"));
+const outputDir = resolve(process.argv[2] || resolve(repoRoot, "sdk/dist/libchassis"));
 const requestedNativeAddons = process.argv.slice(3).map((path) => resolve(path));
-const defaultNativeAddon = resolve(repoRoot, "zig-out/lib/libfx.node");
+const defaultNativeAddon = resolve(repoRoot, "zig-out/lib/libchassis.node");
 const nativeAddons = requestedNativeAddons.length ? requestedNativeAddons : [defaultNativeAddon];
 const requiredNativeNames = new Set([
-  "libfx.linux-x64.node",
-  "libfx.linux-arm64.node",
-  "libfx.darwin-x64.node",
-  "libfx.darwin-arm64.node",
+  "libchassis.linux-x64.node",
+  "libchassis.linux-arm64.node",
+  "libchassis.darwin-x64.node",
+  "libchassis.darwin-arm64.node",
 ]);
 const localNativeName = {
-  "linux-x64": "libfx.linux-x64.node",
-  "linux-arm64": "libfx.linux-arm64.node",
-  "darwin-x64": "libfx.darwin-x64.node",
-  "darwin-arm64": "libfx.darwin-arm64.node",
+  "linux-x64": "libchassis.linux-x64.node",
+  "linux-arm64": "libchassis.linux-arm64.node",
+  "darwin-x64": "libchassis.darwin-x64.node",
+  "darwin-arm64": "libchassis.darwin-arm64.node",
 }[`${process.platform}-${process.arch}`];
 const files = [
   ["sdk/package.json", "package.json"],
@@ -28,14 +28,14 @@ const files = [
   ["LICENSE", "LICENSE"],
   ["sdk/browser.js", "browser.js"],
   ["sdk/node.js", "node.js"],
-  ["sdk/fx-sdk.js", "fx-sdk.js"],
+  ["sdk/chassis-sdk.js", "chassis-sdk.js"],
   ["sdk/wasm-module.js", "wasm-module.js"],
   ["sdk/core-output.js", "core-output.js"],
   ["sdk/mcp.js", "mcp.js"],
   ["sdk/skills.js", "skills.js"],
   ["sdk/skills-node.js", "skills-node.js"],
-  ["zig-out/bin/fx-core.wasm", "fx-core.wasm"],
-  ["zig-out/bin/fx-term.wasm", "fx-term.wasm"],
+  ["zig-out/bin/chassis-core.wasm", "chassis-core.wasm"],
+  ["zig-out/bin/chassis-term.wasm", "chassis-term.wasm"],
 ];
 
 if (requestedNativeAddons.length) {

@@ -820,7 +820,7 @@ fn randomReplayStem(alloc: Allocator) ![]u8 {
     const random_hex = std.fmt.bytesToHex(random, .lower);
     return std.fmt.allocPrint(
         alloc,
-        "fx-command-replay-{s}",
+        "chassis-command-replay-{s}",
         .{&random_hex},
     );
 }
@@ -1482,7 +1482,7 @@ test "saved and ephemeral replay backings share collision handling" {
     );
     defer capability.deinit();
 
-    const stem = "fx-command-replay-fixed-collision";
+    const stem = "chassis-command-replay-fixed-collision";
     var saved = try createSpoolWithStem(alloc, .{ .saved = &capability }, stem);
     defer {
         saved.file.deinit();
@@ -1877,7 +1877,7 @@ test "command replay reader rejects descriptor and frame corruption" {
     var malformed = try capability.createExclusiveFile(
         alloc,
         .command_artifacts,
-        "fx-command-replay-malformed.bin",
+        "chassis-command-replay-malformed.bin",
     );
     defer malformed.deinit();
     try malformed.writeAll("not-a-replay");
@@ -1886,19 +1886,19 @@ test "command replay reader rejects descriptor and frame corruption" {
     try std.testing.expectError(
         error.InvalidReplayHeader,
         Reader.open(alloc, &capability, .{
-            .handle = "fx-command-replay-malformed.bin",
+            .handle = "chassis-command-replay-malformed.bin",
             .framed_bytes = "not-a-replay".len,
         }),
     );
     try std.testing.expectError(
         error.ReplaySizeMismatch,
         Reader.open(alloc, &capability, .{
-            .handle = "fx-command-replay-malformed.bin",
+            .handle = "chassis-command-replay-malformed.bin",
             .framed_bytes = 1,
         }),
     );
 
-    const empty_handle = "fx-command-replay-empty-frame.bin";
+    const empty_handle = "chassis-command-replay-empty-frame.bin";
     var empty_replay = [_]u8{0} ** (replay_magic.len + frame_header_bytes);
     @memcpy(empty_replay[0..replay_magic.len], replay_magic);
     var empty_file = try capability.createExclusiveFile(
@@ -1941,7 +1941,7 @@ test "failed ephemeral replay reader construction leaves its backing reusable" {
     var store = EphemeralStore.initForTesting(alloc, temp_path);
     defer store.deinit();
 
-    var spool = try store.createSpoolWithStem(alloc, "fx-command-replay-invalid-header");
+    var spool = try store.createSpoolWithStem(alloc, "chassis-command-replay-invalid-header");
     defer {
         spool.file.deinit();
         store.delete(spool.handle);

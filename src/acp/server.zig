@@ -62,9 +62,9 @@ const AcpMethod = enum {
     session_prompt,
     session_set_config_option,
     session_set_mode,
-    libfx_checkpoint,
-    libfx_restore,
-    libfx_new,
+    libchassis_checkpoint,
+    libchassis_restore,
+    libchassis_new,
     unknown,
 
     fn parse(method: []const u8) AcpMethod {
@@ -80,9 +80,9 @@ const AcpMethod = enum {
         if (std.mem.eql(u8, method, "session/prompt")) return .session_prompt;
         if (std.mem.eql(u8, method, "session/set_config_option")) return .session_set_config_option;
         if (std.mem.eql(u8, method, "session/set_mode")) return .session_set_mode;
-        if (std.mem.eql(u8, method, "libfx/checkpoint")) return .libfx_checkpoint;
-        if (std.mem.eql(u8, method, "libfx/restore")) return .libfx_restore;
-        if (std.mem.eql(u8, method, "libfx/new")) return .libfx_new;
+        if (std.mem.eql(u8, method, "libchassis/checkpoint")) return .libchassis_checkpoint;
+        if (std.mem.eql(u8, method, "libchassis/restore")) return .libchassis_restore;
+        if (std.mem.eql(u8, method, "libchassis/new")) return .libchassis_new;
         return .unknown;
     }
 
@@ -96,22 +96,22 @@ const AcpMethod = enum {
             .session_load,
             .session_resume,
             .session_close,
-            .libfx_new,
+            .libchassis_new,
             => false,
             .session_list,
             .session_remove,
             .session_prompt,
             .session_set_config_option,
-            .libfx_checkpoint,
-            .libfx_restore,
+            .libchassis_checkpoint,
+            .libchassis_restore,
             .unknown,
             => true,
         };
     }
 
-    fn isLibfx(self: AcpMethod) bool {
+    fn isLibchassis(self: AcpMethod) bool {
         return switch (self) {
-            .libfx_checkpoint, .libfx_restore, .libfx_new => true,
+            .libchassis_checkpoint, .libchassis_restore, .libchassis_new => true,
             else => false,
         };
     }
@@ -488,7 +488,7 @@ pub fn refreshModelCredential(
         state,
         &refreshed,
         expected_account_id,
-        if (source == .fx_login) state.gateway_team else null,
+        if (source == .chassis_login) state.gateway_team else null,
     );
     return worker_token;
 }
@@ -757,7 +757,7 @@ pub fn runWithTransport(
         .cfg = cfg,
         .writer = writer_value,
         .web_search_runtime = web_search_runtime.Runtime.init(.{
-            .provider = cfg.provider_set.gateway.fx_search,
+            .provider = cfg.provider_set.gateway.chassis_search,
         }),
         .terminal_client = terminal_client_runtime.Runtime.init(
             cfg.process_provider,
@@ -1228,7 +1228,7 @@ fn dispatch(state: *ServerState, alloc: Allocator, msg: *jsonrpc.Message) !void 
         return state.writer.writeResponse(alloc, msg.id, "null");
     }
 
-    if (method.isLibfx() and !state.cfg.minimal_kernel) {
+    if (method.isLibchassis() and !state.cfg.minimal_kernel) {
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.method_not_found,
             .message = "Method not found",
@@ -1251,9 +1251,9 @@ fn dispatch(state: *ServerState, alloc: Allocator, msg: *jsonrpc.Message) !void 
             .session_prompt => startPrompt(state, alloc, msg),
             .session_set_config_option => handleSetConfigOption(state, alloc, msg),
             .session_set_mode => handleSetMode(state, alloc, msg),
-            .libfx_checkpoint => handleKernelCheckpoint(state, alloc, msg),
-            .libfx_restore => handleKernelRestore(state, alloc, msg),
-            .libfx_new => sessions.handleNewLibfxSession(state, alloc, msg),
+            .libchassis_checkpoint => handleKernelCheckpoint(state, alloc, msg),
+            .libchassis_restore => handleKernelRestore(state, alloc, msg),
+            .libchassis_new => sessions.handleNewLibchassisSession(state, alloc, msg),
             else => state.writer.writeError(alloc, msg.id, .{
                 .code = ErrorCode.method_not_found,
                 .message = "Method not available in the web core yet",
@@ -1270,9 +1270,9 @@ fn dispatch(state: *ServerState, alloc: Allocator, msg: *jsonrpc.Message) !void 
         .session_prompt => startPrompt(state, alloc, msg),
         .session_set_config_option => handleSetConfigOption(state, alloc, msg),
         .session_set_mode => handleSetMode(state, alloc, msg),
-        .libfx_checkpoint => handleKernelCheckpoint(state, alloc, msg),
-        .libfx_restore => handleKernelRestore(state, alloc, msg),
-        .libfx_new => sessions.handleNewLibfxSession(state, alloc, msg),
+        .libchassis_checkpoint => handleKernelCheckpoint(state, alloc, msg),
+        .libchassis_restore => handleKernelRestore(state, alloc, msg),
+        .libchassis_new => sessions.handleNewLibchassisSession(state, alloc, msg),
         .initialize,
         .request_cancel,
         .session_cancel,
@@ -1325,18 +1325,18 @@ fn handleRequestCancellation(
     handleCancel(state, true);
 }
 
-fn libfxSessionId(alloc: Allocator, msg: *const jsonrpc.Message) !std.json.Parsed(std.json.Value) {
-    const raw = msg.params_raw orelse return error.InvalidLibfxParams;
+fn libchassisSessionId(alloc: Allocator, msg: *const jsonrpc.Message) !std.json.Parsed(std.json.Value) {
+    const raw = msg.params_raw orelse return error.InvalidLibchassisParams;
     const parsed = std.json.parseFromSlice(std.json.Value, alloc, raw, .{}) catch
-        return error.InvalidLibfxParams;
+        return error.InvalidLibchassisParams;
     if (parsed.value != .object) {
         parsed.deinit();
-        return error.InvalidLibfxParams;
+        return error.InvalidLibchassisParams;
     }
     return parsed;
 }
 
-fn activeLibfxSession(
+fn activeLibchassisSession(
     state: *ServerState,
     params: std.json.Value,
 ) ?*ActiveSessionState {
@@ -1352,20 +1352,20 @@ fn handleKernelCheckpoint(
     alloc: Allocator,
     msg: *const jsonrpc.Message,
 ) !void {
-    var parsed = libfxSessionId(alloc, msg) catch return state.writer.writeError(alloc, msg.id, .{
+    var parsed = libchassisSessionId(alloc, msg) catch return state.writer.writeError(alloc, msg.id, .{
         .code = ErrorCode.invalid_params,
-        .message = "Invalid libfx checkpoint params",
+        .message = "Invalid libchassis checkpoint params",
     });
     defer parsed.deinit();
-    const active = activeLibfxSession(state, parsed.value) orelse
+    const active = activeLibchassisSession(state, parsed.value) orelse
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.invalid_params,
-            .message = "Unknown libfx session",
+            .message = "Unknown libchassis session",
         });
     const bytes = active.session_rt.agent.checkpoint(alloc) catch
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.invalid_request,
-            .message = "libfx checkpoint is unavailable",
+            .message = "libchassis checkpoint is unavailable",
         });
     defer alloc.free(bytes);
     const encoded = try alloc.alloc(u8, std.base64.standard.Encoder.calcSize(bytes.len));
@@ -1384,34 +1384,34 @@ fn handleKernelRestore(
     alloc: Allocator,
     msg: *const jsonrpc.Message,
 ) !void {
-    var parsed = libfxSessionId(alloc, msg) catch return state.writer.writeError(alloc, msg.id, .{
+    var parsed = libchassisSessionId(alloc, msg) catch return state.writer.writeError(alloc, msg.id, .{
         .code = ErrorCode.invalid_params,
-        .message = "Invalid libfx restore params",
+        .message = "Invalid libchassis restore params",
     });
     defer parsed.deinit();
-    const active = activeLibfxSession(state, parsed.value) orelse
+    const active = activeLibchassisSession(state, parsed.value) orelse
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.invalid_params,
-            .message = "Unknown libfx session",
+            .message = "Unknown libchassis session",
         });
     const checkpoint = parsed.value.object.get("checkpoint") orelse
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.invalid_params,
-            .message = "Missing libfx checkpoint",
+            .message = "Missing libchassis checkpoint",
         });
     if (checkpoint != .string) return state.writer.writeError(alloc, msg.id, .{
         .code = ErrorCode.invalid_params,
-        .message = "Invalid libfx checkpoint",
+        .message = "Invalid libchassis checkpoint",
     });
     const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(checkpoint.string) catch
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.invalid_params,
-            .message = "Invalid libfx checkpoint",
+            .message = "Invalid libchassis checkpoint",
         });
     if (decoded_len > agent_checkpoint.max_checkpoint_bytes) {
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.invalid_params,
-            .message = "libfx checkpoint is too large",
+            .message = "libchassis checkpoint is too large",
         });
     }
     const bytes = try alloc.alloc(u8, decoded_len);
@@ -1419,12 +1419,12 @@ fn handleKernelRestore(
     std.base64.standard.Decoder.decode(bytes, checkpoint.string) catch
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.invalid_params,
-            .message = "Invalid libfx checkpoint",
+            .message = "Invalid libchassis checkpoint",
         });
     active.session_rt.agent.restoreCheckpoint(alloc, bytes) catch
         return state.writer.writeError(alloc, msg.id, .{
             .code = ErrorCode.invalid_params,
-            .message = "Invalid or non-fresh libfx checkpoint",
+            .message = "Invalid or non-fresh libchassis checkpoint",
         });
     try state.writer.writeResponse(alloc, msg.id, "null");
 }
@@ -1615,7 +1615,7 @@ const InitializeRequest = struct {
 fn parseInitializeRequest(
     alloc: Allocator,
     params: ?[]const u8,
-    allow_libfx: bool,
+    allow_libchassis: bool,
 ) !InitializeRequest {
     const raw = params orelse return error.InvalidInitializeParams;
     const parsed = std.json.parseFromSlice(std.json.Value, alloc, raw, .{}) catch
@@ -1647,15 +1647,15 @@ fn parseInitializeRequest(
         request.client_terminal = value == .bool and value.bool;
     }
     request.client_elicitation = elicitation.parseAcpCapabilities(capabilities);
-    if (allow_libfx) {
-        if (capabilities.object.get("libfx")) |libfx| {
-            if (libfx != .object) return error.InvalidInitializeParams;
+    if (allow_libchassis) {
+        if (capabilities.object.get("libchassis")) |libchassis| {
+            if (libchassis != .object) return error.InvalidInitializeParams;
             request.host_tools = try host_tool_runtime.Runtime.init(
                 alloc,
-                libfx.object.get("tools"),
+                libchassis.object.get("tools"),
             );
             errdefer request.host_tools.deinit();
-            if (libfx.object.get("instructions")) |instructions| {
+            if (libchassis.object.get("instructions")) |instructions| {
                 if (instructions != .string or instructions.string.len > 64 * 1024) {
                     return error.InvalidInitializeParams;
                 }
@@ -1666,11 +1666,11 @@ fn parseInitializeRequest(
     return request;
 }
 
-test "ACP initialize owns libfx tools and instructions" {
+test "ACP initialize owns libchassis tools and instructions" {
     const alloc = std.testing.allocator;
     var request = try parseInitializeRequest(
         alloc,
-        \\{"protocolVersion":1,"clientCapabilities":{"libfx":{"tools":[{"name":"lookup","description":"Lookup","inputSchema":{"type":"object"}}],"instructions":"Be concise."}}}
+        \\{"protocolVersion":1,"clientCapabilities":{"libchassis":{"tools":[{"name":"lookup","description":"Lookup","inputSchema":{"type":"object"}}],"instructions":"Be concise."}}}
     ,
         true,
     );
@@ -1680,11 +1680,11 @@ test "ACP initialize owns libfx tools and instructions" {
     try std.testing.expectEqualStrings("Be concise.", request.host_instructions);
 }
 
-test "ordinary ACP ignores private libfx capabilities" {
+test "ordinary ACP ignores private libchassis capabilities" {
     const alloc = std.testing.allocator;
     var request = try parseInitializeRequest(
         alloc,
-        \\{"protocolVersion":1,"clientCapabilities":{"libfx":"ignored"}}
+        \\{"protocolVersion":1,"clientCapabilities":{"libchassis":"ignored"}}
     ,
         false,
     );
@@ -1695,7 +1695,7 @@ test "ordinary ACP ignores private libfx capabilities" {
 
 fn loadConfiguredStartupState(state: *const ServerState, alloc: Allocator) !app_lifecycle.StartupState {
     if (state.cfg.minimal_kernel) {
-        return app_lifecycle.loadLibfxStartupState(
+        return app_lifecycle.loadLibchassisStartupState(
             alloc,
             state.cfg.workspace_root_override orelse "/",
             state.cfg.model_override orelse state.cfg.default_model,
@@ -1917,7 +1917,7 @@ fn handleInitialize(state: *ServerState, alloc: Allocator, msg: *jsonrpc.Message
     if (state.host_instructions.len > 0) alloc.free(state.host_instructions);
     state.host_instructions = request.host_instructions;
     request.host_instructions = &.{};
-    debug_trace.logf("acp", "libfx host capabilities tools={d} instructions_bytes={d}", .{
+    debug_trace.logf("acp", "libchassis host capabilities tools={d} instructions_bytes={d}", .{
         state.host_tools.tools.len,
         state.host_instructions.len,
     });
@@ -2497,14 +2497,14 @@ test "ACP method parser classifies request dispatch methods" {
     try std.testing.expectEqual(AcpMethod.session_prompt, AcpMethod.parse("session/prompt"));
     try std.testing.expectEqual(AcpMethod.session_set_config_option, AcpMethod.parse("session/set_config_option"));
     try std.testing.expectEqual(AcpMethod.session_set_mode, AcpMethod.parse("session/set_mode"));
-    try std.testing.expectEqual(AcpMethod.libfx_checkpoint, AcpMethod.parse("libfx/checkpoint"));
-    try std.testing.expectEqual(AcpMethod.libfx_restore, AcpMethod.parse("libfx/restore"));
-    try std.testing.expectEqual(AcpMethod.libfx_new, AcpMethod.parse("libfx/new"));
+    try std.testing.expectEqual(AcpMethod.libchassis_checkpoint, AcpMethod.parse("libchassis/checkpoint"));
+    try std.testing.expectEqual(AcpMethod.libchassis_restore, AcpMethod.parse("libchassis/restore"));
+    try std.testing.expectEqual(AcpMethod.libchassis_new, AcpMethod.parse("libchassis/new"));
     try std.testing.expectEqual(AcpMethod.unknown, AcpMethod.parse("workspace/unknown"));
-    try std.testing.expect(AcpMethod.libfx_checkpoint.isLibfx());
-    try std.testing.expect(AcpMethod.libfx_restore.isLibfx());
-    try std.testing.expect(AcpMethod.libfx_new.isLibfx());
-    try std.testing.expect(!AcpMethod.session_new.isLibfx());
+    try std.testing.expect(AcpMethod.libchassis_checkpoint.isLibchassis());
+    try std.testing.expect(AcpMethod.libchassis_restore.isLibchassis());
+    try std.testing.expect(AcpMethod.libchassis_new.isLibchassis());
+    try std.testing.expect(!AcpMethod.session_new.isLibchassis());
 }
 
 test "ACP prompt gate policy keeps lifecycle interruption responsive" {

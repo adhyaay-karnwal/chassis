@@ -83,7 +83,7 @@ const ReadyNotifier = struct {
 
 comptime {
     if (build_options.napi_surface != .core) {
-        @compileError("libfx N-API core requires -Dnapi-surface=core");
+        @compileError("libchassis N-API core requires -Dnapi-surface=core");
     }
 }
 
@@ -1090,7 +1090,7 @@ export fn napi_register_module_v1(env: c.napi_env, exports: c.napi_value) callco
     ensureThreadedIo();
     var api_version: c.napi_value = undefined;
     if (!statusOk(env, c.napi_create_uint32(env, 3, &api_version), "could not create API version")) return null;
-    if (!statusOk(env, c.napi_set_named_property(env, exports, "libfxApiVersion", api_version), "could not export API version")) return null;
+    if (!statusOk(env, c.napi_set_named_property(env, exports, "libchassisApiVersion", api_version), "could not export API version")) return null;
     if (!exportFunction(env, exports, "createCore", createCore)) return null;
     if (!exportFunction(env, exports, "takeCoreReadyFd", takeCoreReadyFd)) return null;
     if (!exportFunction(env, exports, "writeCore", writeCore)) return null;

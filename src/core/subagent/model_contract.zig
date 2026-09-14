@@ -212,7 +212,7 @@ pub fn plan(request: Request, snapshot: ?Snapshot) Plan {
 
 pub fn requestFingerprint(request: Request) [32]u8 {
     var hash = std.crypto.hash.sha2.Sha256.init(.{});
-    hash.update("fx.subagent.request.v1\x00");
+    hash.update("chassis.subagent.request.v1\x00");
     hash.update(@tagName(request.action()));
     hash.update("\x00");
     switch (request) {
@@ -387,7 +387,7 @@ test "creation overrides validate and participate in operation identity" {
     const expected_plain = comptime blk: {
         @setEvalBranchQuota(100_000);
         var hash = std.crypto.hash.sha2.Sha256.init(.{});
-        hash.update("fx.subagent.request.v1\x00");
+        hash.update("chassis.subagent.request.v1\x00");
         hash.update("run");
         hash.update("\x00");
         hash.update("review this");

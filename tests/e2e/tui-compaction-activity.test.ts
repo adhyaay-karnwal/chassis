@@ -4,14 +4,14 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 // The shared tmux helper imports eval helpers; do not load repository dotenv files.
-process.env.FX_E2E_DISABLE_DOTENV = "1";
+process.env.CHASSIS_E2E_DISABLE_DOTENV = "1";
 const {
   FAKE_GATEWAY_MODEL, TmuxSession, fakeGatewayFinalText,
   heldFakeGatewayFinalText, startDynamicFakeGateway, hasEmptyComposer,
   tmuxAvailable,
 } = await import("./tmux-helpers");
 
-const binary = resolve(import.meta.dir, "../../zig-out/bin/fx");
+const binary = resolve(import.meta.dir, "../../zig-out/bin/chassis");
 const HEAD = "HISTORY_HEAD_29b7";
 const TAIL = "HISTORY_TAIL_16d3";
 const HANDOFF = `INTERNAL_HANDOFF_4e12: preserve ${HEAD} and ${TAIL}; follow the latest user request.`;
@@ -42,12 +42,12 @@ async function until(predicate: () => boolean, label: string, timeout = 20_000) 
 
 async function fixture(trigger: Trigger, outcome: Outcome = "success", longResume = false) {
   // Ctrl+O includes the recording path; keep it free of forbidden notice words.
-  const root = mkdtempSync(join(tmpdir(), "fx-activity-"));
+  const root = mkdtempSync(join(tmpdir(), "chassis-activity-"));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace);
-  writeFileSync(join(home, ".fx/settings.json"), JSON.stringify({
+  writeFileSync(join(home, ".chassis/settings.json"), JSON.stringify({
     model: FAKE_GATEWAY_MODEL, auto_upgrade: false, startup_scrollback: false,
   }));
   // Failure attempts need an older exchange outside the retained suffix, but
@@ -97,11 +97,11 @@ async function fixture(trigger: Trigger, outcome: Outcome = "success", longResum
   const env = {
     PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: home, TMPDIR: root,
     TERM: "xterm-256color", AI_GATEWAY_API_KEY: "synthetic-compaction-key",
-    FX_DISABLE_KEYCHAIN: "1", FX_E2E_DISABLE_DOTENV: "1", FX_SKIP_ONBOARDING: "1",
-    FX_SOUND: "0", FX_AUTO_UPGRADE: "0", FX_MODEL: FAKE_GATEWAY_MODEL,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl, FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+    CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_E2E_DISABLE_DOTENV: "1", CHASSIS_SKIP_ONBOARDING: "1",
+    CHASSIS_SOUND: "0", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl, CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
   };
   let sessionId = "";
   let eventsPath = "";
@@ -124,15 +124,15 @@ async function fixture(trigger: Trigger, outcome: Outcome = "success", longResum
     const stderr = join(root, `terminal-${launchIndex}.stderr`);
     tapes.push(tape);
     stderrPaths.push(stderr);
-    const terminalEnv: Record<string, string> = { ...env, FX_RECORD: tape, FX_DEBUG_RECORD_SILENT_BANNER: "1",
-      FX_TRACE_LOG: join(root, `terminal-${launchIndex}.trace`),
-      FX_TRACE_SCOPES: "input,worker,session,scroll,agent,gateway,compaction",
+    const terminalEnv: Record<string, string> = { ...env, CHASSIS_RECORD: tape, CHASSIS_DEBUG_RECORD_SILENT_BANNER: "1",
+      CHASSIS_TRACE_LOG: join(root, `terminal-${launchIndex}.trace`),
+      CHASSIS_TRACE_SCOPES: "input,worker,session,scroll,agent,gateway,compaction",
     };
     if (withoutCredential) delete terminalEnv.AI_GATEWAY_API_KEY;
     // Do not inherit provider overrides, credentials, shell startup or dotenv state.
     const command = `/usr/bin/env -i ${Object.entries(terminalEnv).map(([key, value]) => shellQuote(`${key}=${value}`)).join(" ")} ${shellQuote(binary)} --resume ${shellQuote(sessionId)}`;
     terminal = await TmuxSession.create({
-      cmd: command, cwd: workspace, env: { HOME: home, FX_SOUND: "0" }, isolated: true,
+      cmd: command, cwd: workspace, env: { HOME: home, CHASSIS_SOUND: "0" }, isolated: true,
       stderrPath: stderr, width: 90, height: 32, minimumHistoryLines: 25_000,
       startupWaitMs: 0,
     });
@@ -194,7 +194,7 @@ async function fixture(trigger: Trigger, outcome: Outcome = "success", longResum
       expect(ordinary).toBe(turn);
       expect(summaries).toBe(0);
     }
-    eventsPath = join(home, ".fx/sessions", sessionId, "events.jsonl");
+    eventsPath = join(home, ".chassis/sessions", sessionId, "events.jsonl");
     initial = readFileSync(eventsPath);
     expect(initial.toString()).toContain(HEAD);
     expect(initial.toString()).toContain(TAIL);
@@ -493,7 +493,7 @@ describe.skipIf(!tmuxAvailable())("tui: compaction activity", () => {
     let passed = false;
     try {
       const terminal = await f.launch(true);
-      const authMessage = "fx needs access to Vercel AI Gateway";
+      const authMessage = "chassis needs access to Vercel AI Gateway";
       async function authNotices(label: string) {
         await terminal.sendKeys("C-o");
         await terminal.waitForText("full detail", 5000);

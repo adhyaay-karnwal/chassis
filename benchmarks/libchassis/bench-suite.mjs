@@ -12,18 +12,18 @@ const value = (name, fallback) => {
   return index < 0 ? fallback : args[index + 1];
 };
 const samples = Number(value("--samples", "20"));
-const outDir = resolve(value("--out", "benchmarks/results/libfx"));
+const outDir = resolve(value("--out", "benchmarks/results/libchassis"));
 const piRoot = value("--pi-root", process.env.LIBFX_BENCH_PI_ROOT);
 if (!Number.isInteger(samples) || samples < 1 || samples > 1000) throw new Error("samples must be 1..1000");
 
 const cases = [
-  { name: "fx-node-native", command: "node", args: ["benchmarks/libfx/bench-fx.mjs", "--backend", "native", "--samples", "1", "--json"] },
-  { name: "fx-node-wasm", command: "node", args: ["--experimental-wasm-jspi", "benchmarks/libfx/bench-fx.mjs", "--backend", "wasm", "--samples", "1", "--json"] },
-  { name: "fx-bun-native", command: "bun", args: ["benchmarks/libfx/bench-fx.mjs", "--backend", "native", "--samples", "1", "--json"] },
-  { name: "fx-bun-wasm", command: "bun", args: ["benchmarks/libfx/bench-fx.mjs", "--backend", "wasm", "--samples", "1", "--json"] },
+  { name: "chassis-node-native", command: "node", args: ["benchmarks/libchassis/bench-chassis.mjs", "--backend", "native", "--samples", "1", "--json"] },
+  { name: "chassis-node-wasm", command: "node", args: ["--experimental-wasm-jspi", "benchmarks/libchassis/bench-chassis.mjs", "--backend", "wasm", "--samples", "1", "--json"] },
+  { name: "chassis-bun-native", command: "bun", args: ["benchmarks/libchassis/bench-chassis.mjs", "--backend", "native", "--samples", "1", "--json"] },
+  { name: "chassis-bun-wasm", command: "bun", args: ["benchmarks/libchassis/bench-chassis.mjs", "--backend", "wasm", "--samples", "1", "--json"] },
   ...(piRoot ? [
-    { name: "pi-node", command: "node", args: ["benchmarks/libfx/bench-pi.mjs", "--samples", "1", "--json"], env: { LIBFX_BENCH_PI_ROOT: piRoot } },
-    { name: "pi-bun", command: "bun", args: ["benchmarks/libfx/bench-pi.mjs", "--samples", "1", "--json"], env: { LIBFX_BENCH_PI_ROOT: piRoot } },
+    { name: "pi-node", command: "node", args: ["benchmarks/libchassis/bench-pi.mjs", "--samples", "1", "--json"], env: { LIBFX_BENCH_PI_ROOT: piRoot } },
+    { name: "pi-bun", command: "bun", args: ["benchmarks/libchassis/bench-pi.mjs", "--samples", "1", "--json"], env: { LIBFX_BENCH_PI_ROOT: piRoot } },
   ] : []),
 ];
 const reports = new Map(cases.map((entry) => [entry.name, null]));

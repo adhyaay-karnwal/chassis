@@ -18,7 +18,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, runFx } from "../evals/eval-helpers";
 import {
   canonicalSubagentIdForStore,
   fakeGatewayPermissionDecision,
@@ -212,7 +212,7 @@ function twoEffectfulCommandBatch(first: string, second: string) {
 }
 
 function sessionIdFromHome(root: IsolatedRoot): string {
-  const sessions = join(root.home, ".fx", "sessions");
+  const sessions = join(root.home, ".chassis", "sessions");
   const ids = readdirSync(sessions, { withFileTypes: true })
     .filter((entry) => entry.name !== "latest" && entry.isDirectory())
     .map((entry) => entry.name);
@@ -222,7 +222,7 @@ function sessionIdFromHome(root: IsolatedRoot): string {
 
 function latestTraceReportPath(root: IsolatedRoot): string {
   const reports = readdirSync(root.root)
-    .filter((entry) => entry.startsWith("fx-trace-") && entry.endsWith(".md"))
+    .filter((entry) => entry.startsWith("chassis-trace-") && entry.endsWith(".md"))
     .map((entry) => {
       const path = join(root.root, entry);
       return { path, mtimeMs: statSync(path).mtimeMs };
@@ -587,17 +587,17 @@ function expectTraceOrder(trace: string, markers: string[]) {
 }
 
 function createIsolatedRoot(baseDir = tmpdir()): IsolatedRoot {
-  const root = realpathSync(mkdtempSync(join(baseDir, "fx-command-permissions-e2e-")));
+  const root = realpathSync(mkdtempSync(join(baseDir, "chassis-command-permissions-e2e-")));
   const home = join(root, "home");
   const workspace = join(root, "workspace");
   const hostileBin = join(root, "hostile-bin");
   const profileMarker = join(root, "hostile-profile-used");
   const commandMarkers: Record<string, string> = {};
-  mkdirSync(join(home, ".fx"), { recursive: true });
+  mkdirSync(join(home, ".chassis"), { recursive: true });
   mkdirSync(workspace, { recursive: true });
   mkdirSync(hostileBin, { recursive: true });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({ sandbox: "none", permission: {} }),
   );
   writeFileSync(join(home, ".profile"), `printf profile > ${JSON.stringify(profileMarker)}\n`);
@@ -654,11 +654,11 @@ function gatewayEnv(
     HOME: root.home,
     AI_GATEWAY_API_KEY: "fake-command-permission-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_MODEL: MODEL,
-    FX_AUTO_UPGRADE: "0",
-    FX_DIRECT_SECRET: "must-not-be-inherited",
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_MODEL: MODEL,
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_DIRECT_SECRET: "must-not-be-inherited",
     NO_COLOR: "1",
     ...extra,
   };
@@ -672,7 +672,7 @@ function definedEnv(env: Record<string, string | undefined>) {
 
 async function launchPermissionResumeHarness(initialResponses: Response[]) {
   const root = createIsolatedRoot();
-  const settingsPath = join(root.home, ".fx", "settings.json");
+  const settingsPath = join(root.home, ".chassis", "settings.json");
   const markerPath = join(root.workspace, "must-not-exist");
   const initialStderrPath = join(root.root, "permission-resume-initial-stderr.log");
   const resumedStderrPath = join(root.root, "permission-resume-resumed-stderr.log");
@@ -681,9 +681,9 @@ async function launchPermissionResumeHarness(initialResponses: Response[]) {
 
   const initialGateway = startFakeGateway(initialResponses);
   const initialSession = await TmuxSession.create({
-    cmd: FX_BIN,
+    cmd: CHASSIS_BIN,
     cwd: root.workspace,
-    env: gatewayEnv(root, initialGateway, { FX_PERMISSION_MODE: undefined }),
+    env: gatewayEnv(root, initialGateway, { CHASSIS_PERMISSION_MODE: undefined }),
     stderrPath: initialStderrPath,
     width: 120,
     height: 40,
@@ -708,9 +708,9 @@ async function launchPermissionResumeHarness(initialResponses: Response[]) {
 
       const gateway = startFakeGateway(responses);
       const session = await TmuxSession.create({
-        cmd: `${FX_BIN} resume last`,
+        cmd: `${CHASSIS_BIN} resume last`,
         cwd: root.workspace,
-        env: gatewayEnv(root, gateway, { FX_PERMISSION_MODE: undefined }),
+        env: gatewayEnv(root, gateway, { CHASSIS_PERMISSION_MODE: undefined }),
         stderrPath: resumedStderrPath,
         width: 120,
         height: 40,
@@ -732,7 +732,7 @@ function expectUserProfileTrace(tracePath: string) {
 }
 
 function expectNoCommandArtifacts(root: IsolatedRoot) {
-  const sessions = join(root.home, ".fx", "sessions");
+  const sessions = join(root.home, ".chassis", "sessions");
   if (!existsSync(sessions)) return;
   const files = Bun.spawnSync(["find", sessions, "-type", "f"], {
     stdout: "pipe",
@@ -745,10 +745,10 @@ function expectNoCommandArtifacts(root: IsolatedRoot) {
 }
 
 function commandReplayFiles(root: IsolatedRoot): string[] {
-  const sessions = join(root.home, ".fx", "sessions");
+  const sessions = join(root.home, ".chassis", "sessions");
   if (!existsSync(sessions)) return [];
   const result = Bun.spawnSync(
-    ["find", sessions, "-type", "f", "-name", "fx-command-replay-*"],
+    ["find", sessions, "-type", "f", "-name", "chassis-command-replay-*"],
     { stdout: "pipe", stderr: "pipe" },
   );
   expect(result.exitCode).toBe(0);
@@ -767,7 +767,7 @@ function largeEffectfulCommand(marker: string) {
       { length: 84 },
       (_, index) => `# large lifecycle ${index.toString().padStart(3, "0")} ${"x".repeat(720)}`,
     ),
-    `printf '%s\\n' FX_LARGE_RUN_COMMAND_DONE > ${marker}`,
+    `printf '%s\\n' CHASSIS_LARGE_RUN_COMMAND_DONE > ${marker}`,
   ].join("\n");
   expect(Buffer.byteLength(command)).toBeGreaterThan(57 * 1024);
   return command;
@@ -808,7 +808,7 @@ function normalizeVolatileStatusRows(grid: string[]): string[] {
     /^• Streaming \([^)]*\)$/.test(line) ||
       isVolatileTokenStatusRow(line)
       ? "<status>"
-      : line.replace(/\s+Full access enabled: fx permission checks disabled$/, "")
+      : line.replace(/\s+Full access enabled: chassis permission checks disabled$/, "")
   );
 }
 
@@ -816,7 +816,7 @@ test("volatile token status rows normalize before transcript grid comparison", (
   expect(normalizeVolatileStatusRows(["  (↑10 ↓5)"])).toEqual(["<status>"]);
   expect(normalizeVolatileStatusRows(["  0s (↑10 ↓5)"])).toEqual(["<status>"]);
   expect(normalizeVolatileStatusRows([
-    "full access · gpt-5                 Full access enabled: fx permission checks disabled",
+    "full access · gpt-5                 Full access enabled: chassis permission checks disabled",
   ])).toEqual(["full access · gpt-5"]);
 });
 
@@ -838,14 +838,14 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "ask",
-          FX_RECORD: tapePath,
-          FX_RECORD_INPUT: "1",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "gateway,permission,session,tool",
+          CHASSIS_PERMISSION_MODE: "ask",
+          CHASSIS_RECORD: tapePath,
+          CHASSIS_RECORD_INPUT: "1",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "gateway,permission,session,tool",
         }),
         stderrPath,
         width: 100,
@@ -855,7 +855,7 @@ describe("effect-aware command permissions", () => {
       await activeSession.sendText("Run the prepared two-command history fixture.");
       await activeSession.waitForText(COMMAND_APPROVAL_PROMPT, TIMEOUT);
       await activeSession.sendKeys("Tab");
-      await activeSession.waitForText("Yes, and tell fx what to do next", TIMEOUT);
+      await activeSession.waitForText("Yes, and tell chassis what to do next", TIMEOUT);
       await activeSession.sendLiteralText(feedback);
       await activeSession.waitForText(`Yes, ${feedback}`, TIMEOUT);
       await activeSession.sendKeys("Enter");
@@ -892,7 +892,7 @@ describe("effect-aware command permissions", () => {
 
       const sessionId = sessionIdFromHome(root);
       const events = readFileSync(
-        join(root.home, ".fx", "sessions", sessionId, "events.jsonl"),
+        join(root.home, ".chassis", "sessions", sessionId, "events.jsonl"),
         "utf8",
       );
       expect(events).toContain(feedback);
@@ -920,7 +920,7 @@ describe("effect-aware command permissions", () => {
       ]);
       writeFileSync(stderrPath, "");
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, pickerGateway),
         stderrPath,
@@ -976,10 +976,10 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "ask",
+          CHASSIS_PERMISSION_MODE: "ask",
         }),
         stderrPath,
         width: 100,
@@ -1015,13 +1015,13 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
-          FX_PERMISSION_MODE: "yolo",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "core",
+          CHASSIS_PERMISSION_MODE: "yolo",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "core",
         }),
         stderrPath,
         width: 120,
@@ -1077,13 +1077,13 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
-          FX_PERMISSION_MODE: "yolo",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "core,permission,tool",
+          CHASSIS_PERMISSION_MODE: "yolo",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "core,permission,tool",
         }),
         stderrPath,
         width: 120,
@@ -1119,7 +1119,7 @@ describe("effect-aware command permissions", () => {
       const stderrPath = join(root.root, "current-command-output-stderr.log");
       const resumedStderrPath = join(root.root, "current-command-output-resumed-stderr.log");
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission_mode: "auto",
@@ -1198,12 +1198,12 @@ describe("effect-aware command permissions", () => {
       };
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "auto",
-          FX_TRACE_LOG: join(root.root, "minimal-command-output-trace.log"),
-          FX_TRACE_SCOPES: "core,agent,tool,session,command_output",
+          CHASSIS_PERMISSION_MODE: "auto",
+          CHASSIS_TRACE_LOG: join(root.root, "minimal-command-output-trace.log"),
+          CHASSIS_TRACE_SCOPES: "core,agent,tool,session,command_output",
         }),
         stderrPath,
         width: 120,
@@ -1245,10 +1245,10 @@ describe("effect-aware command permissions", () => {
       await activeSession.kill();
       activeSession = null;
       activeSession = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-last`,
+        cmd: `${CHASSIS_BIN} --resume-last`,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "auto",
+          CHASSIS_PERMISSION_MODE: "auto",
         }),
         stderrPath: resumedStderrPath,
         width: 88,
@@ -1294,10 +1294,10 @@ describe("effect-aware command permissions", () => {
       ]);
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "yolo",
+          CHASSIS_PERMISSION_MODE: "yolo",
         }),
         stderrPath,
         width: 100,
@@ -1384,13 +1384,13 @@ describe("effect-aware command permissions", () => {
       };
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
-          FX_PERMISSION_MODE: "yolo",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "core,tool,session,command_output",
+          CHASSIS_PERMISSION_MODE: "yolo",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "core,tool,session,command_output",
         }),
         stderrPath,
         width: 72,
@@ -1489,7 +1489,7 @@ describe("effect-aware command permissions", () => {
       expect(publicSession.stdout).not.toContain("command_process_presentation");
       expect(publicSession.stdout).not.toContain("process_presentation");
       expect(publicSession.stdout).toContain("full_output_handle");
-      expect(publicSession.stdout).toContain("fx-command-replay-");
+      expect(publicSession.stdout).toContain("chassis-command-replay-");
 
       await activeSession.sendText("/quit");
       expect(await activeSession.waitForSessionEnd(TIMEOUT)).toBe(true);
@@ -1498,7 +1498,7 @@ describe("effect-aware command permissions", () => {
 
       const resumedGateway = startFakeGateway([]);
       activeSession = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-last`,
+        cmd: `${CHASSIS_BIN} --resume-last`,
         cwd: root.workspace,
         env: gatewayEnv(root, resumedGateway),
         stderrPath: resumedStderrPath,
@@ -1546,7 +1546,7 @@ describe("effect-aware command permissions", () => {
         toolCall(command, {}, "fxc29_compact_output"),
         finalText(responseRows.join("\n")),
       ]);
-      const settingsPath = join(root.home, ".fx", "settings.json");
+      const settingsPath = join(root.home, ".chassis", "settings.json");
       writeFileSync(
         settingsPath,
         JSON.stringify({
@@ -1561,9 +1561,9 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
-        env: gatewayEnv(root, gateway, { FX_PERMISSION_MODE: "yolo" }),
+        env: gatewayEnv(root, gateway, { CHASSIS_PERMISSION_MODE: "yolo" }),
         stderrPath,
         width: 90,
         height: 30,
@@ -1639,11 +1639,11 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
-          FX_PERMISSION_MODE: "yolo",
+          CHASSIS_PERMISSION_MODE: "yolo",
         }),
         stderrPath,
         width: 120,
@@ -1696,15 +1696,15 @@ describe("effect-aware command permissions", () => {
       ]);
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
           TMPDIR: root.root,
-          FX_PERMISSION_MODE: "yolo",
-          FX_TRACE: "0",
-          FX_TRACE_LOG: undefined,
-          FX_TRACE_STDERR: "0",
+          CHASSIS_PERMISSION_MODE: "yolo",
+          CHASSIS_TRACE: "0",
+          CHASSIS_TRACE_LOG: undefined,
+          CHASSIS_TRACE_STDERR: "0",
         }),
         stderrPath,
         width: 120,
@@ -1768,7 +1768,7 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
@@ -1824,20 +1824,20 @@ describe("effect-aware command permissions", () => {
       const clipboardPath = join(root.root, "trace-clipboard-path.txt");
       installClipboardFixture(
         root,
-        '#!/bin/sh\nfor arg in "$@"; do last="$arg"; done\nprintf "%s" "$last" > "$FX_TRACE_CLIPBOARD_OUTPUT"\n',
+        '#!/bin/sh\nfor arg in "$@"; do last="$arg"; done\nprintf "%s" "$last" > "$CHASSIS_TRACE_CLIPBOARD_OUTPUT"\n',
       );
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
           TMPDIR: root.root,
-          FX_TRACE_CLIPBOARD_OUTPUT: clipboardPath,
-          FX_TRACE: "0",
-          FX_TRACE_LOG: undefined,
-          FX_TRACE_STDERR: "0",
+          CHASSIS_TRACE_CLIPBOARD_OUTPUT: clipboardPath,
+          CHASSIS_TRACE: "0",
+          CHASSIS_TRACE_LOG: undefined,
+          CHASSIS_TRACE_STDERR: "0",
         }),
         stderrPath,
         width: 120,
@@ -1860,11 +1860,11 @@ describe("effect-aware command permissions", () => {
       const escapes = await activeSession.capturePaneEscapes();
       expect(escapes).not.toContain("Trace:");
       expect(escapes).not.toContain("Report issue");
-      expect(escapes).not.toContain("fx.sh/feedback");
+      expect(escapes).not.toContain("chassis.sh/feedback");
       expect(escapes).not.toContain("github.com");
       const reportPath = latestTraceReportPath(root);
       const report = readFileSync(reportPath, "utf8");
-      expect(report).toContain("# fx trace");
+      expect(report).toContain("# chassis trace");
       expect(report).toContain("## Summary");
       expect(report).toContain(root.workspace);
       expect(report).toContain("terminal_hosts: tmux=true");
@@ -1876,7 +1876,7 @@ describe("effect-aware command permissions", () => {
       expect(rendererEvents).toContain("kind=resize");
       expect(rendererEvents).not.toContain("TRACE_RENDER_ROW_");
       expect(rendererEvents).not.toContain("[truncated]");
-      expect(existsSync(join(root.home, ".fx", "logs", "trace.log"))).toBe(false);
+      expect(existsSync(join(root.home, ".chassis", "logs", "trace.log"))).toBe(false);
       expect(statSync(reportPath).mode & 0o077).toBe(0);
       if (process.platform === "darwin") {
         expect(readFileSync(clipboardPath, "utf8")).toBe(reportPath);
@@ -1894,7 +1894,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test.skipIf(!tmuxAvailable())(
-    "TUI feedback opens fx.sh without creating a trace or touching the clipboard",
+    "TUI feedback opens chassis.sh without creating a trace or touching the clipboard",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([]);
@@ -1903,22 +1903,22 @@ describe("effect-aware command permissions", () => {
       const clipboardMarker = join(root.root, "feedback-clipboard-used.txt");
       installUrlOpenerFixture(
         root,
-        '#!/bin/sh\nprintf "%s" "$1" > "$FX_FEEDBACK_OPEN_OUTPUT"\n',
+        '#!/bin/sh\nprintf "%s" "$1" > "$CHASSIS_FEEDBACK_OPEN_OUTPUT"\n',
       );
       installClipboardFixture(
         root,
-        '#!/bin/sh\nprintf used > "$FX_FEEDBACK_CLIPBOARD_MARKER"\n',
+        '#!/bin/sh\nprintf used > "$CHASSIS_FEEDBACK_CLIPBOARD_MARKER"\n',
       );
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
           TMPDIR: root.root,
-          FX_FEEDBACK_OPEN_OUTPUT: openerPath,
-          FX_FEEDBACK_CLIPBOARD_MARKER: clipboardMarker,
+          CHASSIS_FEEDBACK_OPEN_OUTPUT: openerPath,
+          CHASSIS_FEEDBACK_CLIPBOARD_MARKER: clipboardMarker,
         }),
         stderrPath,
         width: 120,
@@ -1926,12 +1926,12 @@ describe("effect-aware command permissions", () => {
       });
       await activeSession.waitForComposer(TIMEOUT);
       await activeSession.sendText("/feedback");
-      await activeSession.waitForText("Opened https://fx.sh/feedback.", TIMEOUT);
+      await activeSession.waitForText("Opened https://chassis.sh/feedback.", TIMEOUT);
 
-      expect(readFileSync(openerPath, "utf8")).toBe("https://fx.sh/feedback");
+      expect(readFileSync(openerPath, "utf8")).toBe("https://chassis.sh/feedback");
       expect(existsSync(clipboardMarker)).toBe(false);
       expect(
-        readdirSync(root.root).filter((entry) => entry.startsWith("fx-trace-")),
+        readdirSync(root.root).filter((entry) => entry.startsWith("chassis-trace-")),
       ).toHaveLength(0);
       const escapes = await activeSession.capturePaneEscapes();
       expect(escapes).not.toContain("Feedback:");
@@ -1961,12 +1961,12 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "auto",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "permission,tool",
+          CHASSIS_PERMISSION_MODE: "auto",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "permission,tool",
         }),
         stderrPath,
         width: 120,
@@ -2062,11 +2062,11 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "auto",
-          FX_RECORD: tapePath,
+          CHASSIS_PERMISSION_MODE: "auto",
+          CHASSIS_RECORD: tapePath,
         }),
         stderrPath,
         width: 120,
@@ -2149,7 +2149,7 @@ describe("effect-aware command permissions", () => {
   test.skipIf(!tmuxAvailable())(
     "TUI isolates approved foreground commands from terminal ownership",
     async () => {
-      const binary = process.env.FX_COMMAND_SESSION_TEST_BIN ?? FX_BIN;
+      const binary = process.env.CHASSIS_COMMAND_SESSION_TEST_BIN ?? CHASSIS_BIN;
       const sandboxModes = ["legacy-sandbox-key"] as const;
 
       for (const sandbox of sandboxModes) {
@@ -2180,7 +2180,7 @@ describe("effect-aware command permissions", () => {
 
         writeTerminalOwnershipFixture(fixturePath);
         writeFileSync(
-          join(root.home, ".fx", "settings.json"),
+          join(root.home, ".chassis", "settings.json"),
           JSON.stringify({ sandbox: "os", permission: {} }),
         );
         writeFileSync(join(root.home, ".profile"), "");
@@ -2196,20 +2196,20 @@ describe("effect-aware command permissions", () => {
             DEVELOPER_DIR: process.platform === "darwin"
               ? "/Library/Developer/CommandLineTools"
               : undefined,
-            FX_PERMISSION_MODE: "auto",
-            FX_RECORD: tapePath,
-            FX_RECORD_INPUT: "1",
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "agent,core,gateway,permission,session,tool,worker",
+            CHASSIS_PERMISSION_MODE: "auto",
+            CHASSIS_RECORD: tapePath,
+            CHASSIS_RECORD_INPUT: "1",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "agent,core,gateway,permission,session,tool,worker",
           }),
           width: 120,
           height: 40,
           minimumHistoryLines: 1_000,
         });
         await activeSession.sendText(
-          "export PS1='FX_OUTER_PROMPT> '; printf 'FX_OUTER_SHELL_READY\\n'",
+          "export PS1='CHASSIS_OUTER_PROMPT> '; printf 'CHASSIS_OUTER_SHELL_READY\\n'",
         );
-        await activeSession.waitForText("FX_OUTER_SHELL_READY", TIMEOUT);
+        await activeSession.waitForText("CHASSIS_OUTER_SHELL_READY", TIMEOUT);
         await activeSession.sendText(
           `${shellQuote(binary)} 2>${shellQuote(stderrPath)}; ` +
             `printf '%s' "$?" > ${shellQuote(outerReturnPath)}`,
@@ -2267,11 +2267,11 @@ describe("effect-aware command permissions", () => {
         expect(commandSnapshot.output_delta).toContain("TTY_SESSION_STDOUT_BEGIN");
         expect(commandSnapshot.output_delta).toContain("TTY_SESSION_STDOUT_END");
         expect(commandSnapshot.output_delta).toContain("TTY_SESSION_STDERR");
-        expect(commandSnapshot.full_output_handle).toMatch(/^fx-command-replay-.+\.bin$/);
+        expect(commandSnapshot.full_output_handle).toMatch(/^chassis-command-replay-.+\.bin$/);
         expect(gateway.requests[1]!.body).not.toContain("\\u001e");
         expect(gateway.requests[1]!.body).not.toContain("\\u0006");
         expect(gateway.requests[1]!.body).not.toContain("\\u0000");
-        expect(gateway.requests[1]!.body).not.toContain("FX_FOREGROUND_EXEC_FAILED");
+        expect(gateway.requests[1]!.body).not.toContain("CHASSIS_FOREGROUND_EXEC_FAILED");
         const pwdResult = toolResultValue(
           gateway.requests[3]!.body,
           "terminal_session_pwd",
@@ -2290,7 +2290,7 @@ describe("effect-aware command permissions", () => {
         expect(followupIndex).toBeGreaterThan(finalIndex);
         expect(pwdFinalIndex).toBeGreaterThan(followupIndex);
         expect(scrollback).not.toContain("suspended (tty input)");
-        expect(scrollback).not.toContain("FX_FOREGROUND_EXEC_FAILED");
+        expect(scrollback).not.toContain("CHASSIS_FOREGROUND_EXEC_FAILED");
 
         await activeSession.sendKeys("C-o");
         await activeSession.waitForText("full detail · ctrl+o close", TIMEOUT);
@@ -2341,7 +2341,7 @@ describe("effect-aware command permissions", () => {
         expect(replay.stdout).toContain("TTY_SESSION_STDOUT_BEGIN");
         expect(replay.stdout).toContain("TTY_SESSION_STDOUT_END");
         expect(replay.stdout).toContain(`TTY_SESSION_PWD_FINAL_${sandbox}`);
-        expect(replay.stdout).not.toContain("FX_FOREGROUND_EXEC_FAILED");
+        expect(replay.stdout).not.toContain("CHASSIS_FOREGROUND_EXEC_FAILED");
       }
     },
     90_000,
@@ -2365,12 +2365,12 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "auto",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "permission",
+          CHASSIS_PERMISSION_MODE: "auto",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "permission",
           TMPDIR: root.root,
         }),
         stderrPath,
@@ -2407,11 +2407,11 @@ describe("effect-aware command permissions", () => {
       activeSession = null;
 
       rmSync(
-        join(root.home, ".fx", "sessions", sessionId, "resume-view.bin"),
+        join(root.home, ".chassis", "sessions", sessionId, "resume-view.bin"),
         { force: true },
       );
       activeSession = await TmuxSession.create({
-        cmd: `${FX_BIN} resume ${sessionId}`,
+        cmd: `${CHASSIS_BIN} resume ${sessionId}`,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, { TMPDIR: root.root }),
         stderrPath,
@@ -2465,12 +2465,12 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "auto",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "permission",
+          CHASSIS_PERMISSION_MODE: "auto",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "permission",
           TMPDIR: root.root,
         }),
         stderrPath,
@@ -2519,13 +2519,13 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
           PATH: hostilePath(root),
-          FX_PERMISSION_MODE: "yolo",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "core",
+          CHASSIS_PERMISSION_MODE: "yolo",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "core",
         }),
         stderrPath,
         width: 120,
@@ -2570,12 +2570,12 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "auto",
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "permission,interrupt",
+          CHASSIS_PERMISSION_MODE: "auto",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "permission,interrupt",
         }),
         stderrPath,
         width: 120,
@@ -2621,7 +2621,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "default fx ask defaults missing permission mode to auto",
+    "default chassis ask defaults missing permission mode to auto",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "ask-turn-default-auto.txt");
@@ -2648,7 +2648,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask yolo returns repeated user-profile command results to the model",
+    "chassis ask yolo returns repeated user-profile command results to the model",
     async () => {
       const root = createIsolatedRoot();
       const callIds = ["direct_1", "direct_2", "direct_3"];
@@ -2679,7 +2679,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask yolo completes more than ten serial user-profile commands when unlimited",
+    "chassis ask yolo completes more than ten serial user-profile commands when unlimited",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([
@@ -2724,12 +2724,12 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: undefined,
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "scroll,frame_commit",
+          CHASSIS_PERMISSION_MODE: undefined,
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "scroll,frame_commit",
         }),
         stderrPath,
         width: 120,
@@ -2816,7 +2816,7 @@ describe("effect-aware command permissions", () => {
       expect(dismissalPlan).toContain("semantic_rows=0 planned_rows=0");
       expect(dismissalPlan).toContain("geometry_rebase=true");
       expect(commandTrace).toContain("transcript_projection_history_floor");
-      expect(JSON.parse(readFileSync(join(root.home, ".fx", "settings.json"), "utf8")).permission_mode)
+      expect(JSON.parse(readFileSync(join(root.home, ".chassis", "settings.json"), "utf8")).permission_mode)
         .toBe("ask");
       expect(gateway.requests).toHaveLength(1);
       expect(activeSession.isAlive()).toBe(true);
@@ -2865,10 +2865,10 @@ describe("effect-aware command permissions", () => {
       gateways.push(gateway);
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "ask",
+          CHASSIS_PERMISSION_MODE: "ask",
         }),
         stderrPath,
         width: 120,
@@ -2955,10 +2955,10 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "ask",
+          CHASSIS_PERMISSION_MODE: "ask",
         }),
         stderrPath,
         width: 120,
@@ -2999,10 +2999,10 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "ask",
+          CHASSIS_PERMISSION_MODE: "ask",
         }),
         stderrPath,
         width: 120,
@@ -3039,10 +3039,10 @@ describe("effect-aware command permissions", () => {
       writeFileSync(foregroundStderr, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: foregroundRoot.workspace,
         env: gatewayEnv(foregroundRoot, foregroundGateway, {
-          FX_PERMISSION_MODE: "ask",
+          CHASSIS_PERMISSION_MODE: "ask",
         }),
         stderrPath: foregroundStderr,
         width: 120,
@@ -3095,10 +3095,10 @@ describe("effect-aware command permissions", () => {
       writeFileSync(stderrPath, "");
 
       activeSession = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_PERMISSION_MODE: "ask",
+          CHASSIS_PERMISSION_MODE: "ask",
         }),
         stderrPath,
         width: 120,
@@ -3139,7 +3139,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask yolo executes pwd through the default user profile with process-scoped replay",
+    "chassis ask yolo executes pwd through the default user profile with process-scoped replay",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([toolCall("pwd"), finalText("ask direct complete")]);
@@ -3150,8 +3150,8 @@ describe("effect-aware command permissions", () => {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
             PATH: hostilePath(root),
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "core",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "core",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3172,7 +3172,7 @@ describe("effect-aware command permissions", () => {
       expect(json.tool_calls[0].command_result.command).toBe("pwd");
       expect(json.tool_calls[0].command_result.cwd).toBe(root.workspace);
       expect(json.tool_calls[0].command_result.output_file).toMatch(
-        /^fx-command-replay-[a-f0-9-]+\.bin$/,
+        /^chassis-command-replay-[a-f0-9-]+\.bin$/,
       );
       expectUserProfileTrace(tracePath);
       expect(existsSync(root.profileMarker)).toBe(true);
@@ -3183,7 +3183,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask defaults missing permission mode to auto through the classifier",
+    "chassis ask defaults missing permission mode to auto through the classifier",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "classifier-accepted.txt");
@@ -3199,8 +3199,8 @@ describe("effect-aware command permissions", () => {
         {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "permission",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "permission",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3263,7 +3263,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask does not retry a malformed classifier completion and safely replans",
+    "chassis ask does not retry a malformed classifier completion and safely replans",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "classifier-malformed-must-not-run.txt");
@@ -3289,8 +3289,8 @@ describe("effect-aware command permissions", () => {
         {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "permission",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "permission",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3311,7 +3311,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask returns one malformed classifier completion to the agent without execution",
+    "chassis ask returns one malformed classifier completion to the agent without execution",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "classifier-fallback-must-not-exist.txt");
@@ -3334,8 +3334,8 @@ describe("effect-aware command permissions", () => {
         {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "permission",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "permission",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3357,7 +3357,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask provider failure never executes or enters malformed recovery",
+    "chassis ask provider failure never executes or enters malformed recovery",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "classifier-provider-must-not-exist.txt");
@@ -3385,8 +3385,8 @@ describe("effect-aware command permissions", () => {
         {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "permission",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "permission",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3410,7 +3410,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask SIGINT during classifier wait terminates before decision or execution",
+    "chassis ask SIGINT during classifier wait terminates before decision or execution",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "classifier-cancel-must-not-exist.txt");
@@ -3425,13 +3425,13 @@ describe("effect-aware command permissions", () => {
       );
       const tracePath = join(root.root, "trace.log");
       const child = nodeSpawn(
-        FX_BIN,
+        CHASSIS_BIN,
         ["ask", "--quiet", "--json", "--no-save", "Run the classifier cancellation fixture."],
         {
           cwd: root.workspace,
           env: definedEnv(gatewayEnv(root, gateway, {
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "permission,stream",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "permission,stream",
           })),
           stdio: ["pipe", "pipe", "pipe"],
         },
@@ -3456,7 +3456,7 @@ describe("effect-aware command permissions", () => {
         const result = await Promise.race([
           closed,
           Bun.sleep(2_000).then(() => {
-            throw new Error("fx did not exit on SIGINT while the classifier remained blocked");
+            throw new Error("chassis did not exit on SIGINT while the classifier remained blocked");
           }),
         ]);
         expect(result).toEqual({ code: null, signal: "SIGINT" });
@@ -3487,7 +3487,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask automatic review receives the exact delegated command",
+    "chassis ask automatic review receives the exact delegated command",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "delegated-agent-ran.txt");
@@ -3511,8 +3511,8 @@ describe("effect-aware command permissions", () => {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
             PATH: hostilePath(root),
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "permission",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "permission",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3544,33 +3544,33 @@ describe("effect-aware command permissions", () => {
   );
 
   test.skipIf(!tmuxAvailable())(
-    "fx ask terminal automatic caution returns advice without prompting",
+    "chassis ask terminal automatic caution returns advice without prompting",
     async () => {
       const root = createIsolatedRoot();
-      const marker = join(root.workspace, "fx-ask-prompt-approved.txt");
+      const marker = join(root.workspace, "chassis-ask-prompt-approved.txt");
       const command = `printf approved > ${JSON.stringify(marker)}`;
       const gateway = startFakeGateway(
         [
           toolCall(command),
-          finalText("fx ask prompt complete"),
+          finalText("chassis ask prompt complete"),
         ],
         { classifierDecision: "caution" },
       );
       const tracePath = join(root.root, "trace.log");
 
       activeSession = await TmuxSession.create({
-        cmd: `${shellQuote(FX_BIN)} ask --auto --no-save ${shellQuote("Run the one-shot prompt fixture.")}`,
+        cmd: `${shellQuote(CHASSIS_BIN)} ask --auto --no-save ${shellQuote("Run the one-shot prompt fixture.")}`,
         cwd: root.workspace,
         env: gatewayEnv(root, gateway, {
-          FX_TRACE_LOG: tracePath,
-          FX_TRACE_SCOPES: "permission",
+          CHASSIS_TRACE_LOG: tracePath,
+          CHASSIS_TRACE_SCOPES: "permission",
           TMPDIR: root.root,
         }),
         width: 120,
         height: 40,
         remainOnExit: true,
       });
-      const finalPane = await activeSession.waitForText("fx ask prompt complete", TIMEOUT);
+      const finalPane = await activeSession.waitForText("chassis ask prompt complete", TIMEOUT);
       expect(finalPane).not.toContain("Approve? [y/N]");
       expect(finalPane).not.toContain("Auto agent denied");
       expect(existsSync(marker)).toBe(false);
@@ -3590,7 +3590,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask and ACP send large automatic review packets before execution",
+    "chassis ask and ACP send large automatic review packets before execution",
     async () => {
       const cliRoot = createIsolatedRoot();
       const cliMarker = "large-cli-marker";
@@ -3666,7 +3666,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask projects hostile ls filenames through the default user profile",
+    "chassis ask projects hostile ls filenames through the default user profile",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([toolCall("ls"), finalText("ask ls complete")]);
@@ -3676,8 +3676,8 @@ describe("effect-aware command permissions", () => {
         {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "core",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "core",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3699,7 +3699,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask preserves quoted shell metacharacters through the user profile",
+    "chassis ask preserves quoted shell metacharacters through the user profile",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([
@@ -3713,8 +3713,8 @@ describe("effect-aware command permissions", () => {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
             PATH: hostilePath(root),
-            FX_TRACE_LOG: tracePath,
-            FX_TRACE_SCOPES: "core",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_TRACE_SCOPES: "core",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3737,7 +3737,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask keeps parser hardening cases approval-bearing",
+    "chassis ask keeps parser hardening cases approval-bearing",
     async () => {
       const commands = [
         "wc -c < input.txt",
@@ -3755,7 +3755,7 @@ describe("effect-aware command permissions", () => {
             cwd: root.workspace,
             env: gatewayEnv(root, gateway, {
               PATH: hostilePath(root),
-              FX_PERMISSION_MODE: "ask",
+              CHASSIS_PERMISSION_MODE: "ask",
             }),
             timeoutMs: TIMEOUT,
           },
@@ -3774,7 +3774,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask blocks approval-bearing commands before side effects",
+    "chassis ask blocks approval-bearing commands before side effects",
     async () => {
       const root = createIsolatedRoot();
       const marker = join(root.workspace, "must-not-exist");
@@ -3785,7 +3785,7 @@ describe("effect-aware command permissions", () => {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
             PATH: hostilePath(root),
-            FX_PERMISSION_MODE: "ask",
+            CHASSIS_PERMISSION_MODE: "ask",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3802,7 +3802,7 @@ describe("effect-aware command permissions", () => {
   );
 
   test(
-    "fx ask blocks hostile git before any executable or repository access",
+    "chassis ask blocks hostile git before any executable or repository access",
     async () => {
       const root = createIsolatedRoot();
       const gateway = startFakeGateway([
@@ -3815,7 +3815,7 @@ describe("effect-aware command permissions", () => {
           cwd: root.workspace,
           env: gatewayEnv(root, gateway, {
             PATH: hostilePath(root),
-            FX_PERMISSION_MODE: "ask",
+            CHASSIS_PERMISSION_MODE: "ask",
           }),
           timeoutMs: TIMEOUT,
         },
@@ -3836,7 +3836,7 @@ describe("effect-aware command permissions", () => {
     async () => {
       const root = createIsolatedRoot();
       writeFileSync(
-        join(root.home, ".fx", "settings.json"),
+        join(root.home, ".chassis", "settings.json"),
         JSON.stringify({
           sandbox: "none",
           permission: { bash: { pwd: "allow" } },
@@ -3923,7 +3923,7 @@ class AcpClient {
   }
 
   static create(cwd: string, env: Record<string, string | undefined>) {
-    return new AcpClient(nodeSpawn(FX_BIN, ["acp"], {
+    return new AcpClient(nodeSpawn(CHASSIS_BIN, ["acp"], {
       cwd,
       env: definedEnv({ ...process.env, ...env, NO_COLOR: "1" }),
       stdio: ["pipe", "pipe", "pipe"],

@@ -152,7 +152,7 @@ pub const TurnReviewCache = struct {
 
 fn permissionActionId(call: ToolCall) PermissionActionId {
     var hash = std.crypto.hash.sha2.Sha256.init(.{});
-    hash.update("fx.permission-action.v1\x00");
+    hash.update("chassis.permission-action.v1\x00");
     hash.update(call.name);
     hash.update("\x00");
     hash.update(call.arguments_json);
@@ -260,7 +260,7 @@ pub const ShellExecutionFailureRetryState = struct {
             return;
         }
         var hash = std.crypto.hash.sha2.Sha256.init(.{});
-        hash.update("fx.shell-execution-failure.v1\x00");
+        hash.update("chassis.shell-execution-failure.v1\x00");
         hash.update(call.arguments_json);
         const digest = hash.finalResult();
         const decision = terminalValidationDigestDecision(

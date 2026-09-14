@@ -868,11 +868,11 @@ fn historyPath(alloc: Allocator, home: []const u8) ![]u8 {
 }
 
 fn ensureFixtureHome(home: []const u8) !void {
-    const fx_dir = try profile_paths.rootDir(std.testing.allocator, home);
-    defer std.testing.allocator.free(fx_dir);
+    const chassis_dir = try profile_paths.rootDir(std.testing.allocator, home);
+    defer std.testing.allocator.free(chassis_dir);
     std.Io.Dir.createDirAbsolute(
         std.testing.io,
-        fx_dir,
+        chassis_dir,
         std.Io.File.Permissions.fromMode(0o700),
     ) catch |err| switch (err) {
         error.PathAlreadyExists => {},
@@ -1085,11 +1085,11 @@ test "oversized prompt history record is skipped without creating durable state"
         try store.append(alloc, 1, "/tmp/workspace", oversized),
     );
 
-    const fx_path = try profile_paths.rootDir(alloc, home);
-    defer alloc.free(fx_path);
+    const chassis_path = try profile_paths.rootDir(alloc, home);
+    defer alloc.free(chassis_path);
     try std.testing.expectError(
         error.FileNotFound,
-        std.Io.Dir.openDirAbsolute(std.testing.io, fx_path, .{}),
+        std.Io.Dir.openDirAbsolute(std.testing.io, chassis_path, .{}),
     );
 }
 
@@ -1327,11 +1327,11 @@ test "read-only empty home load creates no prompt history state" {
     defer freeLoadedEntries(alloc, entries);
     try std.testing.expectEqual(@as(usize, 0), entries.len);
 
-    const fx_path = try profile_paths.rootDir(alloc, home);
-    defer alloc.free(fx_path);
+    const chassis_path = try profile_paths.rootDir(alloc, home);
+    defer alloc.free(chassis_path);
     try std.testing.expectError(
         error.FileNotFound,
-        std.Io.Dir.openDirAbsolute(std.testing.io, fx_path, .{}),
+        std.Io.Dir.openDirAbsolute(std.testing.io, chassis_path, .{}),
     );
 }
 
@@ -1346,21 +1346,21 @@ test "first append creates only private prompt history layout and reports layout
     defer store.deinit(alloc);
     _ = try store.append(alloc, 1, "/tmp/workspace", "first");
 
-    const fx_path = try profile_paths.rootDir(alloc, home);
-    defer alloc.free(fx_path);
-    var fx_dir = try std.Io.Dir.openDirAbsolute(
+    const chassis_path = try profile_paths.rootDir(alloc, home);
+    defer alloc.free(chassis_path);
+    var chassis_dir = try std.Io.Dir.openDirAbsolute(
         std.testing.io,
-        fx_path,
+        chassis_path,
         .{ .iterate = true },
     );
-    defer fx_dir.close(std.testing.io);
-    const fx_stat = try fx_dir.stat(std.testing.io);
+    defer chassis_dir.close(std.testing.io);
+    const chassis_stat = try chassis_dir.stat(std.testing.io);
     try std.testing.expectEqual(
         @as(std.posix.mode_t, 0o700),
-        fx_stat.permissions.toMode() & 0o777,
+        chassis_stat.permissions.toMode() & 0o777,
     );
-    const history_stat = try fx_dir.statFile(std.testing.io, "history.jsonl", .{});
-    const lock_stat = try fx_dir.statFile(std.testing.io, "history.lock", .{});
+    const history_stat = try chassis_dir.statFile(std.testing.io, "history.jsonl", .{});
+    const lock_stat = try chassis_dir.statFile(std.testing.io, "history.lock", .{});
     try std.testing.expectEqual(
         @as(std.posix.mode_t, 0o600),
         history_stat.permissions.toMode() & 0o777,
@@ -1409,7 +1409,7 @@ test "symlinked durable home is rejected before prompt history reads or writes" 
     tmp.dir.symLink(
         io_mod.getIo(),
         "../outside",
-        "home/.fx",
+        "home/.chassis",
         .{ .is_directory = true },
     ) catch |err| switch (err) {
         error.AccessDenied => return error.SkipZigTest,

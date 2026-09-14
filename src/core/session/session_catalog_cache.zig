@@ -10,7 +10,7 @@ const summary_codec = @import("session_summary_codec.zig");
 const Allocator = std.mem.Allocator;
 const Sha256 = std.crypto.hash.sha2.Sha256;
 // Disposable v4 proofs bind replay and the legacy route gates to one stat window.
-const magic = "fx-resume-catalog-v4\n";
+const magic = "chassis-resume-catalog-v4\n";
 const file_name = ".resume-catalog";
 pub const max_bytes = 64 * 1024 * 1024;
 pub const max_records = 100_000;
@@ -707,7 +707,7 @@ test "catalog ranking invalid rows versions cancellation and bounds are misses" 
     var file = try writer.dir.dir.openFile(std.testing.io, file_name, .{ .mode = .read_write });
     defer file.close(std.testing.io);
     for ([_][]const u8{ "1", "2", "3" }) |version| {
-        try file.writePositionalAll(std.testing.io, version, "fx-resume-catalog-v".len);
+        try file.writePositionalAll(std.testing.io, version, "chassis-resume-catalog-v".len);
         var old_version = try Loaded.load(alloc, writer.dir, null);
         defer old_version.deinit(alloc);
         try std.testing.expect(!old_version.present());

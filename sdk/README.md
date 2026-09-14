@@ -1,11 +1,11 @@
-# libfx
+# libchassis
 
-`libfx` is the small fx agent kernel for JavaScript hosts. One agent is one
+`libchassis` is the small chassis agent kernel for JavaScript hosts. One agent is one
 in-memory conversation with three operations: `prompt`, `checkpoint`, and
 `close`.
 
 ```sh
-npm install libfx
+npm install libchassis
 ```
 
 Node.js uses the native addon when available and falls back to WebAssembly.
@@ -16,9 +16,9 @@ filesystem read when imported.
 ## Agent
 
 ```js
-import { createFxAgent } from "libfx";
+import { createChassisAgent } from "libchassis";
 
-const agent = await createFxAgent({
+const agent = await createChassisAgent({
   apiKey: process.env.AI_GATEWAY_API_KEY,
   model: "google/gemini-2.5-flash-lite",
   onEvent(event) {
@@ -37,19 +37,19 @@ const checkpoint = await agent.checkpoint();
 await agent.close();
 ```
 
-`apiKey` is required. `model` is optional and defaults to fx's built-in model.
+`apiKey` is required. `model` is optional and defaults to chassis's built-in model.
 Agent configuration uses named options; `env` is reserved for
-`createFxTerminal()`.
+`createChassisTerminal()`.
 
 The host selects the model. Agent creation does not fetch the Gateway model
 catalog. Prompting can resolve model capabilities and context capacity through
-the supplied `fetch`; fx caches that metadata for the agent.
+the supplied `fetch`; chassis caches that metadata for the agent.
 
 `onEvent` receives runtime diagnostics separately from model output. Transport
 events report request start, response status and elapsed time, safe Gateway
 request metadata, and failures. Credentials and raw headers are never included.
 
-libfx makes at most one automatic retry after a retryable transport failure and
+libchassis makes at most one automatic retry after a retryable transport failure and
 only before model output or tool effects escape. Cancellation prevents a retry.
 
 `prompt(input, { signal? })` accepts a string or text/resource blocks. It
@@ -87,7 +87,7 @@ opaque, bounded, versioned bytes. Restore them only when creating a fresh
 agent:
 
 ```js
-const restored = await createFxAgent({ apiKey, model, checkpoint });
+const restored = await createChassisAgent({ apiKey, model, checkpoint });
 ```
 
 An already-aborted prompt signal returns `cancelled` without a model request
@@ -103,7 +103,7 @@ Model discovery is explicit and does not create an Agent or load native or Wasm
 artifacts:
 
 ```js
-import { listModels } from "libfx";
+import { listModels } from "libchassis";
 
 const models = await listModels({
   apiKey: process.env.AI_GATEWAY_API_KEY,
@@ -117,7 +117,7 @@ API.
 ## JavaScript tools and instructions
 
 ```js
-const agent = await createFxAgent({
+const agent = await createChassisAgent({
   apiKey,
   model,
   instructions: "Keep answers concise.",
@@ -143,12 +143,12 @@ callbacks. Late results and rejections are ignored. Tools remain responsible
 for stopping their own work when their signal is aborted.
 Instructions are limited to 64 KiB of UTF-8 text, including text assembled by
 the MCP and skills adapters. They are the complete host-owned system context:
-libfx adds no hidden base prompt, and omitting `instructions` sends no system
+libchassis adds no hidden base prompt, and omitting `instructions` sends no system
 message.
 
 ## MCP
 
-`libfx/mcp` accepts a host-owned MCP client. Transport, authentication,
+`libchassis/mcp` accepts a host-owned MCP client. Transport, authentication,
 elicitation, and cleanup remain outside the kernel. The client uses the MCP
 TypeScript SDK v1 signature: `callTool(params, resultSchema?, options?)`, with
 cancellation passed in `options`. Tool text and structured data
@@ -164,7 +164,7 @@ for calls to the MCP client. Each tool description and JSON schema may contain u
 to 64 KiB, within the control message's 8 MiB limit.
 
 ```js
-import { createMcpAdapter } from "libfx/mcp";
+import { createMcpAdapter } from "libchassis/mcp";
 
 const mcp = await createMcpAdapter(client, {
   prefix: "github_",
@@ -172,7 +172,7 @@ const mcp = await createMcpAdapter(client, {
   prompts: ["review"],
 });
 
-const agent = await createFxAgent({
+const agent = await createChassisAgent({
   apiKey,
   model,
   tools: mcp.tools,
@@ -186,27 +186,27 @@ await mcp.close();
 
 ## Skills
 
-Use `libfx/skills` for already-loaded records or `libfx/skills/node` to load a
+Use `libchassis/skills` for already-loaded records or `libchassis/skills/node` to load a
 `SKILL.md` explicitly in Node or Bun.
 
 ```js
-import { loadSkillFile } from "libfx/skills/node";
-import { createSkillsAdapter } from "libfx/skills";
+import { loadSkillFile } from "libchassis/skills/node";
+import { createSkillsAdapter } from "libchassis/skills";
 
 const record = await loadSkillFile("./skills/review/SKILL.md");
 const skills = createSkillsAdapter([record]);
-const agent = await createFxAgent({ apiKey, model, ...skills });
+const agent = await createChassisAgent({ apiKey, model, ...skills });
 ```
 
 ## Backends
 
 ```js
-await createFxAgent({ apiKey, backend: "auto" });   // native, then Wasm fallback
-await createFxAgent({ apiKey, backend: "native" }); // require N-API
-await createFxAgent({ apiKey, backend: "wasm" });   // require Wasm + JSPI
+await createChassisAgent({ apiKey, backend: "auto" });   // native, then Wasm fallback
+await createChassisAgent({ apiKey, backend: "native" }); // require N-API
+await createChassisAgent({ apiKey, backend: "wasm" });   // require Wasm + JSPI
 ```
 
-CommonJS applications can load the same Node API with `require("libfx")`. The
+CommonJS applications can load the same Node API with `require("libchassis")`. The
 package chooses its generated CommonJS entry automatically and keeps asset
 paths relative to the installed package.
 
@@ -214,7 +214,7 @@ Use `getBackendInfo()` to inspect backend availability without creating an
 Agent or terminal:
 
 ```js
-import { getBackendInfo } from "libfx";
+import { getBackendInfo } from "libchassis";
 
 const info = await getBackendInfo({ surface: "agent", backend: "auto" });
 // {
@@ -251,7 +251,7 @@ The optional `causeCode` field retains a Node error code such as `ENOENT` or
 only; it does not validate credentials, a future Agent initialization, or a
 model request.
 
-Within one loaded SDK module, libfx compiles each stable Wasm source once and
+Within one loaded SDK module, libchassis compiles each stable Wasm source once and
 creates a separate WebAssembly instance for every Agent. Agent memory, history,
 tools, cancellation, and shutdown remain isolated. Workers and separate
 processes maintain their own module caches, as do the ESM and CommonJS entries.
@@ -271,7 +271,7 @@ JIT tier-up.
 
 ### Next.js and Vercel
 
-Create agents in a server route using the Node.js runtime. Import `libfx`
+Create agents in a server route using the Node.js runtime. Import `libchassis`
 normally; the package includes its native assets and exposes both ESM and
 CommonJS Node entrypoints. Native agents support Next.js 15 with webpack and
 Next.js 16 with webpack or Turbopack, without `serverExternalPackages` or manual
@@ -283,13 +283,13 @@ JSPI and available Wasm assets; Next.js's standalone tracer excludes `.wasm`
 files, so a standalone Wasm host must supply those assets separately.
 
 ```js
-import { createFxAgent } from "libfx";
+import { createChassisAgent } from "libchassis";
 
 export const runtime = "nodejs";
 
 export async function POST(request) {
   const { prompt } = await request.json();
-  const agent = await createFxAgent({ apiKey: process.env.AI_GATEWAY_API_KEY });
+  const agent = await createChassisAgent({ apiKey: process.env.AI_GATEWAY_API_KEY });
   try {
     let text = "";
     const turn = agent.prompt(prompt, { signal: request.signal });
@@ -311,13 +311,13 @@ backend does not enable the CLI's built-in shell or filesystem tools.
 
 ## Interactive terminal
 
-`createFxTerminal()` remains a separate terminal harness API. In browsers,
+`createChassisTerminal()` remains a separate terminal harness API. In browsers,
 connect it to xterm.js with `xtermAdapter()`:
 
 ```js
-import { createFxTerminal, xtermAdapter } from "libfx/browser";
+import { createChassisTerminal, xtermAdapter } from "libchassis/browser";
 
-const runtime = await createFxTerminal({
+const runtime = await createChassisTerminal({
   terminal: xtermAdapter(term),
   env: { AI_GATEWAY_API_KEY: "<short-lived credential>" },
 });
@@ -350,4 +350,4 @@ resume with the same or a newer SDK build. Older snapshots remain readable.
 Treat `nativeAddon` and `gatewayChatUrl` as trusted host
 configuration. Do not embed long-lived credentials in public browser code.
 Host tool functions, MCP clients, and skill loaders retain their own authority;
-libfx validates and sequences them but does not grant operating-system access.
+libchassis validates and sequences them but does not grant operating-system access.

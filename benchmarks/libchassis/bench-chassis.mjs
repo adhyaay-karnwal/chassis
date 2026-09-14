@@ -38,7 +38,7 @@ async function runChild() {
   if (!gatewayUrl || !diagnosticsPath) throw new Error("benchmark child environment is incomplete");
 
   const startedAt = performance.now();
-  const { createFxAgent } = await import(new URL("../../sdk/node.js", import.meta.url));
+  const { createChassisAgent } = await import(new URL("../../sdk/node.js", import.meta.url));
   const importedAt = performance.now();
   let fetchAt = null;
   let firstBodyAt = null;
@@ -80,14 +80,14 @@ async function runChild() {
     });
   };
 
-  const agent = await createFxAgent({
+  const agent = await createChassisAgent({
     backend,
-    nativeAddon: resolve(repoRoot, "zig-out/lib/libfx.node"),
-    wasm: resolve(repoRoot, "zig-out/bin/fx-core.wasm"),
+    nativeAddon: resolve(repoRoot, "zig-out/lib/libchassis.node"),
+    wasm: resolve(repoRoot, "zig-out/bin/chassis-core.wasm"),
     fetch: tracedFetch,
     home: repoRoot,
     workspaceRoot: repoRoot,
-    apiKey: "libfx-benchmark-key",
+    apiKey: "libchassis-benchmark-key",
     gatewayChatUrl: gatewayUrl,
     model: "benchmark/model",
     instructions: benchmarkInstructions,
@@ -144,7 +144,7 @@ async function runParent() {
   await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   const { port } = server.address();
   const gatewayUrl = `http://127.0.0.1:${port}/chat`;
-  const runDir = await mkdtemp(join(tmpdir(), "libfx-benchmark-"));
+  const runDir = await mkdtemp(join(tmpdir(), "libchassis-benchmark-"));
   const measured = [];
   try {
     for (let index = 0; index < samples; index++) {

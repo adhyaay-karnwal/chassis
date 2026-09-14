@@ -199,7 +199,7 @@ pub fn Runtime(comptime App: type) type {
             const provider_capabilities = if (comptime @hasDecl(App, "providerSet"))
                 app.providerSet().select(selected_provider).capabilities
             else if (selected_provider == .gateway)
-                provider_set.Bundle.Capabilities{ .fx_search = true, .vision_fallback = true }
+                provider_set.Bundle.Capabilities{ .chassis_search = true, .vision_fallback = true }
             else
                 provider_set.Bundle.Capabilities{};
             var ctx: tool_runtime.Context = .{
@@ -302,7 +302,7 @@ pub fn Runtime(comptime App: type) type {
                 ctx.on_web_fetch_progress = app_callbacks.Bindings(App).onWebFetchProgress;
             }
             if (comptime @hasField(App, "web_search_runtime")) {
-                if (provider_capabilities.fx_search) {
+                if (provider_capabilities.chassis_search) {
                     app.web_search_runtime.configure(.{
                         .api_key = app.auth.apiKey() orelse "",
                         .credential_source = app.auth.credentialSource(),
@@ -777,7 +777,7 @@ pub fn Runtime(comptime App: type) type {
             ctx.account_id = credential.accountId();
             ctx.gateway_team = credential.tenant();
             if (comptime @hasField(App, "web_search_runtime") and @hasField(App, "session")) {
-                if (ctx.provider_capabilities.fx_search) {
+                if (ctx.provider_capabilities.chassis_search) {
                     app.web_search_runtime.configure(.{
                         .api_key = credential_secret,
                         .credential_source = credential_source,
@@ -1297,7 +1297,7 @@ pub fn Runtime(comptime App: type) type {
                 .provider_capabilities = if (comptime @hasDecl(App, "providerSet"))
                     app.providerSet().select(job.provider).capabilities
                 else if (job.provider == .gateway)
-                    .{ .fx_search = true, .vision_fallback = true }
+                    .{ .chassis_search = true, .vision_fallback = true }
                 else
                     .{},
                 .custom_tool_guidance = tool_projection.custom_guidance,
@@ -2416,7 +2416,7 @@ test "tool labels preserve skill name value" {
         .name = "selected-workflow",
         .description = "",
         .path = "/skills/different-directory",
-        .source = .workspace_fx,
+        .source = .workspace_chassis,
     } };
     const selected_call: ToolCall = .{
         .id = "selected",

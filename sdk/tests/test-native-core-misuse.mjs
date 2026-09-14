@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const addonPath = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/lib/libfx.node"));
+const addonPath = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/lib/libchassis.node"));
 const ambientTraceChild = process.env.LIBFX_AMBIENT_TRACE_CHILD === "1";
 if (!ambientTraceChild) {
-  delete process.env.FX_TRACE;
-  delete process.env.FX_TRACE_LOG;
-  delete process.env.FX_TRACE_SCOPES;
-  delete process.env.FX_TRACE_STDERR;
+  delete process.env.CHASSIS_TRACE;
+  delete process.env.CHASSIS_TRACE_LOG;
+  delete process.env.CHASSIS_TRACE_SCOPES;
+  delete process.env.CHASSIS_TRACE_STDERR;
 }
 const addon = require(addonPath);
 
@@ -213,7 +213,7 @@ try {
   addon.destroyCore(lifecycleCore);
 }
 
-const traceDir = mkdtempSync(resolve(tmpdir(), "libfx-ambient-trace-"));
+const traceDir = mkdtempSync(resolve(tmpdir(), "libchassis-ambient-trace-"));
 const traceLog = resolve(traceDir, "trace.log");
 try {
   const isolated = spawnSync(process.execPath, [fileURLToPath(import.meta.url), addonPath], {
@@ -222,16 +222,16 @@ try {
     env: {
       ...process.env,
       LIBFX_AMBIENT_TRACE_CHILD: "1",
-      FX_TRACE: "1",
-      FX_TRACE_LOG: traceLog,
-      FX_TRACE_SCOPES: "napi,acp,interrupt",
-      FX_TRACE_STDERR: "1",
+      CHASSIS_TRACE: "1",
+      CHASSIS_TRACE_LOG: traceLog,
+      CHASSIS_TRACE_SCOPES: "napi,acp,interrupt",
+      CHASSIS_TRACE_STDERR: "1",
     },
   });
   assert.equal(isolated.status, 0, isolated.stderr || isolated.stdout);
-  assert.equal(isolated.stdout, "", "ambient fx tracing must not change libfx stdout");
-  assert.equal(isolated.stderr, "", "ambient fx tracing must not change libfx stderr");
-  assert.equal(existsSync(traceLog), false, "ambient fx tracing must not create a libfx trace file");
+  assert.equal(isolated.stdout, "", "ambient chassis tracing must not change libchassis stdout");
+  assert.equal(isolated.stderr, "", "ambient chassis tracing must not change libchassis stderr");
+  assert.equal(existsSync(traceLog), false, "ambient chassis tracing must not create a libchassis trace file");
 } finally {
   rmSync(traceDir, { recursive: true, force: true });
 }

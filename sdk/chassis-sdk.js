@@ -23,7 +23,7 @@ function boundedString(value, name, maxBytes, required) {
     throw new TypeError(`${name} ${required ? "is required and " : ""}must be a non-empty string`);
   }
   if (encoder.encode(value).length > maxBytes) {
-    throw new RangeError(`${name} exceeds the ${maxBytes} byte libfx limit`);
+    throw new RangeError(`${name} exceeds the ${maxBytes} byte libchassis limit`);
   }
   return value;
 }
@@ -46,11 +46,11 @@ function validateGatewayChatUrl(value) {
 
 function normalizeAgentOptions(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new TypeError("createFxAgent() options must be an object");
+    throw new TypeError("createChassisAgent() options must be an object");
   }
   const options = { ...value };
   if (Object.hasOwn(options, "env")) {
-    throw new TypeError("createFxAgent() does not accept env; pass apiKey and model directly");
+    throw new TypeError("createChassisAgent() does not accept env; pass apiKey and model directly");
   }
   options.apiKey = boundedString(options.apiKey, "apiKey", maxApiKeyBytes, true);
   options.model = boundedString(options.model, "model", maxModelBytes, false);
@@ -61,8 +61,8 @@ function normalizeAgentOptions(value) {
 function agentEnvironment(options) {
   return {
     AI_GATEWAY_API_KEY: options.apiKey,
-    ...(options.model === undefined ? {} : { FX_MODEL: options.model }),
-    ...(options.gatewayChatUrl === undefined ? {} : { FX_GATEWAY_CHAT_URL: options.gatewayChatUrl }),
+    ...(options.model === undefined ? {} : { CHASSIS_MODEL: options.model }),
+    ...(options.gatewayChatUrl === undefined ? {} : { CHASSIS_GATEWAY_CHAT_URL: options.gatewayChatUrl }),
   };
 }
 
@@ -76,11 +76,11 @@ async function readBoundedResponseText(response, limit) {
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > limit) {
     await cancelResponseBody(response);
-    throw new RangeError(`model catalog exceeds the ${limit} byte libfx limit`);
+    throw new RangeError(`model catalog exceeds the ${limit} byte libchassis limit`);
   }
   if (!response.body) {
     const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.length > limit) throw new RangeError(`model catalog exceeds the ${limit} byte libfx limit`);
+    if (bytes.length > limit) throw new RangeError(`model catalog exceeds the ${limit} byte libchassis limit`);
     return strictDecoder.decode(bytes);
   }
 
@@ -96,7 +96,7 @@ async function readBoundedResponseText(response, limit) {
       try {
         await reader.cancel();
       } catch {}
-      throw new RangeError(`model catalog exceeds the ${limit} byte libfx limit`);
+      throw new RangeError(`model catalog exceeds the ${limit} byte libchassis limit`);
     }
     chunks.push(value);
   }
@@ -136,7 +136,7 @@ export async function listModels(options = {}) {
     throw new TypeError("model catalog response is malformed");
   }
   if (catalog.data.length > maxModelCatalogEntries) {
-    throw new RangeError(`model catalog exceeds the ${maxModelCatalogEntries} entry libfx limit`);
+    throw new RangeError(`model catalog exceeds the ${maxModelCatalogEntries} entry libchassis limit`);
   }
 
   const ids = new Set();
@@ -194,7 +194,7 @@ function utf8Prefix(value, limit) {
   return value.subarray(0, end);
 }
 
-export const fxSdkApiVersion = 2;
+export const chassisSdkApiVersion = 2;
 
 export function supportsJspi() {
   return typeof WebAssembly.Suspending === "function" &&
@@ -317,7 +317,7 @@ class ByteQueue {
   closed = false;
 
   push(bytes) {
-    if (this.closed) throw new Error("fx runtime stdin is closed");
+    if (this.closed) throw new Error("chassis runtime stdin is closed");
     if (!bytes.length) return;
     this.chunks.push(bytes);
     this.wake();
@@ -392,7 +392,7 @@ function createRuntime(options) {
   const httpRequests = new Set();
   const workspaceExecs = new Set();
   const workspace = prepareWorkspaceAdapter(options.workspace);
-  const args = ["fx", ...(options.args || [])];
+  const args = ["chassis", ...(options.args || [])];
   const env = Object.entries(options.env || {}).map(([key, value]) => `${key}=${value}`);
   let instance;
   let nextHandle = 1;
@@ -659,11 +659,11 @@ function createRuntime(options) {
   function hostToolCall(namePtr, nameLen, argumentsPtr, argumentsLen, outputPtr, outputCap, statusPtr) {
     pendingHostToolResult = null;
     if (typeof options.hostToolExecutor !== "function") return -1;
-    if (options.traceWasi) console.error("fx host tool call start");
+    if (options.traceWasi) console.error("chassis host tool call start");
     let input;
     try { input = JSON.parse(text(argumentsPtr, argumentsLen)); } catch { return -1; }
     return Promise.resolve(options.hostToolExecutor(text(namePtr, nameLen), input)).then((result) => {
-      if (options.traceWasi) console.error("fx host tool call settled", result.cancelled, result.isError);
+      if (options.traceWasi) console.error("chassis host tool call settled", result.cancelled, result.isError);
       if (result.cancelled) return -2;
       const output = encoder.encode(result.content);
       bytes(statusPtr, 1)[0] = (result.isError ? 1 : 0) + (result.rich ? 2 : 0);
@@ -726,7 +726,7 @@ function createRuntime(options) {
       bytes(revisionPtr, revision.length).set(revision);
       writeU32(revisionLenOut, revision.length);
       return 0;
-    }).catch((error) => error?.code === "FX_OAUTH_SESSION_REVISION_CONFLICT" ? -2 : -1);
+    }).catch((error) => error?.code === "CHASSIS_OAUTH_SESSION_REVISION_CONFLICT" ? -2 : -1);
   }
 
   function oauthSessionRemove(expectedPtr, expectedLen) {
@@ -734,7 +734,7 @@ function createRuntime(options) {
     const expectedRevision = expectedLen ? text(expectedPtr, expectedLen) : undefined;
     return Promise.resolve().then(() => options.oauthSessionStore.remove(expectedRevision)).then((result) =>
       result === false || result === "missing" ? 1 : 0
-    ).catch((error) => error?.code === "FX_OAUTH_SESSION_REVISION_CONFLICT" ? -2 : -1);
+    ).catch((error) => error?.code === "CHASSIS_OAUTH_SESSION_REVISION_CONFLICT" ? -2 : -1);
   }
 
   function configGet(idPtr, idLen, outPtr, outCap) {
@@ -836,7 +836,7 @@ function createRuntime(options) {
       bytes(revisionPtr, revision.length).set(revision);
       writeU32(revisionLenOut, revision.length);
       return 0;
-    }).catch((error) => error?.code === "FX_SESSION_REVISION_CONFLICT" ? -2 : -1);
+    }).catch((error) => error?.code === "CHASSIS_SESSION_REVISION_CONFLICT" ? -2 : -1);
   }
 
   function sessionList(outPtr, outCap) {
@@ -1004,40 +1004,40 @@ function createRuntime(options) {
     proc_exit(code) { if (options.traceWasi) console.error("wasi proc_exit", code); markExited(code); throw new WebAssembly.RuntimeError(`proc_exit(${code})`); },
   };
 
-  const fx = {
-    fx_term_poll_input: new WebAssembly.Suspending(termPollInput),
-    fx_clipboard_copy: new WebAssembly.Suspending(clipboardCopy),
-    fx_prompt_history_available() { return options.promptHistoryStore ? 1 : 0; },
-    fx_workspace_available() { return workspace.present ? 1 : 0; },
-    fx_workspace_info: workspaceInfo,
-    fx_workspace_exec: new WebAssembly.Suspending(workspaceExec),
-    fx_http_stream_open: streamOpen,
-    fx_http_stream_status: new WebAssembly.Suspending(streamStatus),
-    fx_http_stream_next: new WebAssembly.Suspending(streamNext),
-    fx_http_stream_close(handle) { const state = streams.get(handle); state?.controller.abort(abortReason); streams.delete(handle); },
-    fx_http_request: new WebAssembly.Suspending(httpRequest),
-    fx_host_tool_call: new WebAssembly.Suspending(hostToolCall),
-    fx_host_tool_result_read(offset, ptr, cap) {
+  const chassis = {
+    chassis_term_poll_input: new WebAssembly.Suspending(termPollInput),
+    chassis_clipboard_copy: new WebAssembly.Suspending(clipboardCopy),
+    chassis_prompt_history_available() { return options.promptHistoryStore ? 1 : 0; },
+    chassis_workspace_available() { return workspace.present ? 1 : 0; },
+    chassis_workspace_info: workspaceInfo,
+    chassis_workspace_exec: new WebAssembly.Suspending(workspaceExec),
+    chassis_http_stream_open: streamOpen,
+    chassis_http_stream_status: new WebAssembly.Suspending(streamStatus),
+    chassis_http_stream_next: new WebAssembly.Suspending(streamNext),
+    chassis_http_stream_close(handle) { const state = streams.get(handle); state?.controller.abort(abortReason); streams.delete(handle); },
+    chassis_http_request: new WebAssembly.Suspending(httpRequest),
+    chassis_host_tool_call: new WebAssembly.Suspending(hostToolCall),
+    chassis_host_tool_result_read(offset, ptr, cap) {
       if (!pendingHostToolResult || offset < 0 || offset > pendingHostToolResult.length) return -1;
       const chunk = pendingHostToolResult.subarray(offset, offset + cap);
       bytes(ptr, chunk.length).set(chunk);
       return chunk.length;
     },
-    fx_host_tool_result_release() { pendingHostToolResult = null; },
-    fx_open_url: new WebAssembly.Suspending(openUrl),
-    fx_oauth_session_load: new WebAssembly.Suspending(oauthSessionLoad),
-    fx_oauth_session_commit: new WebAssembly.Suspending(oauthSessionCommit),
-    fx_oauth_session_remove: new WebAssembly.Suspending(oauthSessionRemove),
-    fx_config_get: new WebAssembly.Suspending(configGet),
-    fx_config_set: new WebAssembly.Suspending(configSet),
-    fx_prompt_history_load: new WebAssembly.Suspending(promptHistoryLoad),
-    fx_prompt_history_append: new WebAssembly.Suspending(promptHistoryAppend),
-    fx_prompt_history_clear: new WebAssembly.Suspending(promptHistoryClear),
-    fx_session_load: new WebAssembly.Suspending(sessionLoad),
-    fx_session_commit: new WebAssembly.Suspending(sessionCommit),
-    fx_session_list: new WebAssembly.Suspending(sessionList),
-    fx_session_remove: new WebAssembly.Suspending(sessionRemove),
-    fx_term_size(cols, rows) {
+    chassis_host_tool_result_release() { pendingHostToolResult = null; },
+    chassis_open_url: new WebAssembly.Suspending(openUrl),
+    chassis_oauth_session_load: new WebAssembly.Suspending(oauthSessionLoad),
+    chassis_oauth_session_commit: new WebAssembly.Suspending(oauthSessionCommit),
+    chassis_oauth_session_remove: new WebAssembly.Suspending(oauthSessionRemove),
+    chassis_config_get: new WebAssembly.Suspending(configGet),
+    chassis_config_set: new WebAssembly.Suspending(configSet),
+    chassis_prompt_history_load: new WebAssembly.Suspending(promptHistoryLoad),
+    chassis_prompt_history_append: new WebAssembly.Suspending(promptHistoryAppend),
+    chassis_prompt_history_clear: new WebAssembly.Suspending(promptHistoryClear),
+    chassis_session_load: new WebAssembly.Suspending(sessionLoad),
+    chassis_session_commit: new WebAssembly.Suspending(sessionCommit),
+    chassis_session_list: new WebAssembly.Suspending(sessionList),
+    chassis_session_remove: new WebAssembly.Suspending(sessionRemove),
+    chassis_term_size(cols, rows) {
       const width = options.terminal?.cols || 80;
       const height = options.terminal?.rows || 24;
       new DataView(memory().buffer).setUint16(cols, width, true);
@@ -1047,7 +1047,7 @@ function createRuntime(options) {
   };
 
   return {
-    imports: { wasi_snapshot_preview1: wasi, fx }, exited,
+    imports: { wasi_snapshot_preview1: wasi, chassis }, exited,
     setInstance(value) { instance = value; },
     write(data) { stdin.push(typeof data === "string" ? encoder.encode(data) : data); },
     wake() { stdin.wake(); },
@@ -1074,7 +1074,7 @@ function createRuntime(options) {
 }
 
 async function instantiate(options) {
-  if (!supportsJspi()) throw new Error("fx WebAssembly requires JSPI (Chrome or Edge 137+)");
+  if (!supportsJspi()) throw new Error("chassis WebAssembly requires JSPI (Chrome or Edge 137+)");
   const runtime = createRuntime({ fetch: globalThis.fetch.bind(globalThis), ...options });
   const module = await loadModule(options.wasm);
   const instance = await WebAssembly.instantiate(module, runtime.imports);
@@ -1101,7 +1101,7 @@ async function instantiate(options) {
   return runtime;
 }
 
-export async function createFxTerminal(options) {
+export async function createChassisTerminal(options) {
   if (!options?.terminal) throw new TypeError("terminal is required");
   const emit = (type, detail = {}) => {
     try { options.onEvent?.({ type, timestamp: performance.now(), ...detail }); } catch {}
@@ -1129,7 +1129,7 @@ export async function createFxTerminal(options) {
   emit("runtime.start", { surface: "terminal" });
   const runtime = await instantiate({ ...options, emit, stdout, onTerminalPoll });
   runtime.exited.then((code) => {
-    if (!interactiveScheduled) rejectInteractive(new Error(`fx terminal exited with code ${code} before becoming interactive`));
+    if (!interactiveScheduled) rejectInteractive(new Error(`chassis terminal exited with code ${code} before becoming interactive`));
   });
   emit("runtime.ready", { surface: "terminal" });
   const interruptKey = options.interruptKey ?? "\x03";
@@ -1238,13 +1238,13 @@ function normalizeInstructions(value) {
     throw new TypeError("instructions must be a string or an array of strings");
   }
   if (encoder.encode(instructions).length > maxInstructionsBytes) {
-    throw new RangeError(`instructions exceed the ${maxInstructionsBytes} byte libfx limit`);
+    throw new RangeError(`instructions exceed the ${maxInstructionsBytes} byte libchassis limit`);
   }
   return instructions;
 }
 
 function hostToolContent(value) {
-  if (value?.type === "libfx.tool-result") {
+  if (value?.type === "libchassis.tool-result") {
     if (typeof value.text !== "string" || !Array.isArray(value.images) || value.images.length > 8) {
       throw new TypeError("invalid typed tool result");
     }
@@ -1292,7 +1292,7 @@ function base64ToBytes(value) {
   return bytes;
 }
 
-export async function createFxAgent(options = {}) {
+export async function createChassisAgent(options = {}) {
   options = normalizeAgentOptions(options);
   const hostTools = normalizeHostTools(options.tools);
   const instructions = normalizeInstructions(options.instructions);
@@ -1382,7 +1382,7 @@ export async function createFxAgent(options = {}) {
       }
     } catch (error) {
       isError = true;
-      if (error?.toolResult?.type === "libfx.tool-result") {
+      if (error?.toolResult?.type === "libchassis.tool-result") {
         try {
           const normalized = hostToolContent(error.toolResult);
           content = normalized.content;
@@ -1412,7 +1412,7 @@ export async function createFxAgent(options = {}) {
     : await instantiate(runtimeOptions);
   emit("runtime.ready");
   const send = (message) => {
-    if (closing) throw new Error("fx agent is closing");
+    if (closing) throw new Error("chassis agent is closing");
     emit("acp.send", { message });
     runtime.write(`${JSON.stringify(message)}\n`);
   };
@@ -1424,7 +1424,7 @@ export async function createFxAgent(options = {}) {
   runtime.exited.then((code) => {
     emit("runtime.exit", { code });
     closing = true;
-    const error = runtime.error ?? new Error(`fx-core exited with code ${code} before completing the ACP request`);
+    const error = runtime.error ?? new Error(`chassis-core exited with code ${code} before completing the ACP request`);
     for (const waiter of pending.values()) waiter.reject(error);
     pending.clear();
   });
@@ -1450,7 +1450,7 @@ export async function createFxAgent(options = {}) {
       send({ jsonrpc: "2.0", id: message.id, result: optionId ? { outcome: { outcome: "selected", optionId } } : { outcome: { outcome: "cancelled" } } });
       return;
     }
-    if (message.method === "libfx/tool_call") {
+    if (message.method === "libchassis/tool_call") {
       const { content, isError, rich, cancelled } = await executeHostTool(
         message.params?.name,
         message.params?.input,
@@ -1472,15 +1472,15 @@ export async function createFxAgent(options = {}) {
       protocolVersion: 1,
       clientCapabilities: {
         ...(hostTools.descriptors.length || instructions
-          ? { libfx: { tools: hostTools.descriptors, instructions } }
+          ? { libchassis: { tools: hostTools.descriptors, instructions } }
           : {}),
       },
     });
 
-    const sessionResult = await request("libfx/new");
+    const sessionResult = await request("libchassis/new");
     sessionId = sessionResult.sessionId;
     if (initialCheckpoint) {
-      await request("libfx/restore", {
+      await request("libchassis/restore", {
         sessionId,
         checkpoint: bytesToBase64(initialCheckpoint),
       });
@@ -1495,15 +1495,15 @@ export async function createFxAgent(options = {}) {
 
   const agent = {
     prompt(input, promptOptions = {}) {
-      if (closing) throw new Error("fx agent is closed");
+      if (closing) throw new Error("chassis agent is closed");
       if (activeTurn) throw new Error("a prompt is already in progress for this session");
       return normalizeTurn(startTurn(input, promptOptions));
     },
     async checkpoint() {
-      if (closing) throw new Error("fx agent is closed");
+      if (closing) throw new Error("chassis agent is closed");
       if (activeTurn) throw new Error("cannot checkpoint while a prompt is active");
-      const response = await request("libfx/checkpoint", { sessionId });
-      if (typeof response?.checkpoint !== "string") throw new Error("fx returned an invalid checkpoint");
+      const response = await request("libchassis/checkpoint", { sessionId });
+      if (typeof response?.checkpoint !== "string") throw new Error("chassis returned an invalid checkpoint");
       return base64ToBytes(response.checkpoint);
     },
     async close() {

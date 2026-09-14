@@ -16,7 +16,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, REPO_ROOT, runFx, providerVersionTestEnv } from "../evals/eval-helpers";
+import { CHASSIS_BIN, REPO_ROOT, runFx, providerVersionTestEnv } from "../evals/eval-helpers";
 import { fakeResponsesTitleDefault, TITLE_GENERATION_MARKER } from "./tmux-helpers";
 import { readTapeFrames } from "./render-lab/tape";
 import { equivalentPngEncodings } from "./fixtures/image-encoding";
@@ -30,7 +30,7 @@ import {
 } from "./tmux-helpers";
 
 const HAS_TMUX = tmuxAvailable();
-if (process.env.FX_REQUIRE_TMUX === "1" && !HAS_TMUX) {
+if (process.env.CHASSIS_REQUIRE_TMUX === "1" && !HAS_TMUX) {
   throw new Error("tmux is required for tui-auth-source-selection.test.ts");
 }
 
@@ -38,7 +38,7 @@ const tmuxTest = test.skipIf(!HAS_TMUX);
 const profileStoredKeyTmuxTest = test.skipIf(!HAS_TMUX || process.platform === "darwin");
 const TIMEOUT = 30_000;
 const ENV_TOKEN = "env-api-key-token";
-const LOGIN_TOKEN = "fx-login-token";
+const LOGIN_TOKEN = "chassis-login-token";
 const STORED_TOKEN = "stored-api-key-token";
 const LOGIN_RESPONSE = "LOGIN_SOURCE_RESPONSE";
 const STORED_RESPONSE = "STORED_SOURCE_RESPONSE";
@@ -217,7 +217,7 @@ function writeSeededChatGptLogin(
   accessToken = chatgptAccessToken(),
   expiresAtMs = Date.now() + 60 * 60 * 1000,
 ): void {
-  const fxDir = join(testHome, ".fx");
+  const fxDir = join(testHome, ".chassis");
   mkdirSync(fxDir, { recursive: true, mode: 0o700 });
   chmodSync(fxDir, 0o700);
   const authPath = join(fxDir, "chatgpt-auth.json");
@@ -237,7 +237,7 @@ function writeSeededGrokLogin(
   accountId = "acct_grok_e2e",
   expiresAtMs = Date.now() + 60 * 60 * 1000,
 ): void {
-  const fxDir = join(testHome, ".fx");
+  const fxDir = join(testHome, ".chassis");
   mkdirSync(fxDir, { recursive: true, mode: 0o700 });
   chmodSync(fxDir, 0o700);
   const authPath = join(fxDir, "grok-auth.json");
@@ -261,7 +261,7 @@ function readSingleUsageSnapshot(testHome: string): {
   models: Array<{ model: string; request_count: number | null }>;
   pending: unknown[];
 } {
-  const sessionsDir = join(testHome, ".fx", "sessions");
+  const sessionsDir = join(testHome, ".chassis", "sessions");
   const usagePaths = readdirSync(sessionsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => join(sessionsDir, entry.name, "usage-v2.json"))
@@ -287,7 +287,7 @@ function writeSeededFxLogin(
   issuer = "https://vercel.com",
   teamId?: string,
 ): void {
-  const fxDir = join(testHome, ".fx");
+  const fxDir = join(testHome, ".chassis");
   mkdirSync(fxDir, { recursive: true, mode: 0o700 });
   chmodSync(fxDir, 0o700);
   const authPath = join(fxDir, "auth.json");
@@ -320,24 +320,24 @@ async function startFx(
   resumeId?: string,
 ): Promise<TmuxSession> {
   return TmuxSession.create({
-    cmd: resumeId ? `${FX_BIN} --resume '${resumeId}'` : FX_BIN,
+    cmd: resumeId ? `${CHASSIS_BIN} --resume '${resumeId}'` : CHASSIS_BIN,
     cwd,
     env: {
       HOME: testHome,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_GATEWAY_BASE_URL: fakeGateway.baseUrl,
-      FX_GATEWAY_CHAT_URL: fakeGateway.chatUrl,
-      FX_E2E_GATEWAY_MODELS_URL: `${fakeGateway.baseUrl}/coding-agent/v1/models`,
-      FX_MODEL: FAKE_GATEWAY_MODEL,
-      FX_AUTO_UPGRADE: "0",
-      FX_NO_OPEN_BROWSER: "1",
-      FX_OAUTH_CLIENT_ID: "test-client",
-      FX_E2E_OAUTH_ISSUER_URL: oauthIssuerUrl,
-      FX_TRACE_LOG: tracePath,
-      FX_TRACE_SCOPES: tracePath ? "auth,prompt" : undefined,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_GATEWAY_BASE_URL: fakeGateway.baseUrl,
+      CHASSIS_GATEWAY_CHAT_URL: fakeGateway.chatUrl,
+      CHASSIS_E2E_GATEWAY_MODELS_URL: `${fakeGateway.baseUrl}/coding-agent/v1/models`,
+      CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_NO_OPEN_BROWSER: "1",
+      CHASSIS_OAUTH_CLIENT_ID: "test-client",
+      CHASSIS_E2E_OAUTH_ISSUER_URL: oauthIssuerUrl,
+      CHASSIS_TRACE_LOG: tracePath,
+      CHASSIS_TRACE_SCOPES: tracePath ? "auth,prompt" : undefined,
       ...envOverrides,
     },
     stderrPath: testStderrPath,
@@ -624,10 +624,10 @@ function startFakeChatGptOAuth(
     accessToken,
     requests,
     env: {
-      FX_E2E_CHATGPT_ISSUER_URL: baseUrl,
-      FX_E2E_CHATGPT_TOKEN_URL: `${baseUrl}/chatgpt/token`,
-      FX_E2E_OPENAI_CODEX_MODELS_URL: `${baseUrl}/chatgpt/models`,
-      FX_E2E_OPENAI_CODEX_RESPONSES_URL: `${baseUrl}/chatgpt/responses`,
+      CHASSIS_E2E_CHATGPT_ISSUER_URL: baseUrl,
+      CHASSIS_E2E_CHATGPT_TOKEN_URL: `${baseUrl}/chatgpt/token`,
+      CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: `${baseUrl}/chatgpt/models`,
+      CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: `${baseUrl}/chatgpt/responses`,
     },
     baseUrl,
     setModels(next: typeof models) {
@@ -706,8 +706,8 @@ function startFakeGrokOAuth(options: {
         if (!redirectUri || !state || url.searchParams.get("nonce")) {
           return new Response("invalid authorize request", { status: 400 });
         }
-        if (url.searchParams.get("referrer") !== "fx") {
-          return new Response("missing fx referrer", { status: 400 });
+        if (url.searchParams.get("referrer") !== "chassis") {
+          return new Response("missing chassis referrer", { status: 400 });
         }
         const callback = new URL(redirectUri);
         callback.searchParams.set("code", "grok-code");
@@ -774,13 +774,13 @@ function startFakeGrokOAuth(options: {
     tokenCalls: () => tokenCalls,
     baseUrl,
     env: {
-      FX_E2E_GROK_ISSUER_URL: baseUrl,
-      FX_E2E_GROK_TOKEN_URL: `${baseUrl}/oauth2/token`,
-      FX_E2E_GROK_USERINFO_URL: `${baseUrl}/oauth2/userinfo`,
-      FX_E2E_GROK_REVOKE_URL: `${baseUrl}/oauth2/revoke`,
-      FX_E2E_XAI_GROK_MODELS_URL: `${baseUrl}/v1/models`,
-      FX_E2E_XAI_GROK_MODALITIES_URL: `${baseUrl}/v1/language-models`,
-      FX_E2E_XAI_GROK_RESPONSES_URL: `${baseUrl}/v1/responses`,
+      CHASSIS_E2E_GROK_ISSUER_URL: baseUrl,
+      CHASSIS_E2E_GROK_TOKEN_URL: `${baseUrl}/oauth2/token`,
+      CHASSIS_E2E_GROK_USERINFO_URL: `${baseUrl}/oauth2/userinfo`,
+      CHASSIS_E2E_GROK_REVOKE_URL: `${baseUrl}/oauth2/revoke`,
+      CHASSIS_E2E_XAI_GROK_MODELS_URL: `${baseUrl}/v1/models`,
+      CHASSIS_E2E_XAI_GROK_MODALITIES_URL: `${baseUrl}/v1/language-models`,
+      CHASSIS_E2E_XAI_GROK_RESPONSES_URL: `${baseUrl}/v1/responses`,
     },
     setModels(next: typeof models) {
       models = next;
@@ -800,7 +800,7 @@ async function runGrokLoginWithBrowser(
     if (value === undefined) delete childEnv[key];
     else childEnv[key] = value;
   }
-  const proc = nodeSpawn(FX_BIN, ["login", "grok"], {
+  const proc = nodeSpawn(CHASSIS_BIN, ["login", "grok"], {
     cwd: REPO_ROOT,
     env: providerVersionTestEnv(childEnv),
     stdio: [authorizationCode ? "pipe" : "ignore", "pipe", "pipe"],
@@ -882,7 +882,7 @@ async function runCodexLoginWithBrowser(
     if (value === undefined) delete childEnv[key];
     else childEnv[key] = value;
   }
-  const proc = nodeSpawn(FX_BIN, ["login", "codex"], {
+  const proc = nodeSpawn(CHASSIS_BIN, ["login", "codex"], {
     cwd: REPO_ROOT,
     env: providerVersionTestEnv(childEnv),
     stdio: ["ignore", "pipe", "pipe"],
@@ -1232,7 +1232,7 @@ function startFakeGrokResourceRecovery() {
 
 for (const provider of ["gateway", "codex", "grok"] as const) {
   tmuxTest(`pending ${provider} prompt retries repaired credential storage without changing accounts`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-prompt-storage-retry-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-prompt-storage-retry-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([fakeGatewayFinalText("GATEWAY_STORAGE_RECOVERED")]);
     oauth = startFakeOAuth("unused-token");
@@ -1242,16 +1242,16 @@ for (const provider of ["gateway", "codex", "grok"] as const) {
       writeSeededFxLogin(home, Date.now() + 3_600_000, oauth.issuerUrl, "team_fixture");
       writeSeededChatGptLogin(home);
       writeSeededGrokLogin(home, grok.initialAccessToken);
-      writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({
+      writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({
         provider,
-        credential_source: "fx_login",
+        credential_source: "chassis_login",
         models: { gateway: FAKE_GATEWAY_MODEL, codex: "gpt-5.6-sol", grok: "grok-4.20" },
       }));
       const name = provider === "gateway" ? "auth.json" : provider === "codex" ? "chatgpt-auth.json" : "grok-auth.json";
       const alias = join(home, "auth.alias");
-      linkSync(join(home, ".fx", name), alias);
+      linkSync(join(home, ".chassis", name), alias);
       session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, {
-        FX_MODEL: undefined,
+        CHASSIS_MODEL: undefined,
         ...chatgptOauth.env,
         ...grok.env,
       });
@@ -1279,7 +1279,7 @@ for (const provider of ["gateway", "codex", "grok"] as const) {
       } else {
         expect(gateway.requests).toHaveLength(0);
       }
-      expect(JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8")).provider).toBe(provider);
+      expect(JSON.parse(readFileSync(join(home, ".chassis", "settings.json"), "utf8")).provider).toBe(provider);
       expect(readFileSync(stderrPath, "utf8")).toBe("");
     } finally {
       grok.stop();
@@ -1290,7 +1290,7 @@ for (const provider of ["gateway", "codex", "grok"] as const) {
 
 for (const provider of ["codex", "grok"] as const) {
   tmuxTest(`provider recovery switches from ${provider} after logout and preserves the fallback on restart`, async () => {
-    home = mkdtempSync(join(tmpdir(), `fx-logout-fallback-${provider}-`));
+    home = mkdtempSync(join(tmpdir(), `chassis-logout-fallback-${provider}-`));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([fakeGatewayFinalText("LOGOUT_GATEWAY_RESPONSE")]);
@@ -1299,11 +1299,11 @@ for (const provider of ["codex", "grok"] as const) {
     try {
       writeSeededChatGptLogin(home, chatgptOauth.accessToken);
       writeSeededGrokLogin(home, grok.initialAccessToken);
-      const settingsPath = join(home, ".fx", "settings.json");
+      const settingsPath = join(home, ".chassis", "settings.json");
       writeFileSync(settingsPath, JSON.stringify({
         provider, models: { gateway: FAKE_GATEWAY_MODEL, codex: "gpt-5.6-sol", grok: "grok-4.6" },
       }), { mode: 0o600 });
-      const env = { ...chatgptOauth.env, ...grok.env, FX_MODEL: undefined };
+      const env = { ...chatgptOauth.env, ...grok.env, CHASSIS_MODEL: undefined };
       session = await startFx(home, stderrPath, gateway, undefined, undefined, env);
       await session.waitForComposer(TIMEOUT);
       const inactive = provider === "codex" ? "grok" : "codex";
@@ -1314,7 +1314,7 @@ for (const provider of ["codex", "grok"] as const) {
       await session.waitForText(`Signed out of ${provider === "codex" ? "Codex" : "Grok"}.`, TIMEOUT);
       await openProviderPicker(session);
       expect(await session.capturePane()).toContain("vercel · current");
-      expect(existsSync(join(home, ".fx", provider === "codex" ? "chatgpt-auth.json" : "grok-auth.json"))).toBe(false);
+      expect(existsSync(join(home, ".chassis", provider === "codex" ? "chatgpt-auth.json" : "grok-auth.json"))).toBe(false);
       expect(JSON.parse(readFileSync(settingsPath, "utf8")).provider).toBe("gateway");
       await session.sendKeys("Escape");
       await session.sendKeys("C-u");
@@ -1335,7 +1335,7 @@ for (const provider of ["codex", "grok"] as const) {
   }, 60_000);
 
   tmuxTest(`provider recovery activates ${provider} sign-in after a cancelled turn`, async () => {
-    home = mkdtempSync(join(tmpdir(), `fx-cancel-login-${provider}-`));
+    home = mkdtempSync(join(tmpdir(), `chassis-cancel-login-${provider}-`));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     let release!: () => void;
@@ -1348,7 +1348,7 @@ for (const provider of ["codex", "grok"] as const) {
     const grok = startFakeGrokOAuth();
     try {
       session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-        ...chatgptOauth.env, ...grok.env, FX_MODEL: undefined,
+        ...chatgptOauth.env, ...grok.env, CHASSIS_MODEL: undefined,
       });
       await session.waitForComposer(TIMEOUT);
       await session.sendText("Hold this request until cancelled.");
@@ -1358,7 +1358,7 @@ for (const provider of ["codex", "grok"] as const) {
         await Bun.sleep(20);
       }
       await session.sendKeys("C-c");
-      await session.waitForText("What can fx do differently?", TIMEOUT);
+      await session.waitForText("What can chassis do differently?", TIMEOUT);
       release();
       await openProviderPicker(session);
       await session.sendKeys("Down");
@@ -1376,7 +1376,7 @@ for (const provider of ["codex", "grok"] as const) {
       await session.sendText("Use the subscription immediately after sign-in.");
       await session.waitForText(provider === "codex" ? "CHATGPT_DIRECT_RESPONSE" : "GROK_DIRECT_RESPONSE", TIMEOUT);
       expect(gateway.requests).toHaveLength(1);
-      expect(JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8")).provider).toBe(provider);
+      expect(JSON.parse(readFileSync(join(home, ".chassis", "settings.json"), "utf8")).provider).toBe(provider);
       expect(readFileSync(stderrPath, "utf8")).toBe("");
     } finally {
       release();
@@ -1387,7 +1387,7 @@ for (const provider of ["codex", "grok"] as const) {
 
 for (const gatewayState of ["absent", "rejected"] as const) {
   tmuxTest(`provider recovery uses the remaining subscription when Gateway is ${gatewayState}`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-logout-other-subscription-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-logout-other-subscription-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([], { models: () => [] });
@@ -1396,11 +1396,11 @@ for (const gatewayState of ["absent", "rejected"] as const) {
     try {
       writeSeededChatGptLogin(home, chatgptOauth.accessToken);
       writeSeededGrokLogin(home, grok.initialAccessToken);
-      writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({
+      writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({
         provider: "codex", models: { codex: "gpt-5.6-sol", grok: "grok-4.6" },
       }), { mode: 0o600 });
       session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-        ...chatgptOauth.env, ...grok.env, FX_MODEL: undefined,
+        ...chatgptOauth.env, ...grok.env, CHASSIS_MODEL: undefined,
         AI_GATEWAY_API_KEY: gatewayState === "absent" ? undefined : ENV_TOKEN,
       });
       await session.waitForComposer(TIMEOUT);
@@ -1412,7 +1412,7 @@ for (const gatewayState of ["absent", "rejected"] as const) {
       await session.sendKeys("C-u");
       await session.sendText("Use the remaining subscription.");
       await session.waitForText("GROK_DIRECT_RESPONSE", TIMEOUT);
-      expect(JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8")).provider).toBe("grok");
+      expect(JSON.parse(readFileSync(join(home, ".chassis", "settings.json"), "utf8")).provider).toBe("grok");
       expect(grok.requests.filter((request) => request.path === "/oauth2/token")).toHaveLength(0);
       expect(readFileSync(stderrPath, "utf8")).toBe("");
     } finally {
@@ -1422,8 +1422,8 @@ for (const gatewayState of ["absent", "rejected"] as const) {
 }
 
 for (const otherProvider of ["codex", "grok"] as const) {
-  tmuxTest(`default logout preserves ${otherProvider} when active fx login becomes unreadable`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-logout-active-unreadable-"));
+  tmuxTest(`default logout preserves ${otherProvider} when active chassis login becomes unreadable`, async () => {
+    home = mkdtempSync(join(tmpdir(), "chassis-logout-active-unreadable-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -1431,23 +1431,23 @@ for (const otherProvider of ["codex", "grok"] as const) {
     writeSeededFxLogin(home, Date.now() + 3_600_000, oauth.issuerUrl, "team_fixture");
     if (otherProvider === "codex") writeSeededChatGptLogin(home);
     else writeSeededGrokLogin(home, "other-grok-token");
-    const otherPath = join(home, ".fx", otherProvider === "codex" ? "chatgpt-auth.json" : "grok-auth.json");
+    const otherPath = join(home, ".chassis", otherProvider === "codex" ? "chatgpt-auth.json" : "grok-auth.json");
     const otherCredential = readFileSync(otherPath, "utf8");
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ provider: "gateway", credential_source: "fx_login" }));
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ provider: "gateway", credential_source: "chassis_login" }));
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, {
       AI_GATEWAY_API_KEY: undefined,
     });
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/status");
-    await session.waitForText("auth=fx login", TIMEOUT);
-    const authPath = join(home, ".fx", "auth.json");
+    await session.waitForText("auth=chassis login", TIMEOUT);
+    const authPath = join(home, ".chassis", "auth.json");
     linkSync(authPath, join(home, "login.alias"));
     await session.sendText("/logout");
     const result = await session.waitForPane(
-      (pane) => pane.includes("Signed out of fx.") || pane.includes(`Signed out of ${otherProvider === "codex" ? "Codex" : "Grok"}.`),
+      (pane) => pane.includes("Signed out of chassis.") || pane.includes(`Signed out of ${otherProvider === "codex" ? "Codex" : "Grok"}.`),
       TIMEOUT,
     );
-    expect(result).toContain("Signed out of fx.");
+    expect(result).toContain("Signed out of chassis.");
     expect(readFileSync(otherPath, "utf8")).toBe(otherCredential);
     expect(existsSync(authPath)).toBe(false);
     expect(gateway.requests).toHaveLength(0);
@@ -1456,17 +1456,17 @@ for (const otherProvider of ["codex", "grok"] as const) {
 }
 
 tmuxTest("provider recovery stays signed out when no replacement is connected", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-logout-no-provider-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-logout-no-provider-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
   gateway = startFakeGateway([]);
   chatgptOauth = startFakeChatGptOAuth();
   writeSeededChatGptLogin(home, chatgptOauth.accessToken);
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({
+  writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({
     provider: "codex", models: { codex: "gpt-5.6-sol" },
   }), { mode: 0o600 });
   session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-    ...chatgptOauth.env, FX_MODEL: undefined, AI_GATEWAY_API_KEY: undefined,
+    ...chatgptOauth.env, CHASSIS_MODEL: undefined, AI_GATEWAY_API_KEY: undefined,
   });
   await session.waitForComposer(TIMEOUT);
   await session.sendText("/logout");
@@ -1476,24 +1476,24 @@ tmuxTest("provider recovery stays signed out when no replacement is connected", 
   expect(pane).not.toContain("codex · current");
   expect(pane).not.toContain("vercel · current");
   expect(pane).not.toContain("grok · current");
-  expect(existsSync(join(home, ".fx", "chatgpt-auth.json"))).toBe(false);
+  expect(existsSync(join(home, ".chassis", "chatgpt-auth.json"))).toBe(false);
   expect(gateway.requests).toHaveLength(0);
   expect(readFileSync(stderrPath, "utf8")).toBe("");
 }, 60_000);
 
 tmuxTest("provider recovery refuses active logout before deleting a busy subscription", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-logout-busy-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-logout-busy-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
   gateway = startFakeGateway([]);
   chatgptOauth = startFakeChatGptOAuth({ responseDelayMs: 10_000 });
   writeSeededChatGptLogin(home, chatgptOauth.accessToken);
-  const authPath = join(home, ".fx", "chatgpt-auth.json");
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({
+  const authPath = join(home, ".chassis", "chatgpt-auth.json");
+  writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({
     provider: "codex", models: { codex: "gpt-5.6-sol" },
   }), { mode: 0o600 });
   session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-    ...chatgptOauth.env, FX_MODEL: undefined,
+    ...chatgptOauth.env, CHASSIS_MODEL: undefined,
   });
   await session.waitForComposer(TIMEOUT);
   await session.sendText("Keep this response open.");
@@ -1511,12 +1511,12 @@ tmuxTest("provider recovery refuses active logout before deleting a busy subscri
   expect(outcome).toContain("Sign out is unavailable until active and queued work finishes.");
   expect(existsSync(authPath)).toBe(true);
   await session.sendKeys("C-c");
-  await session.waitForText("What can fx do differently?", TIMEOUT);
+  await session.waitForText("What can chassis do differently?", TIMEOUT);
   expect(readFileSync(stderrPath, "utf8")).toBe("");
 }, 60_000);
 
 tmuxTest("provider recovery validates a Gateway team after a cancelled turn", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-cancel-team-selection-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-cancel-team-selection-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
   let release!: () => void;
@@ -1539,7 +1539,7 @@ tmuxTest("provider recovery validates a Gateway team after a cancelled turn", as
       await Bun.sleep(20);
     }
     await session.sendKeys("C-c");
-    await session.waitForText("What can fx do differently?", TIMEOUT);
+    await session.waitForText("What can chassis do differently?", TIMEOUT);
     release();
     await selectFxLoginCredential(session);
     expect(gateway.modelRequests.some((request) =>
@@ -1554,15 +1554,15 @@ tmuxTest("provider recovery validates a Gateway team after a cancelled turn", as
 }, 60_000);
 
 tmuxTest("pending Gateway prompt waits for valid saved preferences and a repaired login", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-prompt-preference-retry-"));
-  mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
-  const settingsPath = join(home, ".fx", "settings.json");
-  const settings = JSON.stringify({ provider: "gateway", credential_source: "fx_login", models: { gateway: FAKE_GATEWAY_MODEL } });
+  home = mkdtempSync(join(tmpdir(), "chassis-prompt-preference-retry-"));
+  mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
+  const settingsPath = join(home, ".chassis", "settings.json");
+  const settings = JSON.stringify({ provider: "gateway", credential_source: "chassis_login", models: { gateway: FAKE_GATEWAY_MODEL } });
   writeFileSync(settingsPath, settings);
   stderrPath = join(home, "stderr.log");
   gateway = startFakeGateway([fakeGatewayFinalText("PREFERENCE_REPAIRED")]);
   oauth = startFakeOAuth("unused-token");
-  session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, { FX_MODEL: undefined });
+  session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, { CHASSIS_MODEL: undefined });
   await session.waitForComposer(TIMEOUT);
   writeFileSync(settingsPath, "not-json");
   await session.sendText("PREFERENCE_RETRY_PROMPT");
@@ -1572,7 +1572,7 @@ tmuxTest("pending Gateway prompt waits for valid saved preferences and a repaire
   writeFileSync(settingsPath, settings);
   await session.sendKeys("Enter");
   await session.waitForPane(
-    (pane) => pane.lastIndexOf("fx needs access to Vercel AI Gateway") > pane.lastIndexOf("Could not load authentication settings"),
+    (pane) => pane.lastIndexOf("chassis needs access to Vercel AI Gateway") > pane.lastIndexOf("Could not load authentication settings"),
     TIMEOUT,
   );
   expect(gateway.requests).toHaveLength(0);
@@ -1587,7 +1587,7 @@ tmuxTest("pending Gateway prompt waits for valid saved preferences and a repaire
 }, TIMEOUT);
 
 test("Vercel CLI keeps an issuer authorization denial distinct from persistence failure", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-vercel-authorization-denied-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-vercel-authorization-denied-"));
   oauth = startFakeOAuth("unused-token", undefined, 3600, Number.POSITIVE_INFINITY, {
     deviceError: "access_denied",
     rejectAllDeviceClients: true,
@@ -1596,39 +1596,39 @@ test("Vercel CLI keeps an issuer authorization denial distinct from persistence 
     HOME: home,
     AI_GATEWAY_API_KEY: undefined,
     VERCEL_OIDC_TOKEN: undefined,
-    FX_DISABLE_KEYCHAIN: "1",
-    FX_AUTO_UPGRADE: "0",
-    FX_NO_OPEN_BROWSER: "1",
-    FX_OAUTH_CLIENT_ID: "test-client",
-    FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+    CHASSIS_DISABLE_KEYCHAIN: "1",
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_NO_OPEN_BROWSER: "1",
+    CHASSIS_OAUTH_CLIENT_ID: "test-client",
+    CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
   }, timeoutMs: TIMEOUT });
   expect(result.code).toBe(1);
   expect(result.stderr).toContain("authorization denied");
   expect(result.stderr).not.toContain("Credential could not be saved");
-  expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+  expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
   expect(oauth.requests.filter((request) => request.path === "/oauth/token")).toHaveLength(0);
 }, TIMEOUT);
 
 test("Vercel CLI reports a post-authorization save failure without claiming authorization was denied", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-vercel-save-failure-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-vercel-save-failure-"));
   gateway = startFakeGateway([]);
   oauth = startFakeOAuth("new-token", undefined, 3600, Number.POSITIVE_INFINITY, {
     tokenDelayMs: 300,
     teams: [{ id: "team_fixture", slug: "fixture", name: "Fixture" }],
   });
   writeSeededFxLogin(home, Date.now() + 3_600_000, oauth.issuerUrl, "team_fixture");
-  const authPath = join(home, ".fx", "auth.json");
+  const authPath = join(home, ".chassis", "auth.json");
   const previous = readFileSync(authPath, "utf8");
   const login = runFx(["login", "vercel"], { env: {
     HOME: home,
     AI_GATEWAY_API_KEY: ENV_TOKEN,
     VERCEL_OIDC_TOKEN: undefined,
-    FX_DISABLE_KEYCHAIN: "1",
-    FX_AUTO_UPGRADE: "0",
-    FX_NO_OPEN_BROWSER: "1",
-    FX_OAUTH_CLIENT_ID: "test-client",
-    FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
-    FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+    CHASSIS_DISABLE_KEYCHAIN: "1",
+    CHASSIS_AUTO_UPGRADE: "0",
+    CHASSIS_NO_OPEN_BROWSER: "1",
+    CHASSIS_OAUTH_CLIENT_ID: "test-client",
+    CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+    CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
   }, timeoutMs: TIMEOUT });
   const deadline = Date.now() + 10_000;
   while (!oauth.requests.some((request) => request.path === "/oauth/token") && Date.now() < deadline) await Bun.sleep(5);
@@ -1646,7 +1646,7 @@ test("Vercel CLI reports a post-authorization save failure without claiming auth
 tmuxTest(
   "malformed sessions and read-only locks never become missing authentication",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-auth-storage-error-kinds-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-auth-storage-error-kinds-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([]);
     oauth = startFakeOAuth("unused-token");
@@ -1659,12 +1659,12 @@ tmuxTest(
         writeSeededGrokLogin(home, grok.initialAccessToken);
         if (damage === "malformed") {
           for (const name of ["auth.json", "chatgpt-auth.json", "grok-auth.json"]) {
-            writeFileSync(join(home, ".fx", name), "not-json", { mode: 0o600 });
+            writeFileSync(join(home, ".chassis", name), "not-json", { mode: 0o600 });
           }
         } else {
           for (const name of ["auth.lock", "chatgpt-auth.lock", "grok-auth.lock"]) {
-            writeFileSync(join(home, ".fx", name), "");
-            chmodSync(join(home, ".fx", name), 0o400);
+            writeFileSync(join(home, ".chassis", name), "");
+            chmodSync(join(home, ".chassis", name), 0o400);
           }
         }
         session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, {
@@ -1700,7 +1700,7 @@ tmuxTest(
 
 for (const command of ["/provider", "/login", "/setup"]) {
   tmuxTest(`provider picker retains type-ahead after ${command} Enter`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-provider-typeahead-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-provider-typeahead-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([]);
     session = await startFx(home, stderrPath, gateway);
@@ -1728,7 +1728,7 @@ for (const command of ["/provider", "/login", "/setup"]) {
 }
 
 tmuxTest("provider picker consumes selection keys while inventory is pending", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-provider-pending-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-provider-pending-"));
   stderrPath = join(home, "stderr.log");
   gateway = startFakeGateway([]);
   chatgptOauth = startFakeChatGptOAuth();
@@ -1756,7 +1756,7 @@ for (const scenario of [
   { name: "typed provider query", command: "/provider " },
 ]) {
   tmuxTest(`first Enter reports busy provider flow for ${scenario.name}`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-provider-picker-busy-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-provider-picker-busy-"));
     stderrPath = join(home, "stderr.log");
     let cancelled = false;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
@@ -1787,7 +1787,7 @@ for (const scenario of [
 
       await session.sendKeys("C-u");
       await session.sendInterruptEscapePair(TIMEOUT);
-      await session.waitForText("What can fx do differently?", TIMEOUT);
+      await session.waitForText("What can chassis do differently?", TIMEOUT);
       await session.sendText(scenario.command.trim());
       await session.waitForPane(
         (pane) => pane.includes("vercel") && pane.includes("codex") && pane.includes("grok"),
@@ -1805,7 +1805,7 @@ for (const scenario of [
 tmuxTest(
   "unavailable configured credentials remain recoverable in TUI ask and ACP",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-auth-startup-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-auth-startup-failure-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([
       fakeGatewayFinalText("GATEWAY_RECOVERED_gateway"),
@@ -1819,26 +1819,26 @@ tmuxTest(
     writeSeededChatGptLogin(home);
     writeSeededGrokLogin(home, grok.initialAccessToken);
     for (const name of ["auth.json", "chatgpt-auth.json", "grok-auth.json"]) {
-      linkSync(join(home, ".fx", name), join(home, `${name}.alias`));
+      linkSync(join(home, ".chassis", name), join(home, `${name}.alias`));
     }
     const env = {
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SOUND: "0",
-      FX_AUTO_UPGRADE: "0",
-      FX_NO_OPEN_BROWSER: "1",
-      FX_MODEL: undefined,
-      FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SOUND: "0",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_NO_OPEN_BROWSER: "1",
+      CHASSIS_MODEL: undefined,
+      CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
       ...chatgptOauth.env,
       ...grok.env,
     };
     try {
       for (const provider of ["gateway", "codex", "grok"]) {
-        writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({
+        writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({
           provider,
-          credential_source: "fx_login",
+          credential_source: "chassis_login",
           models: { gateway: FAKE_GATEWAY_MODEL, codex: "gpt-5.6-sol", grok: "grok-4.20" },
         }));
         const status = await runFx(["status", "--json"], { env });
@@ -1888,7 +1888,7 @@ tmuxTest(
 tmuxTest(
   "browser authorization reports a failed save without activating the provider",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-auth-callback-save-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-auth-callback-save-failure-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([fakeGatewayFinalText("GATEWAY_AFTER_FAILED_SIGNIN")]);
     chatgptOauth = startFakeChatGptOAuth();
@@ -1906,7 +1906,7 @@ tmuxTest(
         if (provider === "codex") writeSeededChatGptLogin(home);
         else writeSeededGrokLogin(home, grok.initialAccessToken);
         const name = provider === "codex" ? "chatgpt-auth.json" : "grok-auth.json";
-        const original = join(home, ".fx", name);
+        const original = join(home, ".chassis", name);
         linkSync(original, join(home, `${name}.alias`));
         await completeDisplayedSubscriptionLogin(
           session,
@@ -1933,7 +1933,7 @@ tmuxTest(
 tmuxTest(
   "all provider sign-in entries reject unavailable storage before OAuth",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-auth-storage-admission-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-auth-storage-admission-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([]);
     oauth = startFakeOAuth("unused-token");
@@ -1943,18 +1943,18 @@ tmuxTest(
     writeSeededChatGptLogin(home);
     writeSeededGrokLogin(home, grok.initialAccessToken);
     for (const name of ["auth.json", "chatgpt-auth.json", "grok-auth.json"]) {
-      linkSync(join(home, ".fx", name), join(home, `${name}.alias`));
+      linkSync(join(home, ".chassis", name), join(home, `${name}.alias`));
     }
     const env = {
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SOUND: "0",
-      FX_AUTO_UPGRADE: "0",
-      FX_NO_OPEN_BROWSER: "1",
-      FX_OAUTH_CLIENT_ID: "test-client",
-      FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SOUND: "0",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_NO_OPEN_BROWSER: "1",
+      CHASSIS_OAUTH_CLIENT_ID: "test-client",
+      CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
       ...chatgptOauth.env,
       ...grok.env,
     };
@@ -1976,7 +1976,7 @@ tmuxTest(
       expect(await session.captureFullScrollback()).not.toContain("Sign in with Vercel");
       for (const name of ["auth.json", "chatgpt-auth.json", "grok-auth.json"]) {
         unlinkSync(join(home, `${name}.alias`));
-        chmodSync(join(home, ".fx", name), 0o400);
+        chmodSync(join(home, ".chassis", name), 0o400);
       }
       for (const provider of ["vercel", "codex", "grok"]) {
         const result = await runFx(["login", provider], { env, timeoutMs: 3000 });
@@ -2000,12 +2000,12 @@ tmuxTest(
 tmuxTest(
   "unavailable saved subscriptions keep login and provider selection usable",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-auth-unavailable-subscriptions-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-auth-unavailable-subscriptions-"));
     stderrPath = join(home, "stderr.log");
     writeSeededChatGptLogin(home);
     writeSeededGrokLogin(home, "grok-initial-access-token");
     for (const name of ["chatgpt-auth.json", "grok-auth.json"]) {
-      linkSync(join(home, ".fx", name), join(home, `${name}.alias`));
+      linkSync(join(home, ".chassis", name), join(home, `${name}.alias`));
     }
     gateway = startFakeGateway([fakeGatewayFinalText("GATEWAY_WITH_UNAVAILABLE_SUBSCRIPTIONS")]);
     session = await startFx(home, stderrPath, gateway);
@@ -2025,7 +2025,7 @@ tmuxTest(
     await session.sendText("Keep using the working Gateway credential.");
     await session.waitForText("GATEWAY_WITH_UNAVAILABLE_SUBSCRIPTIONS", TIMEOUT);
     for (const name of ["chatgpt-auth.json", "grok-auth.json"]) {
-      expect(statSync(join(home, ".fx", name)).nlink).toBe(2);
+      expect(statSync(join(home, ".chassis", name)).nlink).toBe(2);
     }
     expect(session.isAlive()).toBe(true);
     expect(readFileSync(stderrPath, "utf8")).toBe("");
@@ -2036,12 +2036,12 @@ tmuxTest(
 tmuxTest(
   "unavailable saved subscription reports storage failure and recovers after repair",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-auth-unavailable-signin-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-auth-unavailable-signin-"));
     stderrPath = join(home, "stderr.log");
     writeSeededChatGptLogin(home);
     writeSeededGrokLogin(home, "grok-initial-access-token");
     for (const name of ["chatgpt-auth.json", "grok-auth.json"]) {
-      linkSync(join(home, ".fx", name), join(home, `${name}.alias`));
+      linkSync(join(home, ".chassis", name), join(home, `${name}.alias`));
     }
     gateway = startFakeGateway([]);
     chatgptOauth = startFakeChatGptOAuth();
@@ -2062,7 +2062,7 @@ tmuxTest(
         await session.waitForComposer(TIMEOUT);
 
         const name = provider === "codex" ? "chatgpt-auth.json" : "grok-auth.json";
-        const original = join(home, ".fx", name);
+        const original = join(home, ".chassis", name);
         expect(statSync(original).nlink).toBe(2);
         expect(readFileSync(original, "utf8")).toBe(readFileSync(join(home, `${name}.alias`), "utf8"));
         unlinkSync(join(home, `${name}.alias`));
@@ -2073,7 +2073,7 @@ tmuxTest(
         await session.waitForText(provider === "codex" ? "CHATGPT_DIRECT_RESPONSE" : "GROK_DIRECT_RESPONSE", TIMEOUT);
       }
       for (const name of ["chatgpt-auth.json", "grok-auth.json"]) {
-        expect(statSync(join(home, ".fx", name)).nlink).toBe(1);
+        expect(statSync(join(home, ".chassis", name)).nlink).toBe(1);
       }
       expect(session.isAlive()).toBe(true);
       expect(readFileSync(stderrPath, "utf8")).toBe("");
@@ -2087,7 +2087,7 @@ tmuxTest(
 tmuxTest(
   "inline sign-in renders the device flow and Ctrl+C cancels without a session",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-inline-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-inline-login-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -2123,7 +2123,7 @@ tmuxTest(
     await session.waitForComposer(TIMEOUT);
 
     expect(session.isAlive()).toBe(true);
-    expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
     expect(await session.captureFullScrollback()).not.toContain("Signed in to Vercel.");
     expect(readFileSync(stderrPath, "utf8")).toBe("");
   },
@@ -2133,7 +2133,7 @@ tmuxTest(
 tmuxTest(
   "Codex sign-in renders browser OAuth without a device code and cancels cleanly",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-chatgpt-cancel-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-chatgpt-cancel-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -2175,7 +2175,7 @@ tmuxTest(
     await session.waitForComposer(TIMEOUT);
 
     expect(session.isAlive()).toBe(true);
-    expect(existsSync(join(home, ".fx", "chatgpt-auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "chatgpt-auth.json"))).toBe(false);
     expect(await session.captureFullScrollback()).not.toContain("Signed in with Codex.");
     expect(readFileSync(stderrPath, "utf8")).toBe("");
   },
@@ -2192,7 +2192,7 @@ for (const [provider, previousProvider] of [
     tmuxTest(
       `${provider} ${resumeMode} resume authenticates the model catalog before the first prompt from ${previousProvider}`,
       async () => {
-        home = mkdtempSync(join(tmpdir(), "fx-auth-resume-"));
+        home = mkdtempSync(join(tmpdir(), "chassis-auth-resume-"));
         stderrPath = join(home, "stderr.log");
         gateway = startFakeGateway(provider === "gateway" ? [
           fakeGatewayFinalText("GATEWAY_RESUME_SEED"),
@@ -2208,19 +2208,19 @@ for (const [provider, previousProvider] of [
           const models = { gateway: FAKE_GATEWAY_MODEL, codex: "gpt-5.6-sol", grok: "grok-4.20" };
           const model = models[provider];
           const otherModel = provider === "codex" ? "gpt-5.4-mini" : provider === "grok" ? "grok-4.6" : model;
-          const settingsPath = join(home, ".fx", "settings.json");
-          writeFileSync(settingsPath, JSON.stringify({ provider, credential_source: "fx_login", models }) + "\n", { mode: 0o600 });
+          const settingsPath = join(home, ".chassis", "settings.json");
+          writeFileSync(settingsPath, JSON.stringify({ provider, credential_source: "chassis_login", models }) + "\n", { mode: 0o600 });
           const env = {
             HOME: home,
             AI_GATEWAY_API_KEY: undefined,
             VERCEL_OIDC_TOKEN: undefined,
-            FX_MODEL: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-            FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-            FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+            CHASSIS_MODEL: undefined,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+            CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
             ...chatgptOauth.env,
             ...grok.env,
           };
@@ -2232,7 +2232,7 @@ for (const [provider, previousProvider] of [
           const saved = JSON.parse(seeded.stdout) as { session_id: string; output: string };
           expect(saved.session_id).toMatch(/^[a-zA-Z0-9_-]+$/);
           expect(saved.output).toContain(provider === "gateway" ? "GATEWAY_RESUME_SEED" : provider === "codex" ? "CHATGPT_DIRECT_RESPONSE" : "GROK_DIRECT_RESPONSE");
-          const preferences = { provider: previousProvider, credential_source: "fx_login", models };
+          const preferences = { provider: previousProvider, credential_source: "chassis_login", models };
           writeFileSync(settingsPath, JSON.stringify(preferences) + "\n", { mode: 0o600 });
           chatgptOauth.requests.length = 0;
           grok.requests.length = 0;
@@ -2274,11 +2274,11 @@ for (const [provider, previousProvider] of [
             : direct.requests.filter((request) => request.path === responsePath);
           expect(catalogAuthorizations.length).toBeGreaterThan(0);
           const catalogSources = catalogAuthorizations.map((authorization) =>
-            authorization === `Bearer ${LOGIN_TOKEN}` ? "fx_login"
+            authorization === `Bearer ${LOGIN_TOKEN}` ? "chassis_login"
               : authorization === `Bearer ${chatgptOauth!.accessToken}` ? "codex"
                 : authorization === `Bearer ${grok.initialAccessToken}` ? "grok"
                   : authorization === null ? "public" : "other");
-          expect(catalogSources).toEqual(Array(catalogSources.length).fill(provider === "gateway" ? "fx_login" : provider));
+          expect(catalogSources).toEqual(Array(catalogSources.length).fill(provider === "gateway" ? "chassis_login" : provider));
           expect(gateway.requests).toHaveLength(0);
           expect(chatgptOauth.requests.filter((request) => request.path === "/chatgpt/responses")).toHaveLength(0);
           expect(grok.requests.filter((request) => request.path === "/v1/responses")).toHaveLength(0);
@@ -2323,7 +2323,7 @@ for (const [provider, previousProvider] of [
 tmuxTest(
   "provider switch before the first prompt discards the previous credential prewarm",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-prewarm-provider-switch-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-prewarm-provider-switch-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     writeFileSync(stderrPath, "");
@@ -2333,14 +2333,14 @@ tmuxTest(
     writeSeededFxLogin(home, Date.now() + 60 * 60 * 1000, oauth.issuerUrl, "team_123");
     writeSeededChatGptLogin(home, chatgptOauth.accessToken);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
-      JSON.stringify({ credential_source: "fx_login" }) + "\n",
+      join(home, ".chassis", "settings.json"),
+      JSON.stringify({ credential_source: "chassis_login" }) + "\n",
       { mode: 0o600 },
     );
 
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, tracePath, {
       ...chatgptOauth.env,
-      FX_MODEL: undefined,
+      CHASSIS_MODEL: undefined,
     });
     await session.waitForComposer(TIMEOUT);
     await waitForTrace(tracePath, "prompt credential prewarm start outcome=started");
@@ -2365,7 +2365,7 @@ tmuxTest(
 tmuxTest(
   "provider switch reauthenticates current Codex and replaces an unavailable model",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-chatgpt-success-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-chatgpt-success-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([], {
@@ -2383,7 +2383,7 @@ tmuxTest(
       undefined,
       {
         ...chatgptOauth.env,
-        FX_MODEL: undefined,
+        CHASSIS_MODEL: undefined,
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -2396,7 +2396,7 @@ tmuxTest(
     await completeDisplayedCodexLogin(session, chatgptOauth);
     await session.waitForText("Switched to Codex subscription with gpt-5.6-sol.", TIMEOUT);
 
-    const authPath = join(home, ".fx", "chatgpt-auth.json");
+    const authPath = join(home, ".chassis", "chatgpt-auth.json");
     expect(existsSync(authPath)).toBe(true);
     expect(statSync(authPath).mode & 0o077).toBe(0);
 
@@ -2469,7 +2469,7 @@ tmuxTest(
     const authorizeRequestsBeforeRoundTrip = chatgptOauth.requests.filter(
       (request) => request.path === "/oauth/authorize",
     ).length;
-    const settingsPath = join(home, ".fx", "settings.json");
+    const settingsPath = join(home, ".chassis", "settings.json");
     const gatewayModelBefore = JSON.parse(readFileSync(settingsPath, "utf8")).models.gateway;
     expect(typeof gatewayModelBefore).toBe("string");
     const savedCodex = JSON.parse(readFileSync(settingsPath, "utf8"));
@@ -2487,7 +2487,7 @@ tmuxTest(
       undefined,
       {
         ...chatgptOauth.env,
-        FX_MODEL: undefined,
+        CHASSIS_MODEL: undefined,
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -2541,7 +2541,7 @@ tmuxTest(
 tmuxTest(
   "interactive Codex login activates a Codex catalog model",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-chatgpt-login-activation-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-chatgpt-login-activation-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -2553,7 +2553,7 @@ tmuxTest(
       gateway,
       undefined,
       undefined,
-      { ...chatgptOauth.env, FX_MODEL: undefined },
+      { ...chatgptOauth.env, CHASSIS_MODEL: undefined },
     );
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/login");
@@ -2566,7 +2566,7 @@ tmuxTest(
     await completeDisplayedCodexLogin(session, chatgptOauth);
     await session.waitForText("Switched to Codex subscription with gpt-5.6-sol.", TIMEOUT);
 
-    const selected = JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8"));
+    const selected = JSON.parse(readFileSync(join(home, ".chassis", "settings.json"), "utf8"));
     expect(selected.provider).toBe("codex");
     expect(selected.models.codex).toBe("gpt-5.6-sol");
     await session.sendText("/status");
@@ -2579,14 +2579,14 @@ tmuxTest(
 tmuxTest(
   "ChatGPT response transport cancels blocked HTTP without stopping the shell",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-chatgpt-response-cancel-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-chatgpt-response-cancel-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
     chatgptOauth = startFakeChatGptOAuth({ responseDelayMs: 10_000 });
     writeSeededChatGptLogin(home, chatgptOauth.accessToken);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ provider: "codex", codex_model: "gpt-5.6-sol" }) + "\n",
       { mode: 0o600 },
     );
@@ -2599,7 +2599,7 @@ tmuxTest(
       undefined,
       {
         ...chatgptOauth.env,
-        FX_MODEL: undefined,
+        CHASSIS_MODEL: undefined,
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -2608,7 +2608,7 @@ tmuxTest(
     const cancelStarted = Date.now();
     await session.sendKeys("C-c");
     const cancelledPane = await session.waitForText(
-      "What can fx do differently?",
+      "What can chassis do differently?",
       TIMEOUT,
     );
     await session.waitForComposer(TIMEOUT);
@@ -2625,14 +2625,14 @@ tmuxTest(
 tmuxTest(
   "a rejected Codex refresh retires the session without using Gateway credentials",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-chatgpt-rejected-refresh-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-chatgpt-rejected-refresh-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
     chatgptOauth = startFakeChatGptOAuth({ rejectRefresh: true });
     writeSeededChatGptLogin(home, chatgptOauth.accessToken, Date.now() - 60_000);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ provider: "codex", codex_model: "gpt-5.6-sol" }) + "\n",
       { mode: 0o600 },
     );
@@ -2643,7 +2643,7 @@ tmuxTest(
       gateway,
       undefined,
       undefined,
-      { ...chatgptOauth.env, FX_MODEL: undefined },
+      { ...chatgptOauth.env, CHASSIS_MODEL: undefined },
     );
     await session.waitForComposer(TIMEOUT);
     await session.sendText("retire the rejected Codex login");
@@ -2658,7 +2658,7 @@ tmuxTest(
       (request) => request.path === "/chatgpt/token" && request.body?.includes('"grant_type":"refresh_token"'),
     );
     expect(refreshRequests).toHaveLength(1);
-    expect(existsSync(join(home, ".fx", "chatgpt-auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "chatgpt-auth.json"))).toBe(false);
     expect(gateway.requests).toHaveLength(0);
     expect(readFileSync(stderrPath, "utf8")).toBe("");
   },
@@ -2668,14 +2668,14 @@ tmuxTest(
 tmuxTest(
   "a rejected Grok refresh retires the session without using Gateway credentials",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-grok-rejected-refresh-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-grok-rejected-refresh-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
     const grok = startFakeGrokOAuth({ rejectRefresh: true });
     writeSeededGrokLogin(home, grok.initialAccessToken, "acct_grok_e2e", Date.now() - 60_000);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
       { mode: 0o600 },
     );
@@ -2687,7 +2687,7 @@ tmuxTest(
         gateway,
         undefined,
         undefined,
-        { ...grok.env, FX_MODEL: undefined },
+        { ...grok.env, CHASSIS_MODEL: undefined },
       );
       await session.waitForComposer(TIMEOUT);
       await session.sendText("retire the rejected Grok login");
@@ -2701,7 +2701,7 @@ tmuxTest(
       expect(grok.requests.filter(
         (request) => request.path === "/oauth2/token" && request.body?.includes("grant_type=refresh_token"),
       )).toHaveLength(1);
-      expect(existsSync(join(home, ".fx", "grok-auth.json"))).toBe(false);
+      expect(existsSync(join(home, ".chassis", "grok-auth.json"))).toBe(false);
       expect(gateway.requests).toHaveLength(0);
       expect(readFileSync(stderrPath, "utf8")).toBe("");
     } finally {
@@ -2712,9 +2712,9 @@ tmuxTest(
 );
 
 test("Codex refresh save failure retires the consumed session", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-chatgpt-refresh-save-failure-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-chatgpt-refresh-save-failure-"));
   gateway = startFakeGateway([]);
-  const authPath = join(home, ".fx", "chatgpt-auth.json");
+  const authPath = join(home, ".chassis", "chatgpt-auth.json");
   chatgptOauth = startFakeChatGptOAuth({
     beforeRefreshResponse() {
       chmodSync(authPath, 0o400);
@@ -2722,7 +2722,7 @@ test("Codex refresh save failure retires the consumed session", async () => {
   });
   writeSeededChatGptLogin(home, chatgptOauth.accessToken, Date.now() - 60_000);
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({ provider: "codex", codex_model: "gpt-5.6-sol" }) + "\n",
     { mode: 0o600 },
   );
@@ -2732,9 +2732,9 @@ test("Codex refresh save failure retires the consumed session", async () => {
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
       ...chatgptOauth.env,
     },
     timeoutMs: TIMEOUT,
@@ -2749,9 +2749,9 @@ test("Codex refresh save failure retires the consumed session", async () => {
 });
 
 test("Grok refresh save failure retires the consumed session", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-grok-refresh-save-failure-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-grok-refresh-save-failure-"));
   gateway = startFakeGateway([]);
-  const authPath = join(home, ".fx", "grok-auth.json");
+  const authPath = join(home, ".chassis", "grok-auth.json");
   const grok = startFakeGrokOAuth({
     beforeRefreshResponse() {
       chmodSync(authPath, 0o400);
@@ -2759,7 +2759,7 @@ test("Grok refresh save failure retires the consumed session", async () => {
   });
   writeSeededGrokLogin(home, grok.initialAccessToken, "acct_grok_e2e", Date.now() - 60_000);
   writeFileSync(
-    join(home, ".fx", "settings.json"),
+    join(home, ".chassis", "settings.json"),
     JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
     { mode: 0o600 },
   );
@@ -2770,9 +2770,9 @@ test("Grok refresh save failure retires the consumed session", async () => {
         HOME: home,
         AI_GATEWAY_API_KEY: ENV_TOKEN,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
         ...grok.env,
       },
       timeoutMs: TIMEOUT,
@@ -2792,7 +2792,7 @@ test("Grok refresh save failure retires the consumed session", async () => {
 tmuxTest(
   "provider picker walks every column and Left steps back",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-setup-hub-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-setup-hub-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -2839,7 +2839,7 @@ tmuxTest(
       (pane) => pane.includes("env · AI_GATEWAY_API_KEY · current") && pane.includes("new · paste a key"),
       TIMEOUT,
     );
-    expect(keySources).not.toContain("saved · saved by fx");
+    expect(keySources).not.toContain("saved · saved by chassis");
 
     await session.sendKeys("Down");
     await session.sendKeys("Right");
@@ -2857,7 +2857,7 @@ tmuxTest(
 tmuxTest(
   "first-run Vercel team Escape continues into the setup hub",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-onboarding-team-back-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-onboarding-team-back-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -2873,9 +2873,9 @@ tmuxTest(
 
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, {
       AI_GATEWAY_API_KEY: undefined,
-      FX_SKIP_ONBOARDING: "0",
+      CHASSIS_SKIP_ONBOARDING: "0",
     });
-    await session.waitForText("Welcome to fx", TIMEOUT);
+    await session.waitForText("Welcome to chassis", TIMEOUT);
     await session.sendKeys("Enter");
     await session.waitForText("Vercel team · Search:", TIMEOUT);
     await session.sendKeys("Escape");
@@ -2884,7 +2884,7 @@ tmuxTest(
       TIMEOUT,
     );
     expect(setup).toMatch(/^› Vercel team\s+choose a team$/m);
-    expect(setup).not.toContain("Welcome to fx");
+    expect(setup).not.toContain("Welcome to chassis");
     expect(setup).not.toContain("sign in to manage");
     expect(readFileSync(stderrPath, "utf8")).toBe("");
   },
@@ -2892,22 +2892,22 @@ tmuxTest(
 );
 
 for (const [provider, help] of [
-  ["gateway", "fx needs access to Vercel AI Gateway."],
+  ["gateway", "chassis needs access to Vercel AI Gateway."],
   ["codex", "Codex needs a subscription login."],
   ["grok", "Grok needs a subscription login."],
 ] as const) {
   tmuxTest(`/status keeps ${provider} authentication requirements without credentials`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-status-provider-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-status-provider-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
-    mkdirSync(join(home, ".fx"));
-    const settingsPath = join(home, ".fx", "settings.json");
+    mkdirSync(join(home, ".chassis"));
+    const settingsPath = join(home, ".chassis", "settings.json");
     const settings = JSON.stringify({ provider, models: { [provider]: "test-model" } });
     writeFileSync(settingsPath, settings);
     gateway = startFakeGateway([]);
     session = await startFx(home, stderrPath, gateway, undefined, undefined, {
       AI_GATEWAY_API_KEY: undefined,
-      FX_MODEL: undefined,
+      CHASSIS_MODEL: undefined,
     });
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/status");
@@ -2916,7 +2916,7 @@ for (const [provider, help] of [
     expect(scrollback).toContain(`auth_help=${help}`);
     if (provider !== "gateway") {
       expect(scrollback).toContain(`model_source=${provider === "codex" ? "Codex" : "Grok"} subscription`);
-      expect(scrollback).not.toContain("auth_help=fx needs access to Vercel AI Gateway");
+      expect(scrollback).not.toContain("auth_help=chassis needs access to Vercel AI Gateway");
     }
     expect(scrollback).toContain("auth=missing");
     expect(scrollback).toContain("auth_refreshable=false");
@@ -2932,11 +2932,11 @@ for (const [source, help] of [
   ["stored_key", "A stored API key is selected but unavailable."],
 ] as const) {
   tmuxTest(`/status retains ${source} until another credential is selected`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-status-explicit-key-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-status-explicit-key-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
-    mkdirSync(join(home, ".fx"));
-    const settingsPath = join(home, ".fx", "settings.json");
+    mkdirSync(join(home, ".chassis"));
+    const settingsPath = join(home, ".chassis", "settings.json");
     const settings = JSON.stringify({ provider: "gateway", credential_source: source });
     writeFileSync(settingsPath, settings);
     gateway = startFakeGateway([fakeGatewayFinalText("EXPLICIT_KEY_RECOVERED")]);
@@ -2965,15 +2965,15 @@ for (const [source, help] of [
 }
 
 tmuxTest("/status preserves a missing selected login through explicit key recovery", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-status-selected-login-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-status-selected-login-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
-  mkdirSync(join(home, ".fx"));
-  const settingsPath = join(home, ".fx", "settings.json");
+  mkdirSync(join(home, ".chassis"));
+  const settingsPath = join(home, ".chassis", "settings.json");
   const settings = JSON.stringify({
     provider: "gateway",
     models: { gateway: FAKE_GATEWAY_MODEL },
-    credential_source: "fx_login",
+    credential_source: "chassis_login",
   });
   writeFileSync(settingsPath, settings);
   gateway = startFakeGateway([fakeGatewayFinalText("SELECTED_KEY_RECOVERED")]);
@@ -2982,10 +2982,10 @@ tmuxTest("/status preserves a missing selected login through explicit key recove
   await session.sendText("/status");
   await session.waitForText("auth_help=", TIMEOUT);
   const missing = await session.captureFullScrollback();
-  expect(missing).toContain("auth_help=fx login is selected but unavailable.");
+  expect(missing).toContain("auth_help=chassis login is selected but unavailable.");
   expect(missing).toContain("Run /login to reconnect");
   expect(missing).not.toContain("or set AI_GATEWAY_API_KEY");
-  expect(await session.captureFullScrollbackEscapes()).toContain("fx login is selected but unavailable.");
+  expect(await session.captureFullScrollbackEscapes()).toContain("chassis login is selected but unavailable.");
   expect(gateway.requests).toHaveLength(0);
   expect(readFileSync(settingsPath, "utf8")).toBe(settings);
 
@@ -3012,24 +3012,24 @@ tmuxTest("/status preserves a missing selected login through explicit key recove
 
 for (const provider of ["codex", "grok"] as const) {
   tmuxTest(`/status retains ${provider} storage failure after unrelated logout`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-status-logout-storage-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-status-logout-storage-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     if (provider === "codex") writeSeededChatGptLogin(home);
     else writeSeededGrokLogin(home, "unreadable-grok-token");
-    const credentialPath = join(home, ".fx", provider === "codex" ? "chatgpt-auth.json" : "grok-auth.json");
+    const credentialPath = join(home, ".chassis", provider === "codex" ? "chatgpt-auth.json" : "grok-auth.json");
     linkSync(credentialPath, join(home, "credential.alias"));
-    const settingsPath = join(home, ".fx", "settings.json");
+    const settingsPath = join(home, ".chassis", "settings.json");
     const settings = JSON.stringify({ provider, models: { [provider]: "test-model" } });
     writeFileSync(settingsPath, settings);
     gateway = startFakeGateway([]);
     session = await startFx(home, stderrPath, gateway, undefined, undefined, {
       AI_GATEWAY_API_KEY: undefined,
-      FX_MODEL: undefined,
+      CHASSIS_MODEL: undefined,
     });
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/logout vercel");
-    await session.waitForText("No fx login session found.", TIMEOUT);
+    await session.waitForText("No chassis login session found.", TIMEOUT);
     await session.sendText("/status");
     await session.waitForText("auth_help=", TIMEOUT);
     expect(await session.captureFullScrollback()).toContain("auth_help=Saved credential storage is unavailable");
@@ -3047,20 +3047,20 @@ async function startFxWithoutAuth(
   cwd?: string,
 ): Promise<TmuxSession> {
   return TmuxSession.create({
-    cmd: FX_BIN,
+    cmd: CHASSIS_BIN,
     cwd,
     env: {
       HOME: testHome,
       AI_GATEWAY_API_KEY: undefined,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_OAUTH_CLIENT_ID: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_GATEWAY_BASE_URL: fakeGateway.baseUrl,
-      FX_GATEWAY_CHAT_URL: fakeGateway.chatUrl,
-      FX_E2E_GATEWAY_MODELS_URL: `${fakeGateway.baseUrl}/coding-agent/v1/models`,
-      FX_MODEL: FAKE_GATEWAY_MODEL,
-      FX_AUTO_UPGRADE: "0",
+      CHASSIS_OAUTH_CLIENT_ID: undefined,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_GATEWAY_BASE_URL: fakeGateway.baseUrl,
+      CHASSIS_GATEWAY_CHAT_URL: fakeGateway.chatUrl,
+      CHASSIS_E2E_GATEWAY_MODELS_URL: `${fakeGateway.baseUrl}/coding-agent/v1/models`,
+      CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+      CHASSIS_AUTO_UPGRADE: "0",
     },
     stderrPath: testStderrPath,
     width: 100,
@@ -3129,7 +3129,7 @@ async function openProviderPicker(pickerSession: TmuxSession): Promise<void> {
 }
 
 // The inline picker replaced the hub's Credential source screen. Selecting the
-// fx login now goes through the oauth method; with no teams to refine it, the
+// chassis login now goes through the oauth method; with no teams to refine it, the
 // choice commits the credential directly.
 async function selectFxLoginCredential(pickerSession: TmuxSession): Promise<void> {
   await openProviderPicker(pickerSession);
@@ -3140,10 +3140,10 @@ async function selectFxLoginCredential(pickerSession: TmuxSession): Promise<void
   );
   await pickerSession.sendKeys("Enter");
   const outcome = await pickerSession.waitForPane(
-    (pane) => pane.includes("Switched credential to fx login") || pane.includes("vercel-labs"),
+    (pane) => pane.includes("Switched credential to chassis login") || pane.includes("vercel-labs"),
     TIMEOUT,
   );
-  if (!outcome.includes("Switched credential to fx login")) {
+  if (!outcome.includes("Switched credential to chassis login")) {
     await pickerSession.sendKeys("Enter");
     await pickerSession.waitForText("Changed Vercel team", TIMEOUT);
   }
@@ -3169,7 +3169,7 @@ async function selectEnvKeyCredential(pickerSession: TmuxSession): Promise<void>
 }
 
 function savedCredentialSource(testHome: string): string | undefined {
-  const settingsPath = join(testHome, ".fx", "settings.json");
+  const settingsPath = join(testHome, ".chassis", "settings.json");
   if (!existsSync(settingsPath)) return undefined;
   return (JSON.parse(readFileSync(settingsPath, "utf8")) as { credential_source?: string })
     .credential_source;
@@ -3178,13 +3178,13 @@ function savedCredentialSource(testHome: string): string | undefined {
 profileStoredKeyTmuxTest(
   "stored-key setup persists ahead of the environment",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-stored-key-preference-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-stored-key-preference-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([fakeGatewayFinalText(STORED_RESPONSE)]);
 
     session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-      FX_DISABLE_KEYCHAIN: undefined,
+      CHASSIS_DISABLE_KEYCHAIN: undefined,
     });
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/status");
@@ -3200,7 +3200,7 @@ profileStoredKeyTmuxTest(
     await session.waitForText("Saved the API key to profile file and made it active", TIMEOUT);
     await session.sendText("/provider vercel api-key");
     const keyColumn = await session.waitForPane(
-      (pane) => pane.includes("saved · saved by fx · current"),
+      (pane) => pane.includes("saved · saved by chassis · current"),
       TIMEOUT,
     );
     expect(keyColumn).toContain("env · AI_GATEWAY_API_KEY");
@@ -3210,13 +3210,13 @@ profileStoredKeyTmuxTest(
     await session.waitForText("auth=stored API key (profile file)", TIMEOUT);
     expect(savedCredentialSource(home)).toBe("stored_key");
 
-    const keyPath = join(home, ".fx", "api-key");
+    const keyPath = join(home, ".chassis", "api-key");
     expect(readFileSync(keyPath, "utf8")).toBe(STORED_TOKEN);
     expect(statSync(keyPath).mode & 0o777).toBe(0o600);
 
     await session.kill();
     session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-      FX_DISABLE_KEYCHAIN: undefined,
+      CHASSIS_DISABLE_KEYCHAIN: undefined,
     });
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/status");
@@ -3235,7 +3235,7 @@ profileStoredKeyTmuxTest(
 tmuxTest(
   "direct login persists ahead of the environment until the env key is selected",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-direct-login-preference-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-direct-login-preference-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([
@@ -3272,8 +3272,8 @@ tmuxTest(
     await session.sendKeys("Enter");
     await session.waitForText("Changed Vercel team to Vercel Labs", TIMEOUT);
     await session.sendText("/status");
-    await session.waitForText("auth=fx login", TIMEOUT);
-    expect(savedCredentialSource(home)).toBe("fx_login");
+    await session.waitForText("auth=chassis login", TIMEOUT);
+    expect(savedCredentialSource(home)).toBe("chassis_login");
     await session.sendText("use the direct login credential");
     await session.waitForText(DIRECT_LOGIN_RESPONSE, TIMEOUT);
     expect(gateway.requests[0].headers.get("authorization")).toBe(
@@ -3284,7 +3284,7 @@ tmuxTest(
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl);
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/status");
-    await session.waitForText("auth=fx login", TIMEOUT);
+    await session.waitForText("auth=chassis login", TIMEOUT);
     await session.sendText("use the remembered direct login credential");
     await session.waitForText(RESTART_RESPONSE, TIMEOUT);
     expect(gateway.requests[1].headers.get("authorization")).toBe(
@@ -3311,9 +3311,9 @@ tmuxTest(
 );
 
 tmuxTest(
-  "Change team activates and persists fx login ahead of the environment",
+  "Change team activates and persists chassis login ahead of the environment",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-team-preference-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-team-preference-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([fakeGatewayFinalText(LOGIN_RESPONSE)]);
@@ -3344,10 +3344,10 @@ tmuxTest(
     await session.sendKeys("Enter");
     await session.waitForText("Changed Vercel team to Vercel Labs", TIMEOUT);
     await session.sendText("/status");
-    await session.waitForText("auth=fx login", TIMEOUT);
-    expect(savedCredentialSource(home)).toBe("fx_login");
+    await session.waitForText("auth=chassis login", TIMEOUT);
+    expect(savedCredentialSource(home)).toBe("chassis_login");
 
-    const savedAuth = JSON.parse(readFileSync(join(home, ".fx", "auth.json"), "utf8")) as {
+    const savedAuth = JSON.parse(readFileSync(join(home, ".chassis", "auth.json"), "utf8")) as {
       team_id?: string;
       team_slug?: string;
     };
@@ -3358,7 +3358,7 @@ tmuxTest(
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl);
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/status");
-    await session.waitForText("auth=fx login", TIMEOUT);
+    await session.waitForText("auth=chassis login", TIMEOUT);
     await session.sendText("use the selected team after restart");
     await session.waitForText(LOGIN_RESPONSE, TIMEOUT);
     expect(gateway.requests[0].headers.get("authorization")).toBe(`Bearer ${LOGIN_TOKEN}`);
@@ -3369,12 +3369,12 @@ tmuxTest(
 );
 
 tmuxTest(
-  "API key and fx login coexist through selection, restart, login, and logout",
+  "API key and chassis login coexist through selection, restart, login, and logout",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-lifecycle-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-lifecycle-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
-    const authPath = join(home, ".fx", "auth.json");
+    const authPath = join(home, ".chassis", "auth.json");
     gateway = startFakeGateway([
       fakeGatewayFinalText(ENV_RESPONSE),
       fakeGatewayFinalText(LOGIN_RESPONSE),
@@ -3407,7 +3407,7 @@ tmuxTest(
 
     await selectFxLoginCredential(session);
     await session.sendText("/status");
-    await session.waitForText("auth=fx login", TIMEOUT);
+    await session.waitForText("auth=chassis login", TIMEOUT);
     const selectedAuth = JSON.parse(readFileSync(authPath, "utf8")) as {
       team_id?: string;
       team_slug?: string;
@@ -3426,9 +3426,9 @@ tmuxTest(
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl);
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/status");
-    // The switch above is remembered, so the restart keeps fx login rather than
+    // The switch above is remembered, so the restart keeps chassis login rather than
     // letting AI_GATEWAY_API_KEY reclaim it through precedence.
-    await session.waitForText("auth=fx login", TIMEOUT);
+    await session.waitForText("auth=chassis login", TIMEOUT);
     expect(JSON.parse(readFileSync(authPath, "utf8")).team_slug).toBe("vercel-labs");
     await session.sendText("use the remembered credential after restart");
     await session.waitForText(RESTART_RESPONSE, TIMEOUT);
@@ -3438,7 +3438,7 @@ tmuxTest(
     // Acquiring a fresh login needs a signed-out state first; the remembered
     // seeded login would otherwise resolve straight into the team column.
     await session.sendText("/logout");
-    await session.waitForText("Signed out of fx.", TIMEOUT);
+    await session.waitForText("Signed out of chassis.", TIMEOUT);
     const oauthBase = oauth.requests.length;
     await session.sendText("/login");
     await session.waitForPane(
@@ -3484,14 +3484,14 @@ tmuxTest(
     ).toHaveLength(1);
 
     await session.sendText("/status");
-    await session.waitForText("auth=fx login", TIMEOUT);
+    await session.waitForText("auth=chassis login", TIMEOUT);
     await session.sendText("direct login prompt");
     await session.waitForText(DIRECT_LOGIN_RESPONSE, TIMEOUT);
     expect(gateway.requests).toHaveLength(4);
     expect(gateway.requests[3].headers.get("authorization")).toBe(`Bearer ${ACQUIRED_LOGIN_TOKEN}`);
 
     await session.sendText("/logout");
-    const loggedOut = await session.waitForText("Signed out of fx.", TIMEOUT);
+    const loggedOut = await session.waitForText("Signed out of chassis.", TIMEOUT);
     expect(loggedOut).not.toContain("remote session could not be revoked");
     expect(existsSync(authPath)).toBe(false);
     expect(
@@ -3531,7 +3531,7 @@ tmuxTest(
 tmuxTest(
   "searched Vercel login team stays open and loads private models",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-team-models-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-team-models-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     writeFileSync(stderrPath, "");
@@ -3570,8 +3570,8 @@ tmuxTest(
       tracePath,
       {
         AI_GATEWAY_API_KEY: undefined,
-        FX_E2E_GATEWAY_MODELS_URL: undefined,
-        FX_TRACE_SCOPES: "auth,prompt,catalog",
+        CHASSIS_E2E_GATEWAY_MODELS_URL: undefined,
+        CHASSIS_TRACE_SCOPES: "auth,prompt,catalog",
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -3650,7 +3650,7 @@ tmuxTest(
       line.includes("[catalog] event=model_catalog_load ")
     );
     expect(catalogEvents.at(-1)).toContain(
-      "requested_access=authenticated credential_source=fx_login effective_access=authenticated",
+      "requested_access=authenticated credential_source=chassis_login effective_access=authenticated",
     );
     for (const secret of [ACQUIRED_LOGIN_TOKEN, "team_123", "example-internal-team"]) {
       expect(trace).not.toContain(secret);
@@ -3663,7 +3663,7 @@ tmuxTest(
 tmuxTest(
   "model catalog warmup follows auth source changes exactly once",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-catalog-lifecycle-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-catalog-lifecycle-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -3683,7 +3683,7 @@ tmuxTest(
     expect(gateway.modelRequests[1].headers.get("x-vercel-ai-gateway-team")).toBeNull();
 
     await session.sendText("/logout");
-    await session.waitForText("Signed out of fx.", TIMEOUT);
+    await session.waitForText("Signed out of chassis.", TIMEOUT);
     await waitForModelRequestCount(gateway, 3);
     expect(gateway.modelRequests).toHaveLength(3);
     expect(gateway.modelRequests[2].headers.get("authorization")).toBe(`Bearer ${ENV_TOKEN}`);
@@ -3693,11 +3693,11 @@ tmuxTest(
 );
 
 test(
-  "fx login falls back once when a custom OAuth client is invalid",
+  "chassis login falls back once when a custom OAuth client is invalid",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-login-client-fallback-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-login-client-fallback-"));
     writeSeededFxLogin(home);
-    const authPath = join(home, ".fx", "auth.json");
+    const authPath = join(home, ".chassis", "auth.json");
     gateway = startFakeGateway([]);
     oauth = startFakeOAuth(
       ACQUIRED_LOGIN_TOKEN,
@@ -3715,14 +3715,14 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: ENV_TOKEN,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_SKIP_ONBOARDING: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_NO_OPEN_BROWSER: "1",
-        FX_OAUTH_CLIENT_ID: "test-client",
-        FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_NO_OPEN_BROWSER: "1",
+        CHASSIS_OAUTH_CLIENT_ID: "test-client",
+        CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
       },
       timeoutMs: TIMEOUT,
     });
@@ -3761,7 +3761,7 @@ test(
     expect(persisted.team_id).toBe("team_123");
     expect(persisted.team_slug).toBe("vercel-labs");
     expect(statSync(authPath).mode & 0o777).toBe(0o600);
-    expect(savedCredentialSource(home)).toBe("fx_login");
+    expect(savedCredentialSource(home)).toBe("chassis_login");
     expect(gateway.modelRequests).toHaveLength(1);
     expect(gateway.modelRequests[0]!.headers.get("authorization")).toBe(
       `Bearer ${ACQUIRED_LOGIN_TOKEN}`,
@@ -3776,9 +3776,9 @@ test(
 );
 
 test(
-  "fx teams validates Gateway before committing and persists fx login",
+  "chassis teams validates Gateway before committing and persists chassis login",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-cli-teams-validation-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-cli-teams-validation-"));
     gateway = startFakeGateway([]);
     oauth = startFakeOAuth(
       ACQUIRED_LOGIN_TOKEN,
@@ -3794,21 +3794,21 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: ENV_TOKEN,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_SKIP_ONBOARDING: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
       },
       timeoutMs: TIMEOUT,
     });
 
     expect(result.code, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Selected Vercel team: Vercel Labs (vercel-labs).");
-    expect(savedCredentialSource(home)).toBe("fx_login");
+    expect(savedCredentialSource(home)).toBe("chassis_login");
     const persisted = JSON.parse(
-      readFileSync(join(home, ".fx", "auth.json"), "utf8"),
+      readFileSync(join(home, ".chassis", "auth.json"), "utf8"),
     ) as {
       team_id?: string;
       team_slug?: string;
@@ -3825,9 +3825,9 @@ test(
 );
 
 test(
-  "fx teams preserves the previous team when Gateway rejects the candidate",
+  "chassis teams preserves the previous team when Gateway rejects the candidate",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-cli-teams-rejected-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-cli-teams-rejected-"));
     gateway = startFakeGateway([], {
       models: () => new Response("rejected", { status: 401 }),
     });
@@ -3845,12 +3845,12 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: ENV_TOKEN,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_SKIP_ONBOARDING: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
       },
       timeoutMs: TIMEOUT,
     });
@@ -3860,7 +3860,7 @@ test(
     expect(result.stderr).toContain("selected team could not access AI Gateway");
     expect(savedCredentialSource(home)).toBeUndefined();
     const persisted = JSON.parse(
-      readFileSync(join(home, ".fx", "auth.json"), "utf8"),
+      readFileSync(join(home, ".chassis", "auth.json"), "utf8"),
     ) as {
       team_id?: string;
     };
@@ -3869,13 +3869,13 @@ test(
   60_000,
 );
 
-test("fx logout clears a remembered fx login source", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-cli-logout-preference-"));
+test("chassis logout clears a remembered chassis login source", async () => {
+  home = mkdtempSync(join(tmpdir(), "chassis-cli-logout-preference-"));
   oauth = startFakeOAuth(ACQUIRED_LOGIN_TOKEN);
   writeSeededFxLogin(home, Date.now() + 60 * 60 * 1000, oauth.issuerUrl, "team_123");
   writeFileSync(
-    join(home, ".fx", "settings.json"),
-    JSON.stringify({ credential_source: "fx_login" }) + "\n",
+    join(home, ".chassis", "settings.json"),
+    JSON.stringify({ credential_source: "chassis_login" }) + "\n",
     { mode: 0o600 },
   );
 
@@ -3884,26 +3884,26 @@ test("fx logout clears a remembered fx login source", async () => {
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
     },
     timeoutMs: TIMEOUT,
   });
 
   expect(result.code, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
-  expect(result.stdout).toContain("Signed out of fx.");
+  expect(result.stdout).toContain("Signed out of chassis.");
   expect(savedCredentialSource(home)).toBeUndefined();
-  expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+  expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
 });
 
-test("fx models does not retry anonymously for an explicit credential", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-cli-models-explicit-auth-"));
+test("chassis models does not retry anonymously for an explicit credential", async () => {
+  home = mkdtempSync(join(tmpdir(), "chassis-cli-models-explicit-auth-"));
   writeSeededFxLogin(home, Date.now() + 60 * 60 * 1000, "https://vercel.com", "team_123");
   writeFileSync(
-    join(home, ".fx", "settings.json"),
-    JSON.stringify({ credential_source: "fx_login" }) + "\n",
+    join(home, ".chassis", "settings.json"),
+    JSON.stringify({ credential_source: "chassis_login" }) + "\n",
     { mode: 0o600 },
   );
   let calls = 0;
@@ -3920,11 +3920,11 @@ test("fx models does not retry anonymously for an explicit credential", async ()
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_MODEL: FAKE_GATEWAY_MODEL,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+      CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
     },
     timeoutMs: TIMEOUT,
   });
@@ -3936,11 +3936,11 @@ test("fx models does not retry anonymously for an explicit credential", async ()
 });
 
 test("status never substitutes an environment key for a missing explicit login", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-cli-status-strict-source-"));
-  mkdirSync(join(home, ".fx"), { recursive: true, mode: 0o700 });
+  home = mkdtempSync(join(tmpdir(), "chassis-cli-status-strict-source-"));
+  mkdirSync(join(home, ".chassis"), { recursive: true, mode: 0o700 });
   writeFileSync(
-    join(home, ".fx", "settings.json"),
-    JSON.stringify({ credential_source: "fx_login" }) + "\n",
+    join(home, ".chassis", "settings.json"),
+    JSON.stringify({ credential_source: "chassis_login" }) + "\n",
     { mode: 0o600 },
   );
 
@@ -3949,9 +3949,9 @@ test("status never substitutes an environment key for a missing explicit login",
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_AUTO_UPGRADE: "0",
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
     },
     timeoutMs: TIMEOUT,
   });
@@ -3965,19 +3965,19 @@ test("status never substitutes an environment key for a missing explicit login",
 test(
   "Codex CLI browser login fetches raw models and replays one 401 without Gateway leakage",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-codex-cli-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-codex-cli-login-"));
     gateway = startFakeGateway([]);
     chatgptOauth = startFakeChatGptOAuth({ unauthorizedResponses: 1 });
     const env = {
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_NO_OPEN_BROWSER: "1",
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_NO_OPEN_BROWSER: "1",
+      CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+      CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
       ...chatgptOauth.env,
     };
 
@@ -3987,10 +3987,10 @@ test(
     expect(login.stdout).not.toContain("Code:");
     expect(login.stderr).toBe("");
 
-    const authPath = join(home, ".fx", "chatgpt-auth.json");
+    const authPath = join(home, ".chassis", "chatgpt-auth.json");
     expect(existsSync(authPath)).toBe(true);
     expect(statSync(authPath).mode & 0o077).toBe(0);
-    const settingsPath = join(home, ".fx", "settings.json");
+    const settingsPath = join(home, ".chassis", "settings.json");
     const selected = JSON.parse(readFileSync(settingsPath, "utf8"));
     expect(selected.provider).toBe("codex");
     expect(selected.models.codex).toBe("gpt-5.6-sol");
@@ -4063,7 +4063,7 @@ test(
 test(
   "Grok CLI browser login fetches subscription models and replays one account-stable 401",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-cli-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-cli-login-"));
     gateway = startFakeGateway([]);
     const grok = startFakeGrokOAuth({ unauthorizedResponses: 1 });
     try {
@@ -4071,12 +4071,12 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: ENV_TOKEN,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_SKIP_ONBOARDING: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_NO_OPEN_BROWSER: "1",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_NO_OPEN_BROWSER: "1",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
         ...grok.env,
       };
 
@@ -4085,10 +4085,10 @@ test(
       expect(login.stdout).toContain("Signed in with Grok.");
       expect(login.stderr).toBe("");
 
-      const authPath = join(home, ".fx", "grok-auth.json");
+      const authPath = join(home, ".chassis", "grok-auth.json");
       expect(existsSync(authPath)).toBe(true);
       expect(statSync(authPath).mode & 0o077).toBe(0);
-      const settings = JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8"));
+      const settings = JSON.parse(readFileSync(join(home, ".chassis", "settings.json"), "utf8"));
       expect(settings.provider).toBe("grok");
       expect(settings.models.grok).toBe("grok-4.20");
 
@@ -4125,7 +4125,7 @@ test(
       for (const request of responses) {
         expect(request.tokenAuth).toBe("xai-grok-cli");
         expect(request.authenticateResponse).toBe("authenticate-response");
-        expect(request.clientIdentifier).toBe("fx");
+        expect(request.clientIdentifier).toBe("chassis");
         expect(request.clientVersion).toBe("1.0.6");
         expect(request.modelOverride).toBe("grok-4.20");
         expect(request.grokUserId).toBe("acct_grok_e2e");
@@ -4157,7 +4157,7 @@ test(
 test(
   "Grok CLI accepts an authorization code copied from the browser",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-cli-code-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-cli-code-"));
     gateway = startFakeGateway([]);
     const grok = startFakeGrokOAuth();
     try {
@@ -4165,12 +4165,12 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: ENV_TOKEN,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_SKIP_ONBOARDING: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_NO_OPEN_BROWSER: "1",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_NO_OPEN_BROWSER: "1",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
         ...grok.env,
       }, "grok-code");
 
@@ -4179,7 +4179,7 @@ test(
       expect(result.stdout).not.toContain("grok-code");
       expect(result.stderr).toBe("");
       expect(grok.tokenCalls()).toBe(1);
-      expect(existsSync(join(home, ".fx", "grok-auth.json"))).toBe(true);
+      expect(existsSync(join(home, ".chassis", "grok-auth.json"))).toBe(true);
     } finally {
       grok.stop();
     }
@@ -4188,22 +4188,22 @@ test(
 );
 
 test("Grok logout removes local credentials when remote revocation fails", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-grok-logout-revoke-failure-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-grok-logout-revoke-failure-"));
   const grok = startFakeGrokOAuth({ revokeStatus: 503 });
   try {
     writeSeededGrokLogin(home, grok.initialAccessToken);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
       { mode: 0o600 },
     );
-    const authPath = join(home, ".fx", "grok-auth.json");
+    const authPath = join(home, ".chassis", "grok-auth.json");
     const result = await runFx(["logout", "grok"], {
       env: {
         HOME: home,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_E2E_GROK_REVOKE_URL: grok.env.FX_E2E_GROK_REVOKE_URL,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_E2E_GROK_REVOKE_URL: grok.env.CHASSIS_E2E_GROK_REVOKE_URL,
       },
       timeoutMs: TIMEOUT,
     });
@@ -4211,24 +4211,24 @@ test("Grok logout removes local credentials when remote revocation fails", async
     expect(result.stdout).toContain("Signed out of Grok.");
     expect(result.stderr).toContain("remote revocation could not be confirmed");
     expect(existsSync(authPath)).toBe(false);
-    expect(JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8")).provider)
+    expect(JSON.parse(readFileSync(join(home, ".chassis", "settings.json"), "utf8")).provider)
       .toBe("grok");
     const ask = await runFx(["ask", "--json", "--no-save", "Still Grok?"], {
-      env: { HOME: home, FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0" },
+      env: { HOME: home, CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0" },
       timeoutMs: TIMEOUT,
     });
     expect(ask.code).toBe(1);
-    expect(ask.stderr).toContain("fx login grok");
+    expect(ask.stderr).toContain("chassis login grok");
   } finally {
     grok.stop();
   }
 });
 
 test("Grok logout removes malformed and unsafe local credentials", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-grok-logout-unreadable-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-grok-logout-unreadable-"));
   const grok = startFakeGrokOAuth();
   try {
-    const authPath = join(home, ".fx", "grok-auth.json");
+    const authPath = join(home, ".chassis", "grok-auth.json");
     for (const failure of ["malformed", "unsafe"]) {
       writeSeededGrokLogin(home, grok.initialAccessToken);
       if (failure === "malformed") writeFileSync(authPath, "{invalid-json");
@@ -4237,9 +4237,9 @@ test("Grok logout removes malformed and unsafe local credentials", async () => {
       const result = await runFx(["logout", "grok"], {
         env: {
           HOME: home,
-          FX_DISABLE_KEYCHAIN: "1",
-          FX_AUTO_UPGRADE: "0",
-          FX_E2E_GROK_REVOKE_URL: grok.env.FX_E2E_GROK_REVOKE_URL,
+          CHASSIS_DISABLE_KEYCHAIN: "1",
+          CHASSIS_AUTO_UPGRADE: "0",
+          CHASSIS_E2E_GROK_REVOKE_URL: grok.env.CHASSIS_E2E_GROK_REVOKE_URL,
         },
         timeoutMs: TIMEOUT,
       });
@@ -4256,13 +4256,13 @@ test("Grok logout removes malformed and unsafe local credentials", async () => {
 });
 
 test("Grok 401 replay refuses a different account before the second provider send", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-grok-account-mismatch-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-grok-account-mismatch-"));
   gateway = startFakeGateway([]);
   const grok = startFakeGrokOAuth({ unauthorizedResponses: 1, userinfoSub: "acct_other" });
   try {
     writeSeededGrokLogin(home, grok.initialAccessToken);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
       { mode: 0o600 },
     );
@@ -4270,10 +4270,10 @@ test("Grok 401 replay refuses a different account before the second provider sen
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+      CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
       ...grok.env,
     };
     const ask = await runFx(["ask", "--json", "--auto", "--no-save", "Answer."], {
@@ -4282,7 +4282,7 @@ test("Grok 401 replay refuses a different account before the second provider sen
     });
     expect(ask.code).toBe(1);
     expect(grok.requests.filter((request) => request.path === "/v1/responses")).toHaveLength(1);
-    expect(existsSync(join(home, ".fx", "grok-auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "grok-auth.json"))).toBe(false);
     for (const request of [...gateway.requests, ...gateway.modelRequests]) {
       expect(request.headers.get("authorization")).not.toContain("grok-");
     }
@@ -4292,13 +4292,13 @@ test("Grok 401 replay refuses a different account before the second provider sen
 });
 
 test("Grok CLI sends verified images directly without advertising the vision fallback", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-grok-native-image-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-grok-native-image-"));
   gateway = startFakeGateway([]);
   const grok = startFakeGrokOAuth();
   try {
     writeSeededGrokLogin(home, grok.initialAccessToken);
     writeFileSync(
-      join(home, ".fx", "settings.json"),
+      join(home, ".chassis", "settings.json"),
       JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
       { mode: 0o600 },
     );
@@ -4317,10 +4317,10 @@ test("Grok CLI sends verified images directly without advertising the vision fal
         HOME: home,
         AI_GATEWAY_API_KEY: ENV_TOKEN,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
         ...grok.env,
       },
       timeoutMs: TIMEOUT,
@@ -4339,13 +4339,13 @@ test("Grok CLI sends verified images directly without advertising the vision fal
 tmuxTest(
   "interactive Grok login activates Grok and setup round-trips without reauthentication",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-tui-switch-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-tui-switch-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([fakeGatewayFinalText("GATEWAY_AFTER_GROK")]);
     const grok = startFakeGrokOAuth();
     try {
       session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-        FX_MODEL: undefined,
+        CHASSIS_MODEL: undefined,
         ...grok.env,
       });
       await session.waitForText("auto ·", TIMEOUT);
@@ -4393,7 +4393,7 @@ tmuxTest(
       }
       await session.sendKeys("Escape");
       await session.waitForComposer(TIMEOUT);
-      const settingsPath = join(home, ".fx", "settings.json");
+      const settingsPath = join(home, ".chassis", "settings.json");
       const persistenceDeadline = Date.now() + TIMEOUT;
       let saved: { provider: string; models: { grok: string } } | undefined;
       while (Date.now() < persistenceDeadline) {
@@ -4422,13 +4422,13 @@ tmuxTest(
 tmuxTest(
   "interactive Grok login auto-expands for a bracketed-paste authorization code",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-tui-code-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-tui-code-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([]);
     const grok = startFakeGrokOAuth();
     try {
       session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-        FX_MODEL: undefined,
+        CHASSIS_MODEL: undefined,
         ...grok.env,
       });
       await session.waitForComposer(TIMEOUT);
@@ -4471,7 +4471,7 @@ tmuxTest(
       const scrollback = await session.captureFullScrollback();
       expect(scrollback).not.toContain("grok-code");
       expect(grok.tokenCalls()).toBe(1);
-      expect(existsSync(join(home, ".fx", "grok-auth.json"))).toBe(true);
+      expect(existsSync(join(home, ".chassis", "grok-auth.json"))).toBe(true);
       expect(readFileSync(stderrPath, "utf8")).toBe("");
     } finally {
       grok.stop();
@@ -4483,19 +4483,19 @@ tmuxTest(
 tmuxTest(
   "Grok model selection uses provider-advertised context and effort metadata",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-effort-selection-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-effort-selection-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([]);
     const grok = startFakeGrokOAuth();
     try {
       writeSeededGrokLogin(home, grok.initialAccessToken);
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "grok", grok_model: "grok-4.20", statusLine: { context: true } }) + "\n",
         { mode: 0o600 },
       );
       session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-        FX_MODEL: undefined,
+        CHASSIS_MODEL: undefined,
         ...grok.env,
       });
       await session.waitForComposer(TIMEOUT);
@@ -4518,7 +4518,7 @@ tmuxTest(
       expect(body.model).toBe("grok-4.6");
       expect(body.reasoning?.effort).toBe("xhigh");
       expect(await session.capturePane()).toContain("/500k");
-      expect(readFileSync(join(home, ".fx", "settings.json"), "utf8")).toContain('"effort":"xhigh"');
+      expect(readFileSync(join(home, ".chassis", "settings.json"), "utf8")).toContain('"effort":"xhigh"');
       expect(readFileSync(stderrPath, "utf8")).toBe("");
     } finally {
       grok.stop();
@@ -4530,22 +4530,22 @@ tmuxTest(
 tmuxTest(
   "Grok resource exhaustion stays on-provider and leaves later input usable",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-resource-recovery-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-resource-recovery-"));
     stderrPath = join(home, "stderr.log");
     gateway = startFakeGateway([]);
     const grok = startFakeGrokResourceRecovery();
     try {
       writeSeededGrokLogin(home, grok.accessToken, "acct_resource_limit");
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
         { mode: 0o600 },
       );
       session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-        FX_MODEL: undefined,
-        FX_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
-        FX_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
+        CHASSIS_MODEL: undefined,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
+        CHASSIS_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
       });
       await session.waitForComposer(TIMEOUT);
       const failureVisible = session.waitForText("request failed: XaiGrokSseEventTooLarge", TIMEOUT);
@@ -4572,7 +4572,7 @@ for (const scenario of ["replace", "conflict", "invalid-index"] as const) {
   test("direct Responses final records " + scenario, async () => {
     const conflict = scenario !== "replace";
     for (const provider of ["codex", "grok"] as const) {
-      const profile = mkdtempSync(join(tmpdir(), "fx-" + provider + "-final-record-"));
+      const profile = mkdtempSync(join(tmpdir(), "chassis-" + provider + "-final-record-"));
       const testGateway = startFakeGateway([]);
       const completed = { type: "response.completed", response: { status: "completed" } };
       const item = (id: string, path: string) => ({
@@ -4611,17 +4611,17 @@ for (const scenario of ["replace", "conflict", "invalid-index"] as const) {
       try {
         if (provider === "codex") writeSeededChatGptLogin(profile, direct.accessToken);
         else writeSeededGrokLogin(profile, direct.accessToken);
-        writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
+        writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
         const env = {
-          HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: undefined,
-          FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-          FX_GATEWAY_BASE_URL: testGateway.baseUrl,
-          FX_E2E_GATEWAY_MODELS_URL: testGateway.baseUrl + "/coding-agent/v1/models",
-          FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl,
-          FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-          FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl,
-          FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-          FX_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+          HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: undefined,
+          CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+          CHASSIS_GATEWAY_BASE_URL: testGateway.baseUrl,
+          CHASSIS_E2E_GATEWAY_MODELS_URL: testGateway.baseUrl + "/coding-agent/v1/models",
+          CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl,
+          CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+          CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl,
+          CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+          CHASSIS_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
         };
         const result = await runFx(["ask", "--json", "--auto", "Create the requested files containing saved."], { cwd: profile, env, timeoutMs: TIMEOUT });
         expect(result.code, provider + ": " + result.stdout + "\n" + result.stderr).toBe(conflict ? 1 : 0);
@@ -4668,7 +4668,7 @@ for (const scenario of ["replace", "conflict", "invalid-index"] as const) {
 
 test("native assistant messages keep their boundaries and phases through tools and resume", async () => {
   for (const provider of ["codex", "grok"] as const) {
-    const profile = mkdtempSync(join(tmpdir(), "fx-message-replay-"));
+    const profile = mkdtempSync(join(tmpdir(), "chassis-message-replay-"));
     const testGateway = startFakeGateway([]);
     const model = "fixture-model";
     const message = (id: string, phase: string, text: string) => ({ type: "message", id, role: "assistant", status: "completed", phase, content: [{ type: "output_text", text, annotations: [] }] });
@@ -4693,15 +4693,15 @@ test("native assistant messages keep their boundaries and phases through tools a
     try {
       if (provider === "codex") writeSeededChatGptLogin(profile, direct.accessToken);
       else writeSeededGrokLogin(profile, direct.accessToken);
-      writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
+      writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
       writeFileSync(join(profile, "notes.txt"), "42\n");
       const env = {
-        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: undefined,
-        FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-        FX_GATEWAY_BASE_URL: testGateway.baseUrl, FX_E2E_GATEWAY_MODELS_URL: testGateway.baseUrl + "/coding-agent/v1/models",
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+        CHASSIS_GATEWAY_BASE_URL: testGateway.baseUrl, CHASSIS_E2E_GATEWAY_MODELS_URL: testGateway.baseUrl + "/coding-agent/v1/models",
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
       };
       const first = await runFx(["ask", "--json", "--auto", "Read notes.txt and report the value."], { cwd: profile, env, timeoutMs: TIMEOUT });
       expect(first.code, first.stdout + first.stderr).toBe(0);
@@ -4738,7 +4738,7 @@ test("native assistant messages keep their boundaries and phases through tools a
 test("native reasoning snapshots survive tools and saved resume exactly once", async () => {
   for (const provider of ["codex", "grok"] as const) for (const shape of ["both", "terminal-only", "enriched", "conflict", "identity-conflict"] as const) {
     const conflict = shape === "conflict" || shape === "identity-conflict";
-    const profile = mkdtempSync(join(tmpdir(), "fx-reasoning-snapshot-"));
+    const profile = mkdtempSync(join(tmpdir(), "chassis-reasoning-snapshot-"));
     const testGateway = startFakeGateway([]);
     const model = "fixture-model";
     const signature = "REASONING_SNAPSHOT_CONTEXT";
@@ -4760,16 +4760,16 @@ test("native reasoning snapshots survive tools and saved resume exactly once", a
     try {
       if (provider === "codex") writeSeededChatGptLogin(profile, direct.accessToken);
       else writeSeededGrokLogin(profile, direct.accessToken);
-      writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
+      writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
       writeFileSync(join(profile, "notes.txt"), "SETTLED_READ_RESULT\n");
       const env = {
-        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: undefined,
-        FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-        FX_GATEWAY_BASE_URL: testGateway.baseUrl,
-        FX_E2E_GATEWAY_MODELS_URL: testGateway.baseUrl + "/coding-agent/v1/models",
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+        CHASSIS_GATEWAY_BASE_URL: testGateway.baseUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: testGateway.baseUrl + "/coding-agent/v1/models",
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
       };
       const first = await runFx(["ask", "--json", "--auto", "Read notes.txt and summarize it."], { cwd: profile, env, timeoutMs: TIMEOUT });
       expect(first.code, provider + "/" + shape + ": " + first.stdout + first.stderr).toBe(conflict ? 1 : 0);
@@ -4784,7 +4784,7 @@ test("native reasoning snapshots survive tools and saved resume exactly once", a
       expect(result.output).toBe("REASONING_SNAPSHOT_OK");
       expect(first.stderr).toMatch(/^(?:● Reading\x1b\[0m\n)?Reading notes\.txt\n$/);
       expect(direct.bodies).toHaveLength(2);
-      const saved = readFileSync(join(profile, ".fx", "sessions", result.session_id, "events.jsonl"), "utf8");
+      const saved = readFileSync(join(profile, ".chassis", "sessions", result.session_id, "events.jsonl"), "utf8");
       expect(saved).toContain(signature);
       const resumed = await runFx(["ask", "--json", "--auto", "--resume-id", result.session_id, "Continue without tools."], { cwd: profile, env, timeoutMs: TIMEOUT });
       expect(resumed.code, resumed.stdout + resumed.stderr).toBe(0);
@@ -4809,7 +4809,7 @@ test("native reasoning snapshots survive tools and saved resume exactly once", a
 test("native final snapshots preserve completed items and reject conflicting kinds", async () => {
   for (const provider of ["codex", "grok"] as const) for (const shape of ["null", "empty", "kind-at-item", "kind-at-terminal"] as const) {
     const conflict = shape.startsWith("kind-");
-    const profile = mkdtempSync(join(tmpdir(), "fx-output-consistency-"));
+    const profile = mkdtempSync(join(tmpdir(), "chassis-output-consistency-"));
     const gateway = startFakeGateway([]);
     const model = "fixture-model";
     const reasoning = { type: "reasoning", id: "rs_snapshot", summary: [], encrypted_content: "SNAPSHOT_REASONING" };
@@ -4834,16 +4834,16 @@ test("native final snapshots preserve completed items and reject conflicting kin
     try {
       if (provider === "codex") writeSeededChatGptLogin(profile, direct.accessToken);
       else writeSeededGrokLogin(profile, direct.accessToken);
-      writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
+      writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
       writeFileSync(join(profile, "notes.txt"), "SNAPSHOT_READ_RESULT\n");
       const tracePath = join(profile, "trace.log");
       const env = {
-        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: undefined,
-        FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0", FX_TRACE_LOG: tracePath, FX_TRACE_SCOPES: "agent,gateway,tool",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl, FX_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0", CHASSIS_TRACE_LOG: tracePath, CHASSIS_TRACE_SCOPES: "agent,gateway,tool",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl, CHASSIS_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
       };
       const first = await runFx(["ask", "--json", "--auto", "Read notes.txt and report the result."], { cwd: profile, env, timeoutMs: TIMEOUT });
       expect(first.code, provider + "/" + shape + ": " + first.stdout + first.stderr).toBe(conflict ? 1 : 0);
@@ -4894,7 +4894,7 @@ test("native final snapshots preserve completed items and reject conflicting kin
 
 test("native discarded prose keeps tool continuation and saved resume valid", async () => {
   for (const provider of ["codex", "grok"] as const) for (const mismatch of [false, true]) for (const multiple of [false, true]) {
-    const profile = mkdtempSync(join(tmpdir(), "fx-discarded-prose-"));
+    const profile = mkdtempSync(join(tmpdir(), "chassis-discarded-prose-"));
     const gateway = startFakeGateway([]);
     const model = "fixture-model";
     const prose = mismatch ? "我会先检查锁文件和依赖清单。" : "I will read the notes next.";
@@ -4919,16 +4919,16 @@ test("native discarded prose keeps tool continuation and saved resume valid", as
     try {
       if (provider === "codex") writeSeededChatGptLogin(profile, direct.accessToken);
       else writeSeededGrokLogin(profile, direct.accessToken);
-      writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
+      writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
       writeFileSync(join(profile, "notes.txt"), "FILTERED_READ_RESULT\n");
       const tracePath = join(profile, "trace.log");
       const env = {
-        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: undefined,
-        FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0", FX_TRACE_LOG: tracePath, FX_TRACE_SCOPES: "agent,gateway,tool",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl, FX_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0", CHASSIS_TRACE_LOG: tracePath, CHASSIS_TRACE_SCOPES: "agent,gateway,tool",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl, CHASSIS_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
       };
       const first = await runFx(["ask", "--json", "--auto", "Please read the notes.txt file and explain the result."], { cwd: profile, env, timeoutMs: TIMEOUT });
       expect(first.code, provider + "/" + mismatch + "/" + multiple + ": " + first.stdout + first.stderr).toBe(0);
@@ -4968,7 +4968,7 @@ test("native terminal outcomes preserve recovery and incomplete warnings", async
   for (const provider of ["gateway", "codex", "grok"] as const) for (const mode of ["transient", "partial", "tool", "rejected", "rejected-partial", "length", "length-with-status"]) {
     const native = provider !== "gateway";
     if (!native && mode !== "transient") continue;
-    const profile = mkdtempSync(join(tmpdir(), "fx-native-outcomes-"));
+    const profile = mkdtempSync(join(tmpdir(), "chassis-native-outcomes-"));
     const model = native ? "fixture-model" : FAKE_GATEWAY_MODEL;
     const limited = mode.startsWith("length");
     const rejected = mode.startsWith("rejected");
@@ -4997,16 +4997,16 @@ test("native terminal outcomes preserve recovery and incomplete warnings", async
     try {
       if (provider === "codex") writeSeededChatGptLogin(profile, direct!.accessToken);
       else if (provider === "grok") writeSeededGrokLogin(profile, direct!.accessToken);
-      mkdirSync(join(profile, ".fx"), { recursive: true });
-      writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [native ? provider + "_model" : "model"]: model }));
+      mkdirSync(join(profile, ".chassis"), { recursive: true });
+      writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [native ? provider + "_model" : "model"]: model }));
       const env = {
-        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: native ? undefined : model,
-        FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl, FX_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
-        FX_GATEWAY_CHAT_URL: gateway.chatUrl, FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct?.responsesUrl, FX_E2E_OPENAI_CODEX_MODELS_URL: direct?.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: direct?.responsesUrl, FX_E2E_XAI_GROK_MODELS_URL: direct?.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: direct && "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: native ? undefined : model,
+        CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl, CHASSIS_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
+        CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl, CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct?.responsesUrl, CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct?.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct?.responsesUrl, CHASSIS_E2E_XAI_GROK_MODELS_URL: direct?.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: direct && "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
       };
       const result = await runFx(["ask", "--json", "--auto", "Report the supplied answer without using tools."], { cwd: profile, env, timeoutMs: TIMEOUT });
       expect(result.signal).toBeNull();
@@ -5015,7 +5015,7 @@ test("native terminal outcomes preserve recovery and incomplete warnings", async
       const output = JSON.parse(result.stdout);
       expect(output.tool_calls).toEqual([]);
       if (native && !limited) {
-        const usage = JSON.parse(readFileSync(join(profile, ".fx", "sessions", output.session_id, "usage-v2.json"), "utf8"));
+        const usage = JSON.parse(readFileSync(join(profile, ".chassis", "sessions", output.session_id, "usage-v2.json"), "utf8"));
         expect(usage.snapshot.billing).toBe("incomplete");
       }
       if (rejected) {
@@ -5062,7 +5062,7 @@ test("native terminal outcomes preserve recovery and incomplete warnings", async
 test("provider SSE framing preserves saved and resumed answers", async () => {
   const prefix = "CONTROL_PREFIX\n", answer = "EXPECTED_FINAL";
   for (const provider of ["gateway", "codex", "grok"] as const) for (const mode of ["no-space", "multiline", "invalid"]) {
-    const profile = mkdtempSync(join(tmpdir(), "fx-sse-framing-"));
+    const profile = mkdtempSync(join(tmpdir(), "chassis-sse-framing-"));
     const native = provider !== "gateway";
     const model = native ? "fixture-model" : FAKE_GATEWAY_MODEL;
     const event = (text: string) => native
@@ -5095,16 +5095,16 @@ test("provider SSE framing preserves saved and resumed answers", async () => {
     try {
       if (provider === "codex") writeSeededChatGptLogin(profile, direct!.accessToken);
       else if (provider === "grok") writeSeededGrokLogin(profile, direct!.accessToken);
-      mkdirSync(join(profile, ".fx"), { recursive: true });
-      writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [native ? provider + "_model" : "model"]: model }));
+      mkdirSync(join(profile, ".chassis"), { recursive: true });
+      writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [native ? provider + "_model" : "model"]: model }));
       const env = {
-        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: native ? undefined : model,
-        FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl, FX_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
-        FX_GATEWAY_CHAT_URL: gateway.chatUrl, FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct?.responsesUrl, FX_E2E_OPENAI_CODEX_MODELS_URL: direct?.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: direct?.responsesUrl, FX_E2E_XAI_GROK_MODELS_URL: direct?.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: direct && "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: native ? undefined : model,
+        CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl, CHASSIS_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
+        CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl, CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct?.responsesUrl, CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct?.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct?.responsesUrl, CHASSIS_E2E_XAI_GROK_MODELS_URL: direct?.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: direct && "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
       };
       const first = await runFx(["ask", "--json", "--auto", "Report the supplied answer."], { cwd: profile, env, timeoutMs: TIMEOUT });
       const output = JSON.parse(first.stdout);
@@ -5140,7 +5140,7 @@ test("direct providers reconcile final text before saving or releasing tools", a
   const prefix = "COMMENTARY_ITEM\n", answer = "FINAL_ANSWER_ITEM";
   const display = prefix + "\n\n" + answer;
   for (const provider of ["codex", "grok"] as const) for (const mode of ["streamed", "final-only", "mixed", "terminal-only", "conflict"]) {
-    const profile = mkdtempSync(join(tmpdir(), "fx-response-text-"));
+    const profile = mkdtempSync(join(tmpdir(), "chassis-response-text-"));
     const model = "fixture-model";
     const gateway = startFakeGateway([]);
     const events: object[] = [], items: object[] = [];
@@ -5173,14 +5173,14 @@ test("direct providers reconcile final text before saving or releasing tools", a
     try {
       if (provider === "codex") writeSeededChatGptLogin(profile, direct.accessToken);
       else writeSeededGrokLogin(profile, direct.accessToken);
-      writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
+      writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
       const env = {
-        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: undefined,
-        FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl, FX_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl, CHASSIS_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl, CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
       };
       const first = await runFx(["ask", "--json", "--auto", "Report both response items."], { cwd: profile, env, timeoutMs: TIMEOUT });
       const output = JSON.parse(first.stdout);
@@ -5216,7 +5216,7 @@ test("direct providers reconcile final text before saving or releasing tools", a
 
 test("direct providers keep images with their users through tools and resume", async () => {
   for (const provider of ["codex", "grok"] as const) {
-    const profile = mkdtempSync(join(tmpdir(), "fx-native-image-history-"));
+    const profile = mkdtempSync(join(tmpdir(), "chassis-native-image-history-"));
     const model = "fixture-model";
     const testGateway = startFakeGateway([]);
     const terminal = { type: "response.completed", response: { status: "completed", usage: { input_tokens: 50_000, output_tokens: 10 } } };
@@ -5236,7 +5236,7 @@ test("direct providers keep images with their users through tools and resume", a
     try {
       if (provider === "codex") writeSeededChatGptLogin(profile, direct.accessToken);
       else writeSeededGrokLogin(profile, direct.accessToken);
-      writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
+      writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
       writeFileSync(join(profile, "fixture.txt"), "fixture text");
       const firstImage = readFileSync(join(REPO_ROOT, "tests/e2e/fixtures/favicon.png"));
       const secondImage = readFileSync(join(REPO_ROOT, "tests/e2e/fixtures/placeholder-logo.png"));
@@ -5245,16 +5245,16 @@ test("direct providers keep images with their users through tools and resume", a
       const firstUrl = "data:image/png;base64," + firstImage.toString("base64");
       const secondUrl = "data:image/png;base64," + secondImage.toString("base64");
       const env = {
-        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: undefined,
-        FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-        FX_GATEWAY_BASE_URL: testGateway.baseUrl,
-        FX_E2E_GATEWAY_MODELS_URL: testGateway.baseUrl + "/coding-agent/v1/models",
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl,
-        FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl,
-        FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
-        FX_TRACE_LOG: join(profile, "trace.log"), FX_TRACE_SCOPES: "context_compaction",
+        HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+        CHASSIS_GATEWAY_BASE_URL: testGateway.baseUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: testGateway.baseUrl + "/coding-agent/v1/models",
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl,
+        CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl,
+        CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+        CHASSIS_TRACE_LOG: join(profile, "trace.log"), CHASSIS_TRACE_SCOPES: "context_compaction",
       };
       const firstPrompt = "Read fixture.txt, then describe the attached image.";
       const secondPrompt = "Compare the earlier image with this new image.";
@@ -5294,7 +5294,7 @@ test("direct providers keep images with their users through tools and resume", a
       const history = JSON.parse(detail.stdout).history;
       expect(history).toHaveLength(3);
       expect(history.map((turn: { user: { images?: unknown[] } }) => turn.user.images?.length ?? 0)).toEqual([1, 1, 0]);
-      const imageDir = join(profile, ".fx", "sessions", sessionId, "images");
+      const imageDir = join(profile, ".chassis", "sessions", sessionId, "images");
       const snapshotName = readdirSync(imageDir).find(name => name.endsWith(".bin") && readFileSync(join(imageDir, name)).equals(firstImage));
       expect(snapshotName).toBeDefined();
       writeFileSync(join(imageDir, snapshotName!), secondImage);
@@ -5319,7 +5319,7 @@ test("provider context accounting is independent of image encoding size", async 
   for (const provider of ["gateway", "codex", "grok"] as const) {
     const estimates: number[] = [];
     for (const bytes of encodings) {
-      const profile = mkdtempSync(join(tmpdir(), "fx-image-context-"));
+      const profile = mkdtempSync(join(tmpdir(), "chassis-image-context-"));
       const model = provider === "gateway" ? "fixture/image" : "fixture-model";
       const gateway = startFakeGateway([fakeGatewayFinalText("IMAGE_CONTEXT_OK")], {
         models: [{ id: model, type: "language", tags: ["vision", "file-input", "tool-use"], context_window: 1_000_000 }],
@@ -5331,23 +5331,23 @@ test("provider context accounting is independent of image encoding size", async 
       const direct = provider === "codex" ? startFakeCodexToolLoop({ responses, model, inputModalities: ["text", "image"] })
         : provider === "grok" ? startFakeGrokToolLoop({ responses, model }) : null;
       try {
-        mkdirSync(join(profile, ".fx"), { recursive: true });
+        mkdirSync(join(profile, ".chassis"), { recursive: true });
         if (provider === "codex") writeSeededChatGptLogin(profile, direct!.accessToken);
         if (provider === "grok") writeSeededGrokLogin(profile, direct!.accessToken);
-        writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
+        writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [provider + "_model"]: model }), { mode: 0o600 });
         const path = join(profile, "image.png"), trace = join(profile, "trace.log");
         writeFileSync(path, bytes);
         const result = await runFx(["ask", "--json", "--auto", "--no-save", "--image", path, "Describe the attached image."], {
           cwd: profile, timeoutMs: TIMEOUT,
           env: {
             HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined,
-            FX_MODEL: provider === "gateway" ? model : undefined, FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl, FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-            FX_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
-            FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct?.responsesUrl, FX_E2E_OPENAI_CODEX_MODELS_URL: direct?.modelsUrl,
-            FX_E2E_XAI_GROK_RESPONSES_URL: direct?.responsesUrl, FX_E2E_XAI_GROK_MODELS_URL: direct?.modelsUrl,
-            FX_E2E_XAI_GROK_MODALITIES_URL: direct && "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
-            FX_TRACE_LOG: trace, FX_TRACE_SCOPES: "context_compaction",
+            CHASSIS_MODEL: provider === "gateway" ? model : undefined, CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl, CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: gateway.baseUrl + "/coding-agent/v1/models",
+            CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct?.responsesUrl, CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct?.modelsUrl,
+            CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct?.responsesUrl, CHASSIS_E2E_XAI_GROK_MODELS_URL: direct?.modelsUrl,
+            CHASSIS_E2E_XAI_GROK_MODALITIES_URL: direct && "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+            CHASSIS_TRACE_LOG: trace, CHASSIS_TRACE_SCOPES: "context_compaction",
           },
         });
         expect(result.code, provider + ": " + result.stdout + result.stderr).toBe(0);
@@ -5378,7 +5378,7 @@ test("provider context accounting is independent of image encoding size", async 
 test("direct provider tool identities obey the session boundary before execution", async () => {
   for (const provider of ["codex", "grok"] as const) {
     for (const bytes of [256, 257]) {
-      const profile = mkdtempSync(join(tmpdir(), `fx-${provider}-identity-`));
+      const profile = mkdtempSync(join(tmpdir(), `chassis-${provider}-identity-`));
       const testGateway = startFakeGateway([]);
       const options = { toolCallId: "i".repeat(bytes), toolName: "write_file", toolArguments: { path: "result.txt", content: "saved" } };
       const direct = provider === "codex" ? startFakeCodexToolLoop(options) : startFakeGrokToolLoop(options);
@@ -5387,17 +5387,17 @@ test("direct provider tool identities obey the session boundary before execution
         else writeSeededGrokLogin(profile, direct.accessToken);
         const catalog = await (await fetch(direct.modelsUrl)).json();
         const model = provider === "codex" ? catalog.models[0].slug : catalog.data[0].id;
-        writeFileSync(join(profile, ".fx", "settings.json"), JSON.stringify({ provider, [`${provider}_model`]: model }), { mode: 0o600 });
+        writeFileSync(join(profile, ".chassis", "settings.json"), JSON.stringify({ provider, [`${provider}_model`]: model }), { mode: 0o600 });
         const env = {
-          HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, FX_MODEL: undefined,
-          FX_DISABLE_KEYCHAIN: "1", FX_AUTO_UPGRADE: "0", FX_SOUND: "0",
-          FX_GATEWAY_BASE_URL: testGateway.baseUrl,
-          FX_E2E_GATEWAY_MODELS_URL: `${testGateway.baseUrl}/coding-agent/v1/models`,
-          FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl,
-          FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-          FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl,
-          FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-          FX_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
+          HOME: profile, AI_GATEWAY_API_KEY: "fixture", VERCEL_OIDC_TOKEN: undefined, CHASSIS_MODEL: undefined,
+          CHASSIS_DISABLE_KEYCHAIN: "1", CHASSIS_AUTO_UPGRADE: "0", CHASSIS_SOUND: "0",
+          CHASSIS_GATEWAY_BASE_URL: testGateway.baseUrl,
+          CHASSIS_E2E_GATEWAY_MODELS_URL: `${testGateway.baseUrl}/coding-agent/v1/models`,
+          CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl,
+          CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+          CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl,
+          CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+          CHASSIS_E2E_XAI_GROK_MODALITIES_URL: "modalitiesUrl" in direct ? direct.modalitiesUrl : undefined,
         };
         const result = await runFx(["ask", "--json", "--auto", "Create result.txt containing saved."], { cwd: profile, env, timeoutMs: TIMEOUT });
         const accepted = bytes === 256;
@@ -5425,13 +5425,13 @@ test("direct provider tool identities obey the session boundary before execution
 test(
   "ChatGPT tool loops round-trip encrypted reasoning without Gateway leakage",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-chatgpt-tool-loop-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-chatgpt-tool-loop-"));
     gateway = startFakeGateway([]);
     const codex = startFakeCodexToolLoop();
     try {
       writeSeededChatGptLogin(home, codex.accessToken);
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "codex", codex_model: "gpt-5.6-sol" }) + "\n",
         { mode: 0o600 },
       );
@@ -5442,12 +5442,12 @@ test(
             HOME: home,
             AI_GATEWAY_API_KEY: "gateway-tool-loop-sentinel",
             VERCEL_OIDC_TOKEN: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-            FX_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
-            FX_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+            CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
+            CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
           },
           timeoutMs: TIMEOUT,
         },
@@ -5470,7 +5470,7 @@ test(
 tmuxTest(
   "Codex remains usable beyond Gateway observation capacity in one process",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-codex-capacity-loop-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-codex-capacity-loop-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -5478,14 +5478,14 @@ tmuxTest(
     try {
       writeSeededChatGptLogin(home, codex.accessToken);
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "codex", codex_model: "gpt-5.6-sol" }) + "\n",
         { mode: 0o600 },
       );
       session = await startFx(home, stderrPath, gateway, undefined, undefined, {
-        FX_MODEL: undefined,
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
-        FX_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
+        CHASSIS_MODEL: undefined,
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
+        CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
       });
       await session.waitForComposer(TIMEOUT);
       await session.sendText("Read enough lines to complete the capacity loop.");
@@ -5508,13 +5508,13 @@ tmuxTest(
 test(
   "Grok tool loops round-trip encrypted reasoning without Gateway leakage",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-tool-loop-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-tool-loop-"));
     gateway = startFakeGateway([]);
     const grok = startFakeGrokToolLoop();
     try {
       writeSeededGrokLogin(home, grok.accessToken, "acct_tool_loop");
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
         { mode: 0o600 },
       );
@@ -5525,13 +5525,13 @@ test(
             HOME: home,
             AI_GATEWAY_API_KEY: "gateway-grok-tool-loop-sentinel",
             VERCEL_OIDC_TOKEN: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-            FX_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
-            FX_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
-            FX_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+            CHASSIS_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
+            CHASSIS_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
+            CHASSIS_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
           },
           timeoutMs: TIMEOUT,
         },
@@ -5554,7 +5554,7 @@ test(
 test(
   "Codex CLI login preserves durable auth but does not claim success when activation fails",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-codex-cli-activation-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-codex-cli-activation-failure-"));
     gateway = startFakeGateway([]);
     chatgptOauth = startFakeChatGptOAuth();
     chatgptOauth.setModels([]);
@@ -5562,21 +5562,21 @@ test(
       HOME: home,
       AI_GATEWAY_API_KEY: ENV_TOKEN,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_NO_OPEN_BROWSER: "1",
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_NO_OPEN_BROWSER: "1",
+      CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+      CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
       ...chatgptOauth.env,
     };
 
     const login = await runCodexLoginWithBrowser(env);
     expect(login.code).toBe(1);
     expect(login.stdout).not.toContain("Signed in with Codex.");
-    expect(login.stderr).toContain("fx login: could not load the target model catalog (malformed_response)");
-    expect(existsSync(join(home, ".fx", "chatgpt-auth.json"))).toBe(true);
-    const settingsPath = join(home, ".fx", "settings.json");
+    expect(login.stderr).toContain("chassis login: could not load the target model catalog (malformed_response)");
+    expect(existsSync(join(home, ".chassis", "chatgpt-auth.json"))).toBe(true);
+    const settingsPath = join(home, ".chassis", "settings.json");
     expect(existsSync(settingsPath)).toBe(false);
   },
   60_000,
@@ -5585,7 +5585,7 @@ test(
 test(
   "Grok CLI login preserves durable auth but does not claim success when activation fails",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-cli-activation-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-cli-activation-failure-"));
     gateway = startFakeGateway([]);
     const grok = startFakeGrokOAuth();
     grok.setModels([]);
@@ -5594,21 +5594,21 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: ENV_TOKEN,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_SKIP_ONBOARDING: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_NO_OPEN_BROWSER: "1",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_NO_OPEN_BROWSER: "1",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
         ...grok.env,
       };
 
       const login = await runGrokLoginWithBrowser(env);
       expect(login.code).toBe(1);
       expect(login.stdout).not.toContain("Signed in with Grok.");
-      expect(login.stderr).toContain("fx login: target model catalog is empty");
-      expect(existsSync(join(home, ".fx", "grok-auth.json"))).toBe(true);
-      expect(existsSync(join(home, ".fx", "settings.json"))).toBe(false);
+      expect(login.stderr).toContain("chassis login: target model catalog is empty");
+      expect(existsSync(join(home, ".chassis", "grok-auth.json"))).toBe(true);
+      expect(existsSync(join(home, ".chassis", "settings.json"))).toBe(false);
     } finally {
       grok.stop();
     }
@@ -5619,7 +5619,7 @@ test(
 test(
   "Codex rejects the vision fallback without another provider request",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-codex-vision-disabled-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-codex-vision-disabled-"));
     gateway = startFakeGateway([]);
     const codex = startFakeCodexToolLoop({
       toolName: "vision",
@@ -5630,7 +5630,7 @@ test(
     try {
       writeSeededChatGptLogin(home, codex.accessToken);
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "codex", codex_model: "gpt-5.6-sol" }) + "\n",
         { mode: 0o600 },
       );
@@ -5641,12 +5641,12 @@ test(
             HOME: home,
             AI_GATEWAY_API_KEY: "gateway-vision-sentinel",
             VERCEL_OIDC_TOKEN: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-            FX_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
-            FX_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+            CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
+            CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
           },
           timeoutMs: TIMEOUT,
         },
@@ -5676,7 +5676,7 @@ test(
 test(
   "Grok rejects the vision fallback because native image input owns OCR",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-vision-disabled-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-vision-disabled-"));
     gateway = startFakeGateway([]);
     const grok = startFakeGrokToolLoop({
       toolName: "vision",
@@ -5686,7 +5686,7 @@ test(
     try {
       writeSeededGrokLogin(home, grok.accessToken, "acct_vision");
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
         { mode: 0o600 },
       );
@@ -5697,13 +5697,13 @@ test(
             HOME: home,
             AI_GATEWAY_API_KEY: "gateway-grok-vision-sentinel",
             VERCEL_OIDC_TOKEN: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-            FX_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
-            FX_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
-            FX_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+            CHASSIS_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
+            CHASSIS_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
+            CHASSIS_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
           },
           timeoutMs: TIMEOUT,
         },
@@ -5728,7 +5728,7 @@ test(
 test(
   "saved provider switching publishes Gateway, Codex, and Grok usage to one profile ledger",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-provider-usage-ledger-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-provider-usage-ledger-"));
     const workspace = join(home, "workspace");
     mkdirSync(workspace, { recursive: true });
     gateway = startFakeGateway([
@@ -5785,18 +5785,18 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: "gateway-usage-key",
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_GATEWAY_BASE_URL: gateway.baseUrl,
-        FX_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-        FX_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
-        FX_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
-        FX_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
-        FX_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
-        FX_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+        CHASSIS_E2E_GATEWAY_CHAT_URL: gateway.chatUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
+        CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
+        CHASSIS_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
+        CHASSIS_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
       };
-      const settingsPath = join(home, ".fx", "settings.json");
+      const settingsPath = join(home, ".chassis", "settings.json");
       const routes = [
         { settings: { provider: "gateway", model: FAKE_GATEWAY_MODEL }, text: "GATEWAY_USAGE_OK" },
         { settings: { provider: "codex", codex_model: "gpt-5.6-sol" }, text: "CODEX_USAGE_OK" },
@@ -5849,14 +5849,14 @@ test(
 test(
   "Codex automatic review uses gpt-5.6-luna while Gateway review stays untouched",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-codex-auto-review-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-codex-auto-review-"));
     writeFileSync(join(home, "provider-review-existing.txt"), "before\n");
     gateway = startFakeGateway([]);
     const codex = startFakeCodexAutoReview();
     try {
       writeSeededChatGptLogin(home, codex.accessToken);
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "codex", codex_model: "gpt-5.6-sol" }) + "\n",
         { mode: 0o600 },
       );
@@ -5873,12 +5873,12 @@ test(
             HOME: home,
             AI_GATEWAY_API_KEY: "gateway-auto-review-sentinel",
             VERCEL_OIDC_TOKEN: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-            FX_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
-            FX_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+            CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: codex.responsesUrl,
+            CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: codex.modelsUrl,
           },
           timeoutMs: TIMEOUT,
         },
@@ -5919,7 +5919,7 @@ test(
   "provider-local automatic compaction never reaches Gateway",
   async () => {
     for (const provider of ["codex", "grok"] as const) {
-      const testHome = mkdtempSync(join(tmpdir(), `fx-${provider}-compaction-`));
+      const testHome = mkdtempSync(join(tmpdir(), `chassis-${provider}-compaction-`));
       const testGateway = startFakeGateway([]);
       const direct = startFakeProviderCompaction(provider);
       try {
@@ -5929,7 +5929,7 @@ test(
           writeSeededGrokLogin(testHome, direct.accessToken);
         }
         writeFileSync(
-          join(testHome, ".fx", "settings.json"),
+          join(testHome, ".chassis", "settings.json"),
           JSON.stringify(provider === "codex"
             ? { provider, codex_model: direct.workingModel }
             : { provider, grok_model: direct.workingModel }) + "\n",
@@ -5941,17 +5941,17 @@ test(
               HOME: testHome,
               AI_GATEWAY_API_KEY: "gateway-compaction-sentinel",
               VERCEL_OIDC_TOKEN: undefined,
-              FX_DISABLE_KEYCHAIN: "1",
-              FX_AUTO_UPGRADE: "0",
-              FX_GATEWAY_BASE_URL: testGateway.baseUrl,
-              FX_TRACE_LOG: join(testHome, "compaction.log"),
-              FX_TRACE_SCOPES: "agent,core,gateway,stream,context_compaction,session",
-              FX_E2E_GATEWAY_MODELS_URL: `${testGateway.baseUrl}/coding-agent/v1/models`,
-              FX_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl,
-              FX_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
-              FX_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl,
-              FX_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
-              FX_E2E_XAI_GROK_MODALITIES_URL: direct.modalitiesUrl,
+              CHASSIS_DISABLE_KEYCHAIN: "1",
+              CHASSIS_AUTO_UPGRADE: "0",
+              CHASSIS_GATEWAY_BASE_URL: testGateway.baseUrl,
+              CHASSIS_TRACE_LOG: join(testHome, "compaction.log"),
+              CHASSIS_TRACE_SCOPES: "agent,core,gateway,stream,context_compaction,session",
+              CHASSIS_E2E_GATEWAY_MODELS_URL: `${testGateway.baseUrl}/coding-agent/v1/models`,
+              CHASSIS_E2E_OPENAI_CODEX_RESPONSES_URL: direct.responsesUrl,
+              CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: direct.modelsUrl,
+              CHASSIS_E2E_XAI_GROK_RESPONSES_URL: direct.responsesUrl,
+              CHASSIS_E2E_XAI_GROK_MODELS_URL: direct.modelsUrl,
+              CHASSIS_E2E_XAI_GROK_MODALITIES_URL: direct.modalitiesUrl,
             },
             timeoutMs: 60_000,
           };
@@ -5988,14 +5988,14 @@ test(
 test(
   "Grok automatic review uses grok-4.5 and never reaches Gateway",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-grok-auto-review-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-grok-auto-review-"));
     writeFileSync(join(home, "provider-review-existing.txt"), "before\n");
     gateway = startFakeGateway([]);
     const grok = startFakeGrokAutoReview();
     try {
       writeSeededGrokLogin(home, grok.accessToken, "acct_auto_review");
       writeFileSync(
-        join(home, ".fx", "settings.json"),
+        join(home, ".chassis", "settings.json"),
         JSON.stringify({ provider: "grok", grok_model: "grok-4.20" }) + "\n",
         { mode: 0o600 },
       );
@@ -6012,13 +6012,13 @@ test(
             HOME: home,
             AI_GATEWAY_API_KEY: "gateway-grok-auto-review-sentinel",
             VERCEL_OIDC_TOKEN: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
-            FX_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
-            FX_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
-            FX_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_E2E_GATEWAY_MODELS_URL: `${gateway.baseUrl}/coding-agent/v1/models`,
+            CHASSIS_E2E_XAI_GROK_RESPONSES_URL: grok.responsesUrl,
+            CHASSIS_E2E_XAI_GROK_MODELS_URL: grok.modelsUrl,
+            CHASSIS_E2E_XAI_GROK_MODALITIES_URL: grok.modalitiesUrl,
           },
           timeoutMs: TIMEOUT,
         },
@@ -6035,7 +6035,7 @@ test(
       for (const [index, headers] of grok.headers.entries()) {
         expect(headers.tokenAuth).toBe("xai-grok-cli");
         expect(headers.authenticateResponse).toBe("authenticate-response");
-        expect(headers.clientIdentifier).toBe("fx");
+        expect(headers.clientIdentifier).toBe("chassis");
         expect(headers.clientVersion).toBe("1.0.6");
         expect(headers.modelOverride).toBe(index === 1 ? "grok-4.5" : "grok-4.20");
         expect(headers.grokUserId).toBe("acct_auto_review");
@@ -6065,11 +6065,11 @@ test(
 );
 
 test(
-  "fx login bounds invalid OAuth client fallback to two device requests",
+  "chassis login bounds invalid OAuth client fallback to two device requests",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-login-client-fallback-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-login-client-fallback-failure-"));
     writeSeededFxLogin(home);
-    const authPath = join(home, ".fx", "auth.json");
+    const authPath = join(home, ".chassis", "auth.json");
     const seededAuthFile = readFileSync(authPath, "utf8");
     oauth = startFakeOAuth(
       ACQUIRED_LOGIN_TOKEN,
@@ -6084,12 +6084,12 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: undefined,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_SKIP_ONBOARDING: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_NO_OPEN_BROWSER: "1",
-        FX_OAUTH_CLIENT_ID: "test-client",
-        FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_NO_OPEN_BROWSER: "1",
+        CHASSIS_OAUTH_CLIENT_ID: "test-client",
+        CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
       },
       timeoutMs: TIMEOUT,
     });
@@ -6108,7 +6108,7 @@ test(
     expect(deviceRequests[1].clientId).toBeDefined();
     expect(deviceRequests[1].clientId).not.toBe("test-client");
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("fx login: failed to sign in\n");
+    expect(result.stderr).toBe("chassis login: failed to sign in\n");
     expect(result.stderr).not.toContain(oauth.providerDetail);
     expect(readFileSync(authPath, "utf8")).toBe(seededAuthFile);
   },
@@ -6116,11 +6116,11 @@ test(
 );
 
 test(
-  "fx login does not fall back for another OAuth device error",
+  "chassis login does not fall back for another OAuth device error",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-login-client-no-fallback-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-login-client-no-fallback-"));
     writeSeededFxLogin(home);
-    const authPath = join(home, ".fx", "auth.json");
+    const authPath = join(home, ".chassis", "auth.json");
     const seededAuthFile = readFileSync(authPath, "utf8");
     oauth = startFakeOAuth(
       ACQUIRED_LOGIN_TOKEN,
@@ -6135,12 +6135,12 @@ test(
         HOME: home,
         AI_GATEWAY_API_KEY: undefined,
         VERCEL_OIDC_TOKEN: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_SKIP_ONBOARDING: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_NO_OPEN_BROWSER: "1",
-        FX_OAUTH_CLIENT_ID: "test-client",
-        FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_SKIP_ONBOARDING: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_NO_OPEN_BROWSER: "1",
+        CHASSIS_OAUTH_CLIENT_ID: "test-client",
+        CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
       },
       timeoutMs: TIMEOUT,
     });
@@ -6156,7 +6156,7 @@ test(
     expect(deviceRequests).toHaveLength(1);
     expect(deviceRequests[0].clientId).toBe("test-client");
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("fx login: failed to sign in\n");
+    expect(result.stderr).toBe("chassis login: failed to sign in\n");
     expect(result.stderr).not.toContain(oauth.providerDetail);
     expect(readFileSync(authPath, "utf8")).toBe(seededAuthFile);
   },
@@ -6166,7 +6166,7 @@ test(
 tmuxTest(
   "missing auth after deferred onboarding preserves the complete prompt",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-preflight-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-preflight-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     const imagePath = join(home, "attachment.png");
@@ -6188,12 +6188,12 @@ tmuxTest(
     await session.sendText(" preserve this exact prompt");
     const blocked = await session.waitForPane(
       (pane) =>
-        pane.includes("fx needs access to Vercel AI Gateway") &&
+        pane.includes("chassis needs access to Vercel AI Gateway") &&
         pane.includes("preserve this exact prompt") &&
         pane.includes("Image 1"),
       TIMEOUT,
     );
-    expect(blocked).not.toContain("Welcome to fx");
+    expect(blocked).not.toContain("Welcome to chassis");
     expect(blocked).not.toContain("Switch credential");
     expect(gateway.requests).toHaveLength(0);
     expect(session.isAlive()).toBe(true);
@@ -6205,7 +6205,7 @@ tmuxTest(
 tmuxTest(
   "logout rejects an invalid revocation endpoint and removes the active login",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-logout-active-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-logout-active-login-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     const tapePath = join(home, "logout.fxtape");
@@ -6219,19 +6219,19 @@ tmuxTest(
     writeSeededFxLogin(home, Date.now() + 60 * 60 * 1000, oauth.issuerUrl, "team_123");
 
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, tracePath, {
-      FX_RECORD: tapePath,
-      FX_RECORD_INPUT: "1",
+      CHASSIS_RECORD: tapePath,
+      CHASSIS_RECORD_INPUT: "1",
     });
     await session.waitForComposer(TIMEOUT);
     await selectFxLoginCredential(session);
-    await session.sendText("prove fx login is active before logout");
+    await session.sendText("prove chassis login is active before logout");
     await session.waitForText(LOGIN_RESPONSE, TIMEOUT);
     expect(gateway.requests[0].headers.get("authorization")).toBe(`Bearer ${LOGIN_TOKEN}`);
 
     await session.sendText("/logout");
     const loggedOut = await session.waitForPane(
       (pane) =>
-        pane.includes("Signed out of fx.") &&
+        pane.includes("Signed out of chassis.") &&
         pane.includes("remote session could not be revoked"),
       TIMEOUT,
     );
@@ -6239,7 +6239,7 @@ tmuxTest(
     expect(
       loggedOut.match(/remote session could not be revoked/g) ?? [],
     ).toHaveLength(1);
-    expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
 
     await session.sendText("/status");
     await session.waitForText("auth=AI_GATEWAY_API_KEY", TIMEOUT);
@@ -6277,9 +6277,9 @@ tmuxTest(
 );
 
 tmuxTest(
-  "logout preserves an active API key when fx login is inactive",
+  "logout preserves an active API key when chassis login is inactive",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-logout-inactive-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-logout-inactive-login-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([fakeGatewayFinalText(ENV_RESPONSE)]);
@@ -6289,8 +6289,8 @@ tmuxTest(
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl);
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/logout");
-    await session.waitForText("Signed out of fx.", TIMEOUT);
-    expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+    await session.waitForText("Signed out of chassis.", TIMEOUT);
+    expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
 
     await session.sendText("/status");
     await session.waitForText("auth=AI_GATEWAY_API_KEY", TIMEOUT);
@@ -6304,21 +6304,21 @@ tmuxTest(
 );
 
 tmuxTest(
-  "logout removes an fx login rejected for unsafe permissions",
+  "logout removes an chassis login rejected for unsafe permissions",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-logout-rejected-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-logout-rejected-login-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
     oauth = startFakeOAuth(ACQUIRED_LOGIN_TOKEN);
     writeSeededFxLogin(home, Date.now() + 60 * 60 * 1000, oauth.issuerUrl);
-    const authPath = join(home, ".fx", "auth.json");
+    const authPath = join(home, ".chassis", "auth.json");
     chmodSync(authPath, 0o644);
 
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl);
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/logout");
-    const loggedOut = await session.waitForText("Signed out of fx.", TIMEOUT);
+    const loggedOut = await session.waitForText("Signed out of chassis.", TIMEOUT);
     expect(existsSync(authPath)).toBe(false);
 
     await session.sendText("/status");
@@ -6339,13 +6339,13 @@ tmuxTest(
 tmuxTest(
   "logout recalculates auth when local cleanup cannot be completed",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-logout-delete-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-logout-delete-failure-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([fakeGatewayFinalText(LOGIN_RESPONSE)]);
     oauth = startFakeOAuth(ACQUIRED_LOGIN_TOKEN);
     writeSeededFxLogin(home, Date.now() + 60 * 60 * 1000, oauth.issuerUrl);
-    const fxDir = join(home, ".fx");
+    const fxDir = join(home, ".chassis");
 
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, {
       AI_GATEWAY_API_KEY: undefined,
@@ -6357,10 +6357,10 @@ tmuxTest(
 
     await session.sendText("/logout");
     const failed = await session.waitForText(
-      "Could not confirm durable fx logout. The active source was recalculated.",
+      "Could not confirm durable chassis logout. The active source was recalculated.",
       TIMEOUT,
     );
-    expect(failed).not.toContain("Signed out of fx.");
+    expect(failed).not.toContain("Signed out of chassis.");
     expect(failed).toContain(
       "Warning: signed out locally, but the remote session could not be revoked.",
     );
@@ -6378,7 +6378,7 @@ tmuxTest(
 tmuxTest(
   "logout with the only credential keeps the shell open and reopens onboarding on the next prompt",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-logout-only-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-logout-only-login-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -6387,11 +6387,11 @@ tmuxTest(
 
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, {
       AI_GATEWAY_API_KEY: undefined,
-      FX_SKIP_ONBOARDING: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
     });
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/logout");
-    await session.waitForText("Signed out of fx.", TIMEOUT);
+    await session.waitForText("Signed out of chassis.", TIMEOUT);
     await session.sendText("/status");
     await session.waitForText("auth=missing", TIMEOUT);
 
@@ -6410,13 +6410,13 @@ tmuxTest(
     const onboarding = await session.waitForPane(
       (pane) =>
         pane.includes(prompt) &&
-        pane.includes("Welcome to fx") &&
+        pane.includes("Welcome to chassis") &&
         pane.includes("Sign in with Vercel") &&
         pane.includes("Add an API key") &&
         pane.includes("esc to set up later"),
       TIMEOUT,
     );
-    expect(onboarding).not.toMatch(/^\s+fx login\s+/m);
+    expect(onboarding).not.toMatch(/^\s+chassis login\s+/m);
     expect(onboarding).not.toContain("Switch credential");
     expect(onboarding).not.toContain("Skip for now");
     expect(gateway.requests).toHaveLength(0);
@@ -6429,7 +6429,7 @@ tmuxTest(
 tmuxTest(
   "HTTP auth failure names the selected source and suppresses provider detail",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-http-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-http-failure-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     const providerDetail = `rejected ${ENV_TOKEN} in provider response`;
@@ -6462,7 +6462,7 @@ tmuxTest(
 tmuxTest(
   "manual compaction refreshes the selected login without losing the draft",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-compact-auth-refresh-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-compact-auth-refresh-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     writeFileSync(stderrPath, "");
@@ -6477,7 +6477,7 @@ tmuxTest(
     writeSeededFxLogin(home, expiresAt, oauth.issuerUrl, "team_123");
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, tracePath, {
       AI_GATEWAY_API_KEY: undefined,
-      FX_TRACE_SCOPES: "auth,input,worker,context_compaction,session",
+      CHASSIS_TRACE_SCOPES: "auth,input,worker,context_compaction,session",
     }, home);
     await session.waitForComposer(TIMEOUT);
     await session.sendText("Remember COMPACT_AUTH_FIRST.");
@@ -6489,9 +6489,9 @@ tmuxTest(
     await Bun.sleep(Math.max(0, expiresAt - 60_000 + 100 - Date.now()));
     await session.sendText("/status");
     await session.waitForText("auth_expired=true", TIMEOUT);
-    const sessionIds = readdirSync(join(home, ".fx", "sessions")).filter((id) => existsSync(join(home!, ".fx", "sessions", id, "session.json")));
+    const sessionIds = readdirSync(join(home, ".chassis", "sessions")).filter((id) => existsSync(join(home!, ".chassis", "sessions", id, "session.json")));
     expect(sessionIds).toHaveLength(1);
-    const historyPath = join(home, ".fx", "sessions", sessionIds[0], "events.jsonl");
+    const historyPath = join(home, ".chassis", "sessions", sessionIds[0], "events.jsonl");
     const before = readFileSync(historyPath, "utf8");
     await session.sendText("/compact");
     await waitForTrace(tracePath, "manual_compaction_auth_pending", TIMEOUT);
@@ -6530,7 +6530,7 @@ tmuxTest(
 
 for (const outcome of ["failure", "cancel"] as const) {
   tmuxTest(`manual compaction auth ${outcome} preserves the session and accepts a later prompt`, async () => {
-    home = mkdtempSync(join(tmpdir(), `fx-compact-auth-${outcome}-`));
+    home = mkdtempSync(join(tmpdir(), `chassis-compact-auth-${outcome}-`));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     writeFileSync(stderrPath, "");
@@ -6544,18 +6544,18 @@ for (const outcome of ["failure", "cancel"] as const) {
     });
     const expiresAt = Date.now() + 80_000;
     writeSeededFxLogin(home, expiresAt, oauth.issuerUrl, "team_123");
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ credential_source: "fx_login" }));
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ credential_source: "chassis_login" }));
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, tracePath, {
-      FX_TRACE_SCOPES: "auth,input,worker,context_compaction,session",
+      CHASSIS_TRACE_SCOPES: "auth,input,worker,context_compaction,session",
     }, home);
     await session.waitForComposer(TIMEOUT);
     await session.sendText("Remember AUTH_BOUNDARY_FIRST.");
     await session.waitForText("AUTH_BOUNDARY_FIRST_REPLY", TIMEOUT);
     await session.sendText("Remember AUTH_BOUNDARY_SECOND.");
     await session.waitForText("AUTH_BOUNDARY_SECOND_REPLY", TIMEOUT);
-    const sessionIds = readdirSync(join(home, ".fx", "sessions")).filter((id) => existsSync(join(home!, ".fx", "sessions", id, "session.json")));
+    const sessionIds = readdirSync(join(home, ".chassis", "sessions")).filter((id) => existsSync(join(home!, ".chassis", "sessions", id, "session.json")));
     expect(sessionIds).toHaveLength(1);
-    const historyPath = join(home, ".fx", "sessions", sessionIds[0], "events.jsonl");
+    const historyPath = join(home, ".chassis", "sessions", sessionIds[0], "events.jsonl");
     const before = readFileSync(historyPath, "utf8");
     expect(gateway.requests).toHaveLength(2);
     expect(gateway.requests[0].headers.get("authorization")).toBe(`Bearer ${LOGIN_TOKEN}`);
@@ -6597,7 +6597,7 @@ for (const outcome of ["failure", "cancel"] as const) {
 tmuxTest(
   "expired selected login preserves the prompt and avoids Gateway before explicit recovery",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-source-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-source-failure-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     writeFileSync(stderrPath, "");
@@ -6620,7 +6620,7 @@ tmuxTest(
     await session.sendKeys("Enter");
     const failed = await session.waitForPane(
       (pane) =>
-        pane.includes("fx login sign-in expired.") &&
+        pane.includes("chassis login sign-in expired.") &&
         pane.includes("press enter to sign in again.") &&
         !pane.includes("Setup"),
       TIMEOUT,
@@ -6652,9 +6652,9 @@ tmuxTest(
 );
 
 tmuxTest(
-  "permanent fx login failure enters repair without retrying or losing the prompt",
+  "permanent chassis login failure enters repair without retrying or losing the prompt",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-repair-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-repair-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     const tapePath = join(home, "pending-activity.fxtape");
@@ -6670,9 +6670,9 @@ tmuxTest(
 
     session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, tracePath, {
       AI_GATEWAY_API_KEY: undefined,
-      FX_TRACE_SCOPES: "auth,input",
-      FX_RECORD: tapePath,
-      FX_RECORD_INPUT: "1",
+      CHASSIS_TRACE_SCOPES: "auth,input",
+      CHASSIS_RECORD: tapePath,
+      CHASSIS_RECORD_INPUT: "1",
     });
     await session.waitForComposer(TIMEOUT);
     await waitForTrace(tracePath, "prompt credential prewarm start outcome=started", 1_000);
@@ -6692,7 +6692,7 @@ tmuxTest(
     await session.sendKeys("C-u");
     await session.sendKeys("C-k");
     await session.waitForPane(
-      (pane) => pane.includes("fx login sign-in expired.") && !pane.includes("Thinking"),
+      (pane) => pane.includes("chassis login sign-in expired.") && !pane.includes("Thinking"),
       TIMEOUT,
     );
     expect(oauth.requests.filter((request) => request.grantType === "refresh_token")).toHaveLength(1);
@@ -6732,7 +6732,7 @@ tmuxTest(
     await session.sendKeys("Enter");
     await session.waitForText(REFRESH_RECOVERY_RESPONSE, TIMEOUT);
     const full = await session.captureFullScrollback();
-    expect(full.match(/fx login sign-in expired\./g)).toHaveLength(1);
+    expect(full.match(/chassis login sign-in expired\./g)).toHaveLength(1);
     expect(gateway.requests).toHaveLength(1);
     expect(gateway.requests[0]!.body).toContain(prompt);
     expect(readFileSync(stderrPath, "utf8")).toBe("");
@@ -6741,9 +6741,9 @@ tmuxTest(
 );
 
 tmuxTest(
-  "cancelled fx login repair allows a later explicit login",
+  "cancelled chassis login repair allows a later explicit login",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-cancelled-repair-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-cancelled-repair-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([fakeGatewayFinalText(REFRESH_RECOVERY_RESPONSE)]);
@@ -6759,7 +6759,7 @@ tmuxTest(
     await session.waitForComposer(TIMEOUT);
     const prompt = "DO_NOT_REPLAY_AFTER_CANCELLED_REPAIR";
     await session.sendText(prompt);
-    await session.waitForText("fx login sign-in expired.", TIMEOUT);
+    await session.waitForText("chassis login sign-in expired.", TIMEOUT);
     expect(oauth.requests.filter((request) => request.grantType === "refresh_token")).toHaveLength(1);
 
     await session.sendKeys("Enter");
@@ -6792,14 +6792,14 @@ tmuxTest(
     await session.waitForText("Changed Vercel team to Team Harness", TIMEOUT);
     expect(gateway.requests).toHaveLength(0);
 
-    await session.sendText("use the repaired fx login");
+    await session.sendText("use the repaired chassis login");
     await session.waitForText(REFRESH_RECOVERY_RESPONSE, TIMEOUT);
     expect(gateway.requests).toHaveLength(1);
     expect(gateway.requests[0]!.headers.get("authorization")).toBe(
       `Bearer ${ACQUIRED_LOGIN_TOKEN}`,
     );
     expect(gateway.requests[0]!.body).not.toContain(prompt);
-    expect(savedCredentialSource(home)).toBe("fx_login");
+    expect(savedCredentialSource(home)).toBe("chassis_login");
     expect(readFileSync(stderrPath, "utf8")).toBe("");
   },
   60_000,
@@ -6808,11 +6808,11 @@ tmuxTest(
 tmuxTest(
   "refresh save failure retires the session and starts a fresh sign-in",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-refresh-save-failure-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-refresh-save-failure-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
-    const authPath = join(home, ".fx", "auth.json");
+    const authPath = join(home, ".chassis", "auth.json");
     oauth = startFakeOAuth(ACQUIRED_LOGIN_TOKEN, undefined, 3600, Number.POSITIVE_INFINITY, {
       tokenDelayMs: 5_000,
       beforeRefreshResponse() {
@@ -6848,7 +6848,7 @@ tmuxTest(
 tmuxTest(
   "a rejected saved session is retired before a later explicit login",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-rejected-session-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-rejected-session-login-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([fakeGatewayFinalText(REFRESH_RECOVERY_RESPONSE)]);
@@ -6900,7 +6900,7 @@ tmuxTest(
     await session.waitForText("Team Harness", TIMEOUT);
     await session.sendKeys("Enter");
     await session.waitForText("Changed Vercel team to Team Harness", TIMEOUT);
-    expect(savedCredentialSource(home)).toBe("fx_login");
+    expect(savedCredentialSource(home)).toBe("chassis_login");
 
     await session.sendText("use the repaired login after retiring the rejected token");
     await session.waitForText(REFRESH_RECOVERY_RESPONSE, TIMEOUT);
@@ -6919,7 +6919,7 @@ tmuxTest(
 tmuxTest(
   "prompt refresh replaces an expired public catalog with the selected team catalog",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-refresh-team-models-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-refresh-team-models-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     writeFileSync(stderrPath, "");
@@ -6948,8 +6948,8 @@ tmuxTest(
       tracePath,
       {
         AI_GATEWAY_API_KEY: undefined,
-        FX_E2E_GATEWAY_MODELS_URL: undefined,
-        FX_TRACE_SCOPES: "auth,prompt,catalog",
+        CHASSIS_E2E_GATEWAY_MODELS_URL: undefined,
+        CHASSIS_TRACE_SCOPES: "auth,prompt,catalog",
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -6985,9 +6985,9 @@ tmuxTest(
       line.includes("[catalog] event=model_catalog_load ")
     );
     expect(catalogEvents).toHaveLength(2);
-    expect(catalogEvents[0]).toContain("public_only_reason=fx_login_refresh_required");
+    expect(catalogEvents[0]).toContain("public_only_reason=chassis_login_refresh_required");
     expect(catalogEvents[1]).toContain(
-      "requested_access=authenticated credential_source=fx_login effective_access=authenticated",
+      "requested_access=authenticated credential_source=chassis_login effective_access=authenticated",
     );
     for (const secret of [
       LOGIN_TOKEN,
@@ -7007,7 +7007,7 @@ tmuxTest(
 tmuxTest(
   "expired saved login prewarms credentials while model discovery stays anonymous",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-expired-models-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-expired-models-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -7053,9 +7053,9 @@ tmuxTest(
 );
 
 tmuxTest(
-  "ready team catalog downgrades after fx login expiry and refresh failure",
+  "ready team catalog downgrades after chassis login expiry and refresh failure",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-ready-catalog-expiry-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-ready-catalog-expiry-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     writeFileSync(stderrPath, "");
@@ -7084,8 +7084,8 @@ tmuxTest(
       tracePath,
       {
         AI_GATEWAY_API_KEY: undefined,
-        FX_E2E_GATEWAY_MODELS_URL: undefined,
-        FX_TRACE_SCOPES: "auth,prompt,catalog",
+        CHASSIS_E2E_GATEWAY_MODELS_URL: undefined,
+        CHASSIS_TRACE_SCOPES: "auth,prompt,catalog",
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -7118,7 +7118,7 @@ tmuxTest(
     await session.waitForPane(
       (pane) =>
         pane.includes(blockedPrompt) &&
-        pane.includes("fx login sign-in expired.") &&
+        pane.includes("chassis login sign-in expired.") &&
         pane.includes("press enter to sign in again.") &&
         !pane.includes("Model provider"),
       TIMEOUT,
@@ -7143,9 +7143,9 @@ tmuxTest(
     );
     expect(catalogEvents).toHaveLength(2);
     expect(catalogEvents[0]).toContain(
-      "requested_access=authenticated credential_source=fx_login effective_access=authenticated",
+      "requested_access=authenticated credential_source=chassis_login effective_access=authenticated",
     );
-    expect(catalogEvents[1]).toContain("public_only_reason=fx_login_refresh_required");
+    expect(catalogEvents[1]).toContain("public_only_reason=chassis_login_refresh_required");
     for (const secret of [LOGIN_TOKEN, "seeded-refresh-token", "team_123"]) {
       expect(trace).not.toContain(secret);
     }
@@ -7157,7 +7157,7 @@ tmuxTest(
 tmuxTest(
   "an immediately expired prewarm retires the login and keeps model discovery anonymous",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-expired-refresh-models-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-expired-refresh-models-"));
     stderrPath = join(home, "stderr.log");
     const tracePath = join(home, "trace.log");
     writeFileSync(stderrPath, "");
@@ -7173,7 +7173,7 @@ tmuxTest(
       tracePath,
       {
         AI_GATEWAY_API_KEY: undefined,
-        FX_TRACE_SCOPES: "auth,prompt,catalog",
+        CHASSIS_TRACE_SCOPES: "auth,prompt,catalog",
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -7186,7 +7186,7 @@ tmuxTest(
     const firstFailure = await session.waitForPane(
       (pane) =>
         pane.includes(firstPrompt) &&
-        pane.includes("fx login sign-in expired.") &&
+        pane.includes("chassis login sign-in expired.") &&
         pane.includes("press enter to sign in again.") &&
         !pane.includes("Model provider"),
       TIMEOUT,
@@ -7194,7 +7194,7 @@ tmuxTest(
     expect(firstFailure).not.toContain("Choose another source");
     expect(gateway.requests).toHaveLength(0);
     expect(gateway.modelRequests).toHaveLength(1);
-    expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
     expect(oauth.requests.map((request) => `${request.method} ${request.path}`)).toEqual([
       "GET /.well-known/openid-configuration",
       "POST /oauth/token",
@@ -7226,7 +7226,7 @@ tmuxTest(
     );
     expect(catalogEvents).toHaveLength(1);
     expect(catalogEvents[0]).toContain(
-      "requested_access=public_only credential_source=fx_login effective_access=public_only public_only_reason=fx_login_refresh_required anonymous_fallback=false outcome=loaded failure_category=none http_status=none retryable=none",
+      "requested_access=public_only credential_source=chassis_login effective_access=public_only public_only_reason=chassis_login_refresh_required anonymous_fallback=false outcome=loaded failure_category=none http_status=none retryable=none",
     );
     for (const secret of [
       LOGIN_TOKEN,
@@ -7248,7 +7248,7 @@ tmuxTest(
 tmuxTest(
   "expired saved login refreshes credits and the selected team catalog",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-expired-credits-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-expired-credits-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -7264,8 +7264,8 @@ tmuxTest(
       undefined,
       {
         AI_GATEWAY_API_KEY: undefined,
-        FX_E2E_GATEWAY_MODELS_URL: undefined,
-        FX_E2E_GATEWAY_CREDITS_URL: creditsGateway.url,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: undefined,
+        CHASSIS_E2E_GATEWAY_CREDITS_URL: creditsGateway.url,
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -7305,7 +7305,7 @@ tmuxTest(
 tmuxTest(
   "expired login refresh failure keeps one anonymous catalog request and blocks credits",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-expired-startup-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-expired-startup-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -7321,7 +7321,7 @@ tmuxTest(
       undefined,
       {
         AI_GATEWAY_API_KEY: undefined,
-        FX_E2E_GATEWAY_CREDITS_URL: creditsGateway.url,
+        CHASSIS_E2E_GATEWAY_CREDITS_URL: creditsGateway.url,
       },
     );
     await session.waitForComposer(TIMEOUT);
@@ -7338,7 +7338,7 @@ tmuxTest(
     await session.sendText("/credits");
     const failed = await session.waitForPane(
       (pane) =>
-        pane.includes("fx login sign-in expired.") &&
+        pane.includes("chassis login sign-in expired.") &&
         pane.includes("press enter to sign in again.") &&
         pane.includes("/credits"),
       TIMEOUT,
@@ -7360,7 +7360,7 @@ tmuxTest(
 tmuxTest(
   "model discovery remains available before login",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-models-before-login-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-models-before-login-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([]);
@@ -7400,7 +7400,7 @@ tmuxTest(
 tmuxTest(
   "rejected catalog credential renders the degraded public fallback notice",
   async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-tui-auth-populated-catalog-fallback-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-populated-catalog-fallback-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     gateway = startFakeGateway([], {
@@ -7450,7 +7450,7 @@ for (const scenario of [
   tmuxTest(
     `empty model menu renders the ${scenario.name} status`,
     async () => {
-      home = mkdtempSync(join(tmpdir(), "fx-tui-auth-empty-catalog-"));
+      home = mkdtempSync(join(tmpdir(), "chassis-tui-auth-empty-catalog-"));
       stderrPath = join(home, "stderr.log");
       writeFileSync(stderrPath, "");
       gateway = startFakeGateway([], {
@@ -7496,7 +7496,7 @@ for (const scenario of [
 
 for (const provider of ["codex", "grok"] as const) {
   test.skipIf(process.platform === "win32")(`${provider} model discovery ignores a FIFO version cache without a writer`, async () => {
-    home = mkdtempSync(join(tmpdir(), `fx-${provider}-version-fifo-`));
+    home = mkdtempSync(join(tmpdir(), `chassis-${provider}-version-fifo-`));
     const chatgpt = provider === "codex" ? startFakeChatGptOAuth() : undefined;
     const grok = provider === "grok" ? startFakeGrokOAuth() : undefined;
     const model = provider === "codex" ? "gpt-5.6-luna" : "grok-4.20";
@@ -7513,23 +7513,23 @@ for (const provider of ["codex", "grok"] as const) {
     try {
       if (chatgpt) writeSeededChatGptLogin(home);
       else writeSeededGrokLogin(home, grok!.initialAccessToken);
-      writeFileSync(join(home, ".fx/settings.json"), JSON.stringify({
+      writeFileSync(join(home, ".chassis/settings.json"), JSON.stringify({
         provider, models: { [provider]: model },
       }), { mode: 0o600 });
-      mkdirSync(join(home, ".fx/provider-versions"), { mode: 0o700 });
-      const cachePath = join(home, ".fx/provider-versions", `${provider}.json`);
+      mkdirSync(join(home, ".chassis/provider-versions"), { mode: 0o700 });
+      const cachePath = join(home, ".chassis/provider-versions", `${provider}.json`);
       expect(spawnSync("mkfifo", ["-m", "600", cachePath]).status).toBe(0);
       const env = {
         HOME: home,
         PATH: "/usr/bin:/bin",
-        FX_MODEL: undefined,
-        FX_DISABLE_KEYCHAIN: "1",
-        FX_AUTO_UPGRADE: "0",
-        FX_SOUND: "0",
+        CHASSIS_MODEL: undefined,
+        CHASSIS_DISABLE_KEYCHAIN: "1",
+        CHASSIS_AUTO_UPGRADE: "0",
+        CHASSIS_SOUND: "0",
         ...(chatgpt?.env ?? grok!.env),
-        FX_E2E_CODEX_CLIENT_VERSION: undefined,
-        FX_E2E_GROK_CLIENT_VERSION: undefined,
-        [provider === "codex" ? "FX_E2E_CODEX_VERSION_URL" : "FX_E2E_GROK_VERSION_URL"]:
+        CHASSIS_E2E_CODEX_CLIENT_VERSION: undefined,
+        CHASSIS_E2E_GROK_CLIENT_VERSION: undefined,
+        [provider === "codex" ? "CHASSIS_E2E_CODEX_VERSION_URL" : "CHASSIS_E2E_GROK_VERSION_URL"]:
           `http://127.0.0.1:${releases.port}/version`,
       };
 
@@ -7565,11 +7565,11 @@ for (const provider of ["codex", "grok"] as const) {
 }
 
 tmuxTest("Codex discovers upstream versions and refreshes models in an open session without a CLI", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-codex-catalog-version-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-codex-catalog-version-"));
   stderrPath = join(home, "stderr.log");
   gateway = startFakeGateway([]);
   writeSeededChatGptLogin(home);
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({
+  writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({
     provider: "codex",
     models: { codex: "gpt-5.6-luna" },
   }) + "\n", { mode: 0o600 });
@@ -7603,13 +7603,13 @@ tmuxTest("Codex discovers upstream versions and refreshes models in an open sess
     const env = {
       HOME: home,
       PATH: "/usr/bin:/bin",
-      FX_MODEL: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_SOUND: "0",
-      FX_E2E_OPENAI_CODEX_MODELS_URL: `http://127.0.0.1:${catalog.port}/models`,
-      FX_E2E_CODEX_VERSION_URL: `http://127.0.0.1:${catalog.port}/version`,
-      FX_E2E_CODEX_CLIENT_VERSION: undefined,
+      CHASSIS_MODEL: undefined,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_SOUND: "0",
+      CHASSIS_E2E_OPENAI_CODEX_MODELS_URL: `http://127.0.0.1:${catalog.port}/models`,
+      CHASSIS_E2E_CODEX_VERSION_URL: `http://127.0.0.1:${catalog.port}/version`,
+      CHASSIS_E2E_CODEX_CLIENT_VERSION: undefined,
     };
     const listed = await runFx(["models", "--json"], { env, timeoutMs: TIMEOUT });
     expect(listed.code, listed.stderr).toBe(0);
@@ -7643,7 +7643,7 @@ tmuxTest("Codex discovers upstream versions and refreshes models in an open sess
 }, 120_000);
 
 test("Grok refreshes upstream versions for catalogs and responses and survives lookup failures", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-grok-version-discovery-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-grok-version-discovery-"));
   const grok = startFakeGrokOAuth();
   let latest = "1.999.1";
   let failure: "none" | "unavailable" | "malformed" | "slow" = "none";
@@ -7660,20 +7660,20 @@ test("Grok refreshes upstream versions for catalogs and responses and survives l
   });
   try {
     writeSeededGrokLogin(home, grok.initialAccessToken);
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({
       provider: "grok", models: { grok: "grok-4.20" },
     }) + "\n", { mode: 0o600 });
     const env = {
       HOME: home,
       PATH: "/usr/bin:/bin",
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_SOUND: "0",
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_SOUND: "0",
       ...grok.env,
-      FX_E2E_GROK_VERSION_URL: `http://127.0.0.1:${releases.port}/stable`,
-      FX_E2E_GROK_CLIENT_VERSION: undefined,
+      CHASSIS_E2E_GROK_VERSION_URL: `http://127.0.0.1:${releases.port}/stable`,
+      CHASSIS_E2E_GROK_CLIENT_VERSION: undefined,
     };
-    const cachePath = join(home, ".fx", "provider-versions", "grok.json");
+    const cachePath = join(home, ".chassis", "provider-versions", "grok.json");
     const expireCache = () => {
       const cached = JSON.parse(readFileSync(cachePath, "utf8"));
       cached.checked_at_ms = 0;
@@ -7704,7 +7704,7 @@ test("Grok refreshes upstream versions for catalogs and responses and survives l
     const malformed = await runFx(["models", "--json"], { env });
     expect(malformed.code).toBe(1);
     expect(existsSync(cachePath)).toBe(false);
-    expect(existsSync(join(home, ".fx", "grok-auth.json"))).toBe(true);
+    expect(existsSync(join(home, ".chassis", "grok-auth.json"))).toBe(true);
     failure = "slow";
     const started = Date.now();
     const timedOut = await runFx(["models", "--json"], { env, timeoutMs: 8000 });
@@ -7724,7 +7724,7 @@ test("Grok refreshes upstream versions for catalogs and responses and survives l
 for (const provider of ["codex", "grok"] as const) {
   for (const outcome of ["success", "failure", "cancel"] as const) {
     tmuxTest(`provider preparation keeps input responsive through ${provider} ${outcome}`, async () => {
-      home = mkdtempSync(join(tmpdir(), "fx-provider-preparation-"));
+      home = mkdtempSync(join(tmpdir(), "chassis-provider-preparation-"));
       stderrPath = join(home, "stderr.log");
       writeFileSync(stderrPath, "");
       gateway = startFakeGateway([fakeGatewayFinalText("PREPARATION_GATEWAY_RECOVERY")]);
@@ -7742,10 +7742,10 @@ for (const provider of ["codex", "grok"] as const) {
       try {
         writeSeededChatGptLogin(home, chatgptOauth.accessToken);
         writeSeededGrokLogin(home, grok.initialAccessToken);
-        const settingsPath = join(home, ".fx", "settings.json");
+        const settingsPath = join(home, ".chassis", "settings.json");
         writeFileSync(settingsPath, JSON.stringify({ provider: "gateway", models: { gateway: FAKE_GATEWAY_MODEL } }));
         session = await startFx(home, stderrPath, gateway, undefined, join(home, "trace.log"), {
-          ...chatgptOauth.env, ...grok.env, FX_MODEL: undefined, FX_SOUND: "0", FX_TRACE_SCOPES: "auth,prompt,input,provider",
+          ...chatgptOauth.env, ...grok.env, CHASSIS_MODEL: undefined, CHASSIS_SOUND: "0", CHASSIS_TRACE_SCOPES: "auth,prompt,input,provider",
         });
         await session.waitForComposer(TIMEOUT);
         await openProviderPicker(session);
@@ -7811,7 +7811,7 @@ for (const provider of ["codex", "grok"] as const) {
 }
 
 tmuxTest("provider preparation does not delay double Ctrl+C shutdown", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-provider-preparation-exit-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-provider-preparation-exit-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
   gateway = startFakeGateway([]);
@@ -7821,7 +7821,7 @@ tmuxTest("provider preparation does not delay double Ctrl+C shutdown", async () 
   chatgptOauth = startFakeChatGptOAuth({ modelsResponse: async () => { entered = true; await held; } });
   try {
     writeSeededChatGptLogin(home, chatgptOauth.accessToken);
-    session = await startFx(home, stderrPath, gateway, undefined, undefined, { ...chatgptOauth.env, FX_SOUND: "0" });
+    session = await startFx(home, stderrPath, gateway, undefined, undefined, { ...chatgptOauth.env, CHASSIS_SOUND: "0" });
     await session.waitForComposer(TIMEOUT);
     await openProviderPicker(session);
     await session.sendLiteral("codex");
@@ -7839,7 +7839,7 @@ tmuxTest("provider preparation does not delay double Ctrl+C shutdown", async () 
 
 for (const outcome of ["cancel", "failure"] as const) {
   tmuxTest(`provider preparation validates Vercel team before saving through ${outcome}`, async () => {
-    home = mkdtempSync(join(tmpdir(), "fx-team-preparation-"));
+    home = mkdtempSync(join(tmpdir(), "chassis-team-preparation-"));
     stderrPath = join(home, "stderr.log");
     writeFileSync(stderrPath, "");
     let entered = 0;
@@ -7859,12 +7859,12 @@ for (const outcome of ["cancel", "failure"] as const) {
     chatgptOauth = startFakeChatGptOAuth();
     writeSeededFxLogin(home, Date.now() + 3_600_000, oauth.issuerUrl, "team_previous");
     writeSeededChatGptLogin(home, chatgptOauth.accessToken);
-    const settingsPath = join(home, ".fx", "settings.json");
-    const authPath = join(home, ".fx", "auth.json");
+    const settingsPath = join(home, ".chassis", "settings.json");
+    const authPath = join(home, ".chassis", "auth.json");
     writeFileSync(settingsPath, JSON.stringify({ provider: "codex", models: { codex: "gpt-5.6-sol", gateway: "openai/gpt-5.6-sol" } }));
     const beforeAuth = readFileSync(authPath, "utf8");
     try {
-      session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, { ...chatgptOauth.env, FX_MODEL: undefined, FX_SOUND: "0" });
+      session = await startFx(home, stderrPath, gateway, oauth.issuerUrl, undefined, { ...chatgptOauth.env, CHASSIS_MODEL: undefined, CHASSIS_SOUND: "0" });
       await session.waitForComposer(TIMEOUT);
       const chooseTeam = async () => {
         await session!.sendKeys("C-u");
@@ -7910,7 +7910,7 @@ for (const outcome of ["cancel", "failure"] as const) {
 }
 
 tmuxTest("provider preparation cancellation stops logout fallback", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-logout-preparation-cancel-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-logout-preparation-cancel-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
   let entered = false;
@@ -7926,8 +7926,8 @@ tmuxTest("provider preparation cancellation stops logout fallback", async () => 
   try {
     writeSeededChatGptLogin(home, chatgptOauth.accessToken);
     writeSeededGrokLogin(home, grok.initialAccessToken);
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ provider: "codex", models: { codex: "gpt-5.6-sol" } }));
-    session = await startFx(home, stderrPath, gateway, undefined, undefined, { ...chatgptOauth.env, ...grok.env, FX_MODEL: undefined, FX_SOUND: "0" });
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ provider: "codex", models: { codex: "gpt-5.6-sol" } }));
+    session = await startFx(home, stderrPath, gateway, undefined, undefined, { ...chatgptOauth.env, ...grok.env, CHASSIS_MODEL: undefined, CHASSIS_SOUND: "0" });
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/logout");
     await session.waitForPane(() => entered, 5000);
@@ -7936,8 +7936,8 @@ tmuxTest("provider preparation cancellation stops logout fallback", async () => 
     release();
     await Bun.sleep(100);
     expect(grok.requests.filter((request) => request.path === "/v1/models")).toHaveLength(0);
-    expect(existsSync(join(home, ".fx", "chatgpt-auth.json"))).toBe(false);
-    expect(existsSync(join(home, ".fx", "grok-auth.json"))).toBe(true);
+    expect(existsSync(join(home, ".chassis", "chatgpt-auth.json"))).toBe(false);
+    expect(existsSync(join(home, ".chassis", "grok-auth.json"))).toBe(true);
     expect(readFileSync(stderrPath, "utf8")).toBe("");
     await session.sendText("/quit");
     await session.waitForSessionEnd(3000);
@@ -7946,7 +7946,7 @@ tmuxTest("provider preparation cancellation stops logout fallback", async () => 
 }, TIMEOUT);
 
 tmuxTest("provider recovery continues after a held prompt and failed catalog", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-provider-fallback-prompt-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-provider-fallback-prompt-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
   let entered = false;
@@ -7962,9 +7962,9 @@ tmuxTest("provider recovery continues after a held prompt and failed catalog", a
   try {
     writeSeededChatGptLogin(home, chatgptOauth.accessToken);
     writeSeededGrokLogin(home, grok.initialAccessToken);
-    writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ provider: "codex", models: { codex: "gpt-5.6-sol" } }));
+    writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ provider: "codex", models: { codex: "gpt-5.6-sol" } }));
     const trace = join(home, "trace.log");
-    session = await startFx(home, stderrPath, gateway, undefined, trace, { ...chatgptOauth.env, ...grok.env, FX_MODEL: undefined, FX_SOUND: "0", FX_TRACE_SCOPES: "auth,provider,input,prompt" });
+    session = await startFx(home, stderrPath, gateway, undefined, trace, { ...chatgptOauth.env, ...grok.env, CHASSIS_MODEL: undefined, CHASSIS_SOUND: "0", CHASSIS_TRACE_SCOPES: "auth,provider,input,prompt" });
     await session.waitForComposer(TIMEOUT);
     await session.sendText("/logout");
     await session.waitForPane(() => entered, 5000);
@@ -7972,7 +7972,7 @@ tmuxTest("provider recovery continues after a held prompt and failed catalog", a
     await waitForTrace(trace, "pending_prompt_adopted", 3000);
     release();
     await session.waitForText("GROK_DIRECT_RESPONSE", 5000);
-    expect(JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8")).provider).toBe("grok");
+    expect(JSON.parse(readFileSync(join(home, ".chassis", "settings.json"), "utf8")).provider).toBe("grok");
     expect(grok.requests.filter((request) => request.path === "/v1/responses")).toHaveLength(1);
     expect(gateway.requests).toHaveLength(0);
     expect(readFileSync(stderrPath, "utf8")).toBe("");
@@ -7981,7 +7981,7 @@ tmuxTest("provider recovery continues after a held prompt and failed catalog", a
 
 
 tmuxTest("provider preparation resumes a held prompt after explicit provider retry", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-preparation-explicit-retry-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-preparation-explicit-retry-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
   let entered = 0;
@@ -7998,7 +7998,7 @@ tmuxTest("provider preparation resumes a held prompt after explicit provider ret
   try {
     writeSeededChatGptLogin(home, chatgptOauth.accessToken);
     const trace = join(home, "trace.log");
-    session = await startFx(home, stderrPath, gateway, undefined, trace, { ...chatgptOauth.env, FX_MODEL: undefined, FX_SOUND: "0", FX_TRACE_SCOPES: "auth,provider,input,prompt" });
+    session = await startFx(home, stderrPath, gateway, undefined, trace, { ...chatgptOauth.env, CHASSIS_MODEL: undefined, CHASSIS_SOUND: "0", CHASSIS_TRACE_SCOPES: "auth,provider,input,prompt" });
     await session.waitForComposer(TIMEOUT);
     await openProviderPicker(session);
     await session.sendLiteral("codex");
@@ -8021,16 +8021,16 @@ tmuxTest("provider preparation resumes a held prompt after explicit provider ret
 }, TIMEOUT);
 
 tmuxTest("provider preparation completes existing-key recovery for a held prompt", async () => {
-  home = mkdtempSync(join(tmpdir(), "fx-preparation-key-recovery-"));
+  home = mkdtempSync(join(tmpdir(), "chassis-preparation-key-recovery-"));
   stderrPath = join(home, "stderr.log");
   writeFileSync(stderrPath, "");
   gateway = startFakeGateway([fakeGatewayFinalText("KEY_RECOVERY_OK")]);
   chatgptOauth = startFakeChatGptOAuth();
   writeSeededChatGptLogin(home, chatgptOauth.accessToken);
-  linkSync(join(home, ".fx", "chatgpt-auth.json"), join(home, "auth-alias"));
-  writeFileSync(join(home, ".fx", "settings.json"), JSON.stringify({ provider: "codex", models: { codex: "gpt-5.6-sol" } }));
+  linkSync(join(home, ".chassis", "chatgpt-auth.json"), join(home, "auth-alias"));
+  writeFileSync(join(home, ".chassis", "settings.json"), JSON.stringify({ provider: "codex", models: { codex: "gpt-5.6-sol" } }));
   const trace = join(home, "trace.log");
-  session = await startFx(home, stderrPath, gateway, undefined, trace, { ...chatgptOauth.env, FX_MODEL: undefined, FX_SOUND: "0", FX_TRACE_SCOPES: "auth,provider,input,prompt" });
+  session = await startFx(home, stderrPath, gateway, undefined, trace, { ...chatgptOauth.env, CHASSIS_MODEL: undefined, CHASSIS_SOUND: "0", CHASSIS_TRACE_SCOPES: "auth,provider,input,prompt" });
   await session.waitForComposer(TIMEOUT);
   await session.sendText("Use the Gateway after repair.");
   await waitForTrace(trace, "pending_prompt_awaiting_auth", 5000);
@@ -8044,7 +8044,7 @@ tmuxTest("provider preparation completes existing-key recovery for a held prompt
   await session.sendLiteral("env");
   await session.sendKeys("Enter");
   await session.waitForText("KEY_RECOVERY_OK", 5000);
-  expect(JSON.parse(readFileSync(join(home, ".fx", "settings.json"), "utf8")).provider).toBe("gateway");
+  expect(JSON.parse(readFileSync(join(home, ".chassis", "settings.json"), "utf8")).provider).toBe("gateway");
   expect(gateway.requests).toHaveLength(1);
   expect(JSON.stringify(gateway.requests[0]!.body)).toContain("Use the Gateway after repair.");
   expect(gateway.requests[0]!.headers.get("authorization")).toBe(`Bearer ${ENV_TOKEN}`);

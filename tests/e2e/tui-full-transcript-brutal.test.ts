@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import { platform, tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN } from "../evals/eval-helpers";
+import { CHASSIS_BIN } from "../evals/eval-helpers";
 import {
   composerContains,
   FAKE_GATEWAY_MODEL,
@@ -134,7 +134,7 @@ function countOccurrences(text: string, needle: string): number {
 }
 
 function committedAssistantOccurrences(home: string, assistant: string): number {
-  const sessionsRoot = join(home, ".fx", "sessions");
+  const sessionsRoot = join(home, ".chassis", "sessions");
   let count = 0;
   for (const entry of readdirSync(sessionsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name === "latest") continue;
@@ -198,16 +198,16 @@ function gatewayEnv(
     HOME: home,
     AI_GATEWAY_API_KEY: "fake-full-transcript-brutal-key",
     VERCEL_OIDC_TOKEN: undefined,
-    FX_GATEWAY_BASE_URL: gateway.baseUrl,
-    FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-    FX_MODEL: FAKE_GATEWAY_MODEL,
-    FX_AUTO_UPGRADE: "0",
+    CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+    CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+    CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+    CHASSIS_AUTO_UPGRADE: "0",
     NO_COLOR: "1",
   };
 }
 
 function makeRoot(label: string): StressRoot {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), `fx-ctrl-o-${label}-`)));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), `chassis-ctrl-o-${label}-`)));
   return {
     root,
     home: join(root, "home"),
@@ -342,14 +342,14 @@ function prepareFixture(config: StressConfig): {
   totalTools: number;
 } {
   const paths = makeRoot(config.label);
-  mkdirSync(join(paths.home, ".fx"), { recursive: true });
+  mkdirSync(join(paths.home, ".chassis"), { recursive: true });
   mkdirSync(paths.workspace);
   writeFileSync(paths.stderrPath, "");
   writeFileSync(paths.resumedStderrPath, "");
   writeFileSync(paths.tracePath, "");
   writeFileSync(paths.resumedTracePath, "");
   writeFileSync(
-    join(paths.home, ".fx", "settings.json"),
+    join(paths.home, ".chassis", "settings.json"),
     JSON.stringify({
       sandbox: "none",
       permission_mode: "auto",
@@ -648,7 +648,7 @@ function fxProcessId(session: TmuxSession): number {
   }).trim().split("\n");
   const pid = findFxProcessId(rows);
   if (pid !== undefined) return pid;
-  throw new Error(`Unable to find fx on ${tty}. Processes:\n${rows.join("\n")}`);
+  throw new Error(`Unable to find chassis on ${tty}. Processes:\n${rows.join("\n")}`);
 }
 
 function findFxProcessId(rows: readonly string[]): number | undefined {
@@ -656,16 +656,16 @@ function findFxProcessId(rows: readonly string[]): number | undefined {
     const match = row.trim().match(/^(\d+)\s+(.+)$/);
     if (!match) continue;
     const command = match[2]!;
-    if (command === "fx" || command === FX_BIN || command.endsWith("/fx")) {
+    if (command === "chassis" || command === CHASSIS_BIN || command.endsWith("/chassis")) {
       return Number(match[1]);
     }
   }
   return undefined;
 }
 
-test("fx process discovery accepts basename and path process names", () => {
-  expect(findFxProcessId(["11361 fx"])).toBe(11361);
-  expect(findFxProcessId(["11362 /workspace/zig-out/bin/fx"])).toBe(11362);
+test("chassis process discovery accepts basename and path process names", () => {
+  expect(findFxProcessId(["11361 chassis"])).toBe(11361);
+  expect(findFxProcessId(["11362 /workspace/zig-out/bin/chassis"])).toBe(11362);
 });
 
 function residentKib(pid: number): number {
@@ -942,14 +942,14 @@ async function runStress(config: StressConfig): Promise<StressRoot> {
   let passed = false;
   try {
     session = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       cwd: realpathSync(paths.workspace),
       env: {
         ...gatewayEnv(paths.home, gateway),
-        FX_RECORD: paths.tapePath,
-        FX_RECORD_INPUT: "1",
-        FX_TRACE_LOG: paths.tracePath,
-        FX_TRACE_SCOPES:
+        CHASSIS_RECORD: paths.tapePath,
+        CHASSIS_RECORD_INPUT: "1",
+        CHASSIS_TRACE_LOG: paths.tracePath,
+        CHASSIS_TRACE_SCOPES:
           "full_transcript_cache,full_transcript,scroll,frame_render,terminal_diff,frame_schedule,frame_plan,resize",
       },
       stderrPath: paths.stderrPath,
@@ -1198,12 +1198,12 @@ async function runStress(config: StressConfig): Promise<StressRoot> {
     if (config.resumeCycles > 0) {
       resumedGateway = startFakeGateway([]);
       session = await TmuxSession.create({
-        cmd: `${FX_BIN} --resume-last`,
+        cmd: `${CHASSIS_BIN} --resume-last`,
         cwd: realpathSync(paths.workspace),
         env: {
           ...gatewayEnv(paths.home, resumedGateway),
-          FX_TRACE_LOG: paths.resumedTracePath,
-          FX_TRACE_SCOPES:
+          CHASSIS_TRACE_LOG: paths.resumedTracePath,
+          CHASSIS_TRACE_SCOPES:
             "full_transcript_cache,full_transcript,scroll,frame_render,terminal_diff,frame_schedule,frame_plan,resize",
         },
         stderrPath: paths.resumedStderrPath,
@@ -1287,7 +1287,7 @@ test.skipIf(!tmuxAvailable())(
   "Ctrl-O keeps saved tool output intact across window replacement",
   async () => {
     const paths = makeRoot("saved-result-lifetime");
-    mkdirSync(join(paths.home, ".fx"), { recursive: true });
+    mkdirSync(join(paths.home, ".chassis"), { recursive: true });
     mkdirSync(paths.workspace);
     const lines = Array.from({ length: 300 }, (_, i) =>
       `SAVED_ROW_${String(i + 1).padStart(4, "0")} original tool output`,
@@ -1300,9 +1300,9 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: paths.workspace,
-        env: { ...gatewayEnv(paths.home, savedGateway), FX_RECORD: paths.tapePath },
+        env: { ...gatewayEnv(paths.home, savedGateway), CHASSIS_RECORD: paths.tapePath },
         stderrPath: paths.stderrPath,
         width: 100,
         height: 32,
@@ -1351,7 +1351,7 @@ test.skipIf(!tmuxAvailable())(
   "Ctrl-O fills a viewport taller than the prepared overscan cache",
   async () => {
     const paths = makeRoot("tall-viewport");
-    mkdirSync(join(paths.home, ".fx"), { recursive: true });
+    mkdirSync(join(paths.home, ".chassis"), { recursive: true });
     mkdirSync(paths.workspace);
     writeFileSync(paths.stderrPath, "");
     const tallTail = "TALL_TRANSCRIPT_TAIL";
@@ -1365,7 +1365,7 @@ test.skipIf(!tmuxAvailable())(
     let active: TmuxSession | null = null;
     try {
       active = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: realpathSync(paths.workspace),
         env: gatewayEnv(paths.home, tallGateway),
         stderrPath: paths.stderrPath,
@@ -1401,7 +1401,7 @@ test.skipIf(!tmuxAvailable())(
   "Ctrl-O resized close preserves long history within ordinary resize cost",
   async () => {
     const paths = makeRoot("resize-recovery-cost");
-    mkdirSync(join(paths.home, ".fx"), { recursive: true });
+    mkdirSync(join(paths.home, ".chassis"), { recursive: true });
     mkdirSync(paths.workspace);
     const paragraphs = Array.from({ length: 4_000 }, (_, index) =>
       `ROW${pad(index + 1)} ALPHA_abcdefghijklmnopqrstuvwxyz0123456789 ` +
@@ -1412,13 +1412,13 @@ test.skipIf(!tmuxAvailable())(
     let passed = false;
     try {
       session = await TmuxSession.create({
-        cmd: FX_BIN,
+        cmd: CHASSIS_BIN,
         cwd: paths.workspace,
         env: {
           ...gatewayEnv(paths.home, gateway),
-          FX_RECORD: paths.tapePath,
-          FX_TRACE_LOG: paths.tracePath,
-          FX_TRACE_SCOPES: "full_transcript,full_transcript_cache,scroll,frame_schedule,resize",
+          CHASSIS_RECORD: paths.tapePath,
+          CHASSIS_TRACE_LOG: paths.tracePath,
+          CHASSIS_TRACE_SCOPES: "full_transcript,full_transcript_cache,scroll,frame_schedule,resize",
         },
         stderrPath: paths.stderrPath,
         width: 120,
@@ -1509,7 +1509,7 @@ test.skipIf(!tmuxAvailable())(
   240_000,
 );
 
-test.skipIf(!tmuxAvailable() || process.env.FX_CTRL_O_BRUTAL !== "1")(
+test.skipIf(!tmuxAvailable() || process.env.CHASSIS_CTRL_O_BRUTAL !== "1")(
   "Ctrl-O extended brutal soak holds under four thousand chat lines and ninety six tools",
   async () => {
     await runStress({
@@ -1528,7 +1528,7 @@ test.skipIf(!tmuxAvailable() || process.env.FX_CTRL_O_BRUTAL !== "1")(
 
 test.skipIf(
   !tmuxAvailable() ||
-    process.env.FX_CTRL_O_PROFILE !== "1" ||
+    process.env.CHASSIS_CTRL_O_PROFILE !== "1" ||
     platform() !== "darwin" ||
     !existsSync("/usr/bin/sample"),
 )(
@@ -1551,10 +1551,10 @@ test.skipIf(
   600_000,
 );
 
-test.skipIf(!tmuxAvailable() || process.env.FX_CTRL_O_50K !== "1")(
+test.skipIf(!tmuxAvailable() || process.env.CHASSIS_CTRL_O_50K !== "1")(
   "Ctrl-O load test survives a realistic fifty-thousand-line session with large tool sidecars",
   async () => {
-    const profileSeconds = process.env.FX_CTRL_O_PROFILE === "1" &&
+    const profileSeconds = process.env.CHASSIS_CTRL_O_PROFILE === "1" &&
         platform() === "darwin" &&
         existsSync("/usr/bin/sample")
       ? 30

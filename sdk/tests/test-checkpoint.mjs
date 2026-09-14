@@ -4,13 +4,13 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createFxAgent } from "../node.js";
+import { createChassisAgent } from "../node.js";
 
 const sourceBackend = process.argv[2] || "native";
 const targetBackend = process.argv[3] || "wasm";
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const addon = resolve(scriptDir, "../../zig-out/lib/libfx.node");
-const wasm = await readFile(resolve(scriptDir, "../../zig-out/bin/fx-core.wasm"));
+const addon = resolve(scriptDir, "../../zig-out/lib/libchassis.node");
+const wasm = await readFile(resolve(scriptDir, "../../zig-out/bin/chassis-core.wasm"));
 for (const shape of ["plain", "reasoning-text", "reasoning-only", "provider-terminal"]) {
   let modelRequests = 0;
   const remembered = shape === "reasoning-only" ? "Done." : "remembered value";
@@ -85,7 +85,7 @@ for (const shape of ["plain", "reasoning-text", "reasoning-only", "provider-term
   let source;
   let target;
   try {
-    source = await createFxAgent(options(sourceBackend));
+    source = await createChassisAgent(options(sourceBackend));
     const first = source.prompt("store this context");
     for await (const _ of first) {}
     assert.equal((await first.result).stopReason, "end_turn");
@@ -94,7 +94,7 @@ for (const shape of ["plain", "reasoning-text", "reasoning-only", "provider-term
     assert.equal(await source.close(), undefined);
     source = null;
 
-    target = await createFxAgent(options(targetBackend, checkpoint));
+    target = await createChassisAgent(options(targetBackend, checkpoint));
     const second = target.prompt("continue");
     let text = "";
     for await (const update of second) {

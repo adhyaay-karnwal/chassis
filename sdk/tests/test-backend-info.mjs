@@ -5,12 +5,12 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createFxAgent, createFxTerminal, getBackendInfo } from "../node.js";
+import { createChassisAgent, createChassisTerminal, getBackendInfo } from "../node.js";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const coreWasm = resolve(scriptDir, "../../zig-out/bin/fx-core.wasm");
-const termWasm = resolve(scriptDir, "../../zig-out/bin/fx-term.wasm");
-const temp = await mkdtemp(join(tmpdir(), "libfx-backend-info-"));
+const coreWasm = resolve(scriptDir, "../../zig-out/bin/chassis-core.wasm");
+const termWasm = resolve(scriptDir, "../../zig-out/bin/chassis-term.wasm");
+const temp = await mkdtemp(join(tmpdir(), "libchassis-backend-info-"));
 const missingAddon = join(temp, "missing.node");
 const corruptAddon = join(temp, "corrupt.node");
 const missingWasm = join(temp, "missing.wasm");
@@ -36,7 +36,7 @@ const matchingCore = {
 };
 const matchingTerminal = {
   libfxApiVersion: 2,
-  createFxTerminal() { assert.fail("backend probing must not create a terminal"); },
+  createChassisTerminal() { assert.fail("backend probing must not create a terminal"); },
 };
 
 try {
@@ -48,8 +48,8 @@ try {
   assert.deepEqual(await getBackendInfo({ surface: undefined, backend: undefined, nativeAddon: matchingCore }), defaults);
   assert.deepEqual(await getBackendInfo({ surface: "agent", backend: "auto", nativeAddon: matchingCore }), defaults);
   const backendError = { name: "TypeError", message: 'backend must be "auto", "native", or "wasm"' };
-  await assert.rejects(createFxAgent({ backend: null }), backendError);
-  await assert.rejects(createFxTerminal({ backend: null }), backendError);
+  await assert.rejects(createChassisAgent({ backend: null }), backendError);
+  await assert.rejects(createChassisTerminal({ backend: null }), backendError);
 
   assert.deepEqual(await getBackendInfo({ backend: "native", nativeAddon: matchingCore }), {
     surface: "agent",
@@ -71,7 +71,7 @@ try {
       available: false,
       reason: {
         code: "LIBFX_NATIVE_SURFACE_MISSING",
-        message: "native addon does not provide createFxTerminal()",
+        message: "native addon does not provide createChassisTerminal()",
       },
     }],
   });
@@ -93,7 +93,7 @@ try {
   assert.equal(missing.attempts[0].reason.code, "LIBFX_NATIVE_ARTIFACT_MISSING");
   assert.equal(missing.attempts[0].reason.causeCode, "MODULE_NOT_FOUND");
   await assert.rejects(
-    createFxAgent({ backend: "native", nativeAddon: missingAddon, apiKey: "missing-override-key" }),
+    createChassisAgent({ backend: "native", nativeAddon: missingAddon, apiKey: "missing-override-key" }),
     (error) => error?.code === "MODULE_NOT_FOUND",
   );
 
@@ -102,7 +102,7 @@ try {
   assert.equal(dependencyFailure.attempts[0].reason.code, "LIBFX_NATIVE_LOAD_FAILED");
   assert.equal(dependencyFailure.attempts[0].reason.causeCode, "ERR_MODULE_NOT_FOUND");
   await assert.rejects(
-    createFxAgent({ backend: "native", nativeAddon: dependencyAddon, apiKey: "dependency-override-key" }),
+    createChassisAgent({ backend: "native", nativeAddon: dependencyAddon, apiKey: "dependency-override-key" }),
     (error) => error?.code === "ERR_MODULE_NOT_FOUND",
   );
 
@@ -111,11 +111,11 @@ try {
   assert.equal(defaultMissing.attempts[0].reason.code, "LIBFX_NATIVE_ARTIFACT_MISSING");
   assert.equal(defaultMissing.attempts[0].reason.causeCode, "ENOENT");
   await assert.rejects(
-    createFxAgent({ backend: "native", apiKey: "missing-default-key" }),
+    createChassisAgent({ backend: "native", apiKey: "missing-default-key" }),
     (error) => error?.code === "LIBFX_NATIVE_UNAVAILABLE",
   );
   await assert.rejects(
-    createFxTerminal({ backend: "native" }),
+    createChassisTerminal({ backend: "native" }),
     (error) => error?.code === "LIBFX_NATIVE_UNAVAILABLE",
   );
 
@@ -131,7 +131,7 @@ try {
   assert.equal(nonlocal.attempts[0].reason.code, "LIBFX_NATIVE_LOAD_FAILED");
   assert.equal(nonlocal.attempts[0].reason.causeCode, "ERR_INVALID_FILE_URL_HOST");
   await assert.rejects(
-    createFxAgent({ backend: "native", nativeAddon: nonlocalAddon, apiKey: "nonlocal-key" }),
+    createChassisAgent({ backend: "native", nativeAddon: nonlocalAddon, apiKey: "nonlocal-key" }),
     (error) => error?.code === "ERR_INVALID_FILE_URL_HOST",
   );
 
@@ -153,7 +153,7 @@ try {
       }],
     });
     await assert.rejects(
-      createFxAgent({ backend: "auto", nativeAddon: nonlocalAddon, apiKey: "nonlocal-key" }),
+      createChassisAgent({ backend: "auto", nativeAddon: nonlocalAddon, apiKey: "nonlocal-key" }),
       (error) => error?.code === "LIBFX_JSPI_REQUIRED" && error.cause?.code === "ERR_INVALID_FILE_URL_HOST",
     );
   } finally {
@@ -161,7 +161,7 @@ try {
     Object.defineProperty(WebAssembly, "promising", { configurable: true, value: savedPromising });
   }
 
-  const nonlocalFallback = await createFxAgent({
+  const nonlocalFallback = await createChassisAgent({
     backend: "auto",
     nativeAddon: nonlocalAddon,
     wasm: coreWasm,
@@ -182,7 +182,7 @@ try {
     ["wasm-jspi", "LIBFX_WASM_LOAD_FAILED"],
   ]);
   await assert.rejects(
-    createFxAgent({ backend: "wasm", wasm: nonlocalWasm, apiKey: "nonlocal-wasm-key" }),
+    createChassisAgent({ backend: "wasm", wasm: nonlocalWasm, apiKey: "nonlocal-wasm-key" }),
     (error) => error?.code === "ERR_INVALID_FILE_URL_HOST",
   );
   assert.equal((await getBackendInfo({ backend: "auto", nativeAddon: false, wasm: coreWasm })).backend, "wasm-jspi");
@@ -201,7 +201,7 @@ try {
   await writeFile(replacedWasm, await readFile(coreWasm));
   const secondFileProbe = await getBackendInfo({ backend: "wasm", wasm: replacedWasm });
   assert.equal(secondFileProbe.backend, "wasm-jspi", "replaced Wasm file must be read again after compile failure");
-  const replacedAgent = await createFxAgent({ backend: "wasm", wasm: replacedWasm, apiKey: "probe-retry-key" });
+  const replacedAgent = await createChassisAgent({ backend: "wasm", wasm: replacedWasm, apiKey: "probe-retry-key" });
   const replacedCheckpoint = await replacedAgent.checkpoint();
   await replacedAgent.close();
   assert.ok(replacedCheckpoint.length > 0, "factory must reuse the valid replacement after the failed probe");
@@ -220,16 +220,16 @@ try {
   try {
     assert.equal((await getBackendInfo({ backend: "wasm", wasm: stableWasm })).backend, "wasm-jspi");
     await assert.rejects(
-      createFxAgent({
+      createChassisAgent({
         backend: "wasm",
         wasm: stableWasm,
         apiKey: "stable-cache-key",
         checkpoint: new Uint8Array([1, 2, 3]),
       }),
-      /Invalid or non-fresh libfx checkpoint/,
+      /Invalid or non-fresh libchassis checkpoint/,
     );
     assert.equal((await getBackendInfo({ backend: "wasm", wasm: stableWasm })).backend, "wasm-jspi");
-    const stableAgent = await createFxAgent({ backend: "wasm", wasm: stableWasm, apiKey: "stable-cache-key" });
+    const stableAgent = await createChassisAgent({ backend: "wasm", wasm: stableWasm, apiKey: "stable-cache-key" });
     await stableAgent.close();
     assert.equal(stableCompileCalls, 1, "downstream factory errors must retain a successful compiled module");
   } finally {
@@ -255,7 +255,7 @@ try {
     response.end(remoteBytes);
   });
   await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
-  const remoteUrl = new URL(`http://127.0.0.1:${server.address().port}/fx-core.wasm`);
+  const remoteUrl = new URL(`http://127.0.0.1:${server.address().port}/chassis-core.wasm`);
   try {
     const remote = await getBackendInfo({ backend: "wasm", wasm: remoteUrl });
     assert.equal(remote.backend, "wasm-jspi");

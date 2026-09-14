@@ -20,7 +20,7 @@ const Allocator = std.mem.Allocator;
 
 comptime {
     if (build_options.wasm_surface != .core) {
-        @compileError("fx-core requires -Dwasm-surface=core");
+        @compileError("chassis-core requires -Dwasm-surface=core");
     }
 }
 
@@ -50,7 +50,7 @@ pub fn main(init: std.process.Init) !void {
         .context_registry = .{ .default_provider = context_contract.empty_provider },
         .mode_registry = builtin_modes.registry,
         .credential_override = io_mod.getenv("AI_GATEWAY_API_KEY"),
-        .model_override = io_mod.getenv("FX_MODEL"),
+        .model_override = io_mod.getenv("CHASSIS_MODEL"),
         .workspace_root_override = "/",
         .allow_acp_mcp = false,
         .allow_native_tools = false,

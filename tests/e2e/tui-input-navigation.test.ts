@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FX_BIN, REPO_ROOT, runFx } from "../evals/eval-helpers";
+import { CHASSIS_BIN, REPO_ROOT, runFx } from "../evals/eval-helpers";
 import {
   FAKE_GATEWAY_MODEL,
   fakeGatewayFinalText,
@@ -26,7 +26,7 @@ import {
 } from "./tui-render-assertions";
 
 const HAS_TMUX = tmuxAvailable();
-if (process.env.FX_REQUIRE_TMUX === "1" && !HAS_TMUX) {
+if (process.env.CHASSIS_REQUIRE_TMUX === "1" && !HAS_TMUX) {
   throw new Error("tmux is required for tui-input-navigation.test.ts");
 }
 
@@ -63,12 +63,12 @@ async function startFx(
   recordRender = false,
   gatewayResponseCount = 1,
 ): Promise<TmuxSession> {
-  testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
+  testHome = mkdtempSync(join(tmpdir(), "chassis-tui-input-"));
   stderrPath = join(testHome, "stderr.log");
   writeFileSync(stderrPath, "");
-  mkdirSync(join(testHome, ".fx"), { recursive: true });
+  mkdirSync(join(testHome, ".chassis"), { recursive: true });
   writeFileSync(
-    join(testHome, ".fx", "settings.json"),
+    join(testHome, ".chassis", "settings.json"),
     JSON.stringify({ sandbox: "none" }),
   );
   if (withGateway) {
@@ -81,26 +81,26 @@ async function startFx(
   }
   const active = await TmuxSession.create({
     cmd: withGateway
-      ? FX_BIN
-      : `env -u AI_GATEWAY_API_KEY -u VERCEL_OIDC_TOKEN FX_DISABLE_KEYCHAIN=1 FX_SKIP_ONBOARDING=1 ${FX_BIN}`,
+      ? CHASSIS_BIN
+      : `env -u AI_GATEWAY_API_KEY -u VERCEL_OIDC_TOKEN CHASSIS_DISABLE_KEYCHAIN=1 CHASSIS_SKIP_ONBOARDING=1 ${CHASSIS_BIN}`,
     env: {
       HOME: testHome,
       ...(gateway
         ? {
           AI_GATEWAY_API_KEY: "fake-input-navigation-key",
           VERCEL_OIDC_TOKEN: undefined,
-          FX_GATEWAY_BASE_URL: gateway.baseUrl,
-          FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-          FX_MODEL: FAKE_GATEWAY_MODEL,
-          FX_AUTO_UPGRADE: "0",
+          CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+          CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+          CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+          CHASSIS_AUTO_UPGRADE: "0",
         }
         : {}),
       ...(recordRender
         ? {
-          FX_RECORD: join(testHome, "session.fxtape"),
-          FX_RECORD_INPUT: "1",
-          FX_TRACE_LOG: join(testHome, "trace.log"),
-          FX_TRACE_SCOPES: RENDER_TRACE_SCOPES,
+          CHASSIS_RECORD: join(testHome, "session.fxtape"),
+          CHASSIS_RECORD_INPUT: "1",
+          CHASSIS_TRACE_LOG: join(testHome, "trace.log"),
+          CHASSIS_TRACE_SCOPES: RENDER_TRACE_SCOPES,
         }
         : {}),
     },
@@ -1046,7 +1046,7 @@ tmuxTest(
 tmuxTest(
   "typed pasted and slash-command images share the queued Gateway and session contract",
   async () => {
-    testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
+    testHome = mkdtempSync(join(tmpdir(), "chassis-tui-input-"));
     stderrPath = join(testHome, "stderr.log");
     writeFileSync(stderrPath, "");
     const workspacePath = join(testHome, "workspace");
@@ -1087,17 +1087,17 @@ tmuxTest(
     );
     gateway = localGateway;
     const active = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       cwd: workspace,
       env: {
         HOME: testHome,
         AI_GATEWAY_API_KEY: "fake-image-input-key",
         VERCEL_OIDC_TOKEN: undefined,
-        FX_GATEWAY_BASE_URL: localGateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: localGateway.chatUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
-        FX_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: localGateway.baseUrl,
+        CHASSIS_GATEWAY_CHAT_URL: localGateway.chatUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_AUTO_UPGRADE: "0",
       },
       width: 100,
       height: 24,
@@ -1230,10 +1230,10 @@ tmuxTest(
 tmuxTest(
   "repeated image commands stay local and submit together as one prompt",
   async () => {
-    testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
+    testHome = mkdtempSync(join(tmpdir(), "chassis-tui-input-"));
     stderrPath = join(testHome, "stderr.log");
     writeFileSync(stderrPath, "");
-    const workspace = mkdtempSync(join(tmpdir(), "fx-tui-images-"));
+    const workspace = mkdtempSync(join(tmpdir(), "chassis-tui-images-"));
     const firstPath = join(workspace, "first.png");
     const secondPath = join(workspace, "second.png");
     copyFileSync(imageFixture, firstPath);
@@ -1253,16 +1253,16 @@ tmuxTest(
     );
     gateway = localGateway;
     const active = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       env: {
         HOME: testHome,
         AI_GATEWAY_API_KEY: "fake-repeated-image-key",
         VERCEL_OIDC_TOKEN: undefined,
-        FX_GATEWAY_BASE_URL: localGateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: localGateway.chatUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
-        FX_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: localGateway.baseUrl,
+        CHASSIS_GATEWAY_CHAT_URL: localGateway.chatUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_AUTO_UPGRADE: "0",
       },
       width: 100,
       height: 24,
@@ -1338,10 +1338,10 @@ tmuxTest(
 tmuxTest(
   "a later turn's image keeps its own id in the composer and transcript",
   async () => {
-    testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
+    testHome = mkdtempSync(join(tmpdir(), "chassis-tui-input-"));
     stderrPath = join(testHome, "stderr.log");
     writeFileSync(stderrPath, "");
-    const workspace = mkdtempSync(join(tmpdir(), "fx-tui-image-ids-"));
+    const workspace = mkdtempSync(join(tmpdir(), "chassis-tui-image-ids-"));
     const firstPath = join(workspace, "one.png");
     const secondPath = join(workspace, "two.png");
     copyFileSync(imageFixture, firstPath);
@@ -1364,16 +1364,16 @@ tmuxTest(
     );
     gateway = localGateway;
     const active = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       env: {
         HOME: testHome,
         AI_GATEWAY_API_KEY: "fake-image-id-key",
         VERCEL_OIDC_TOKEN: undefined,
-        FX_GATEWAY_BASE_URL: localGateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: localGateway.chatUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
-        FX_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: localGateway.baseUrl,
+        CHASSIS_GATEWAY_CHAT_URL: localGateway.chatUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_AUTO_UPGRADE: "0",
       },
       width: 120,
       height: 36,
@@ -1435,10 +1435,10 @@ tmuxTest(
 tmuxTest(
   "image line kill and repeated yank preserve captured bytes under fresh ids",
   async () => {
-    testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
+    testHome = mkdtempSync(join(tmpdir(), "chassis-tui-input-"));
     stderrPath = join(testHome, "stderr.log");
     writeFileSync(stderrPath, "");
-    const workspace = mkdtempSync(join(tmpdir(), "fx-tui-image-yank-"));
+    const workspace = mkdtempSync(join(tmpdir(), "chassis-tui-image-yank-"));
     const sourcePath = join(workspace, "source.png");
     copyFileSync(imageFixture, sourcePath);
     const source = realpathSync(sourcePath);
@@ -1456,16 +1456,16 @@ tmuxTest(
     );
     gateway = localGateway;
     const active = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       env: {
         HOME: testHome,
         AI_GATEWAY_API_KEY: "fake-image-yank-key",
         VERCEL_OIDC_TOKEN: undefined,
-        FX_GATEWAY_BASE_URL: localGateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: localGateway.chatUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
-        FX_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: localGateway.baseUrl,
+        CHASSIS_GATEWAY_CHAT_URL: localGateway.chatUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_AUTO_UPGRADE: "0",
       },
       width: 100,
       height: 24,
@@ -1511,7 +1511,7 @@ tmuxTest(
 tmuxTest(
   "pending image commands stay local",
   async () => {
-    testHome = mkdtempSync(join(tmpdir(), "fx-tui-input-"));
+    testHome = mkdtempSync(join(tmpdir(), "chassis-tui-input-"));
     stderrPath = join(testHome, "stderr.log");
     writeFileSync(stderrPath, "");
     const localGateway = startFakeGateway(
@@ -1526,16 +1526,16 @@ tmuxTest(
     );
     gateway = localGateway;
     const active = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       env: {
         HOME: testHome,
         AI_GATEWAY_API_KEY: "fake-pending-image-key",
         VERCEL_OIDC_TOKEN: undefined,
-        FX_GATEWAY_BASE_URL: localGateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: localGateway.chatUrl,
-        FX_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
-        FX_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: localGateway.baseUrl,
+        CHASSIS_GATEWAY_CHAT_URL: localGateway.chatUrl,
+        CHASSIS_E2E_GATEWAY_MODELS_URL: `${localGateway.baseUrl}/coding-agent/v1/models`,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_AUTO_UPGRADE: "0",
       },
       width: 100,
       height: 24,
@@ -1580,7 +1580,7 @@ tmuxTest(
 );
 
 tmuxTest(
-  "repeated image-path paste cannot grow direct input past the cap and leaves fx alive",
+  "repeated image-path paste cannot grow direct input past the cap and leaves chassis alive",
   async () => {
     const active = await startFx(120, 24);
     await active.pasteText(repeatedImagePaste(80));
@@ -1637,22 +1637,22 @@ tmuxTest(
 tmuxTest(
   "current composer and submitted prompt use connected rails",
   async () => {
-    testHome = mkdtempSync(join(tmpdir(), "fx-tui-current-rails-"));
-    mkdirSync(join(testHome, ".fx"), { recursive: true });
+    testHome = mkdtempSync(join(tmpdir(), "chassis-tui-current-rails-"));
+    mkdirSync(join(testHome, ".chassis"), { recursive: true });
     const localGateway = startFakeGateway([
       fakeGatewayFinalText("CURRENT_RAIL_MOCK_OK"),
     ]);
     gateway = localGateway;
     const active = await TmuxSession.create({
-      cmd: FX_BIN,
+      cmd: CHASSIS_BIN,
       env: {
         HOME: testHome,
         AI_GATEWAY_API_KEY: "fake-current-rail-key",
         VERCEL_OIDC_TOKEN: undefined,
-        FX_GATEWAY_BASE_URL: localGateway.baseUrl,
-        FX_GATEWAY_CHAT_URL: localGateway.chatUrl,
-        FX_MODEL: FAKE_GATEWAY_MODEL,
-        FX_AUTO_UPGRADE: "0",
+        CHASSIS_GATEWAY_BASE_URL: localGateway.baseUrl,
+        CHASSIS_GATEWAY_CHAT_URL: localGateway.chatUrl,
+        CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
+        CHASSIS_AUTO_UPGRADE: "0",
       },
       width: 80,
       height: 24,

@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>fx terminal WebAssembly demo</title>
+  <title>chassis terminal WebAssembly demo</title>
   <script>
     // The production packager replaces these defaults with content-addressed values.
-    const fxWasmAsset = "./fx-term.wasm";
+    const fxWasmAsset = "./chassis-term.wasm";
     const fxWasmIntegrity = "";
-    const fxWasmUrl = fxWasmAsset === "./fx-term.wasm" &&
+    const fxWasmUrl = fxWasmAsset === "./chassis-term.wasm" &&
       (location.hostname === "localhost" || location.hostname === "127.0.0.1")
-      ? "../zig-out/bin/fx-term.wasm"
+      ? "../zig-out/bin/chassis-term.wasm"
       : fxWasmAsset;
     globalThis.__fxWasmModule = null;
     if (typeof WebAssembly.Suspending === "function" && typeof WebAssembly.promising === "function") {
@@ -60,7 +60,7 @@
   <script type="module">
     import { Terminal } from "@xterm/xterm";
     import { FitAddon } from "@xterm/addon-fit";
-    import { createFxTerminal, supportsJspi, xtermAdapter } from "./browser.js";
+    import { createChassisTerminal, supportsJspi, xtermAdapter } from "./browser.js";
 
     const terminal = new Terminal({
       cursorBlink: true,
@@ -100,31 +100,31 @@
     terminal.focus();
 
     const configStore = {
-      get(id) { return localStorage.getItem(`fx.core.config.${id}`); },
-      set(id, value) { localStorage.setItem(`fx.core.config.${id}`, value); },
+      get(id) { return localStorage.getItem(`chassis.core.config.${id}`); },
+      set(id, value) { localStorage.setItem(`chassis.core.config.${id}`, value); },
     };
     const promptHistoryStore = {
       load(workspaceRoot, limit) {
-        const values = JSON.parse(localStorage.getItem(`fx.term.history.${workspaceRoot}`) || "[]");
+        const values = JSON.parse(localStorage.getItem(`chassis.term.history.${workspaceRoot}`) || "[]");
         return values.slice(-limit);
       },
       append(workspaceRoot, value) {
-        const key = `fx.term.history.${workspaceRoot}`;
+        const key = `chassis.term.history.${workspaceRoot}`;
         const values = JSON.parse(localStorage.getItem(key) || "[]");
         if (values.at(-1) === value) return "duplicate";
         values.push(value);
         localStorage.setItem(key, JSON.stringify(values.slice(-100)));
       },
-      clear(workspaceRoot) { localStorage.removeItem(`fx.term.history.${workspaceRoot}`); },
+      clear(workspaceRoot) { localStorage.removeItem(`chassis.term.history.${workspaceRoot}`); },
     };
     if (!supportsJspi()) {
-      terminal.write("fx requires Chrome or Edge 137+ with JSPI support.\r\n");
+      terminal.write("chassis requires Chrome or Edge 137+ with JSPI support.\r\n");
       window.__fxTerminal = { terminal, fitAddon, resizeObserver, unsupported: true };
     } else {
-      const runtime = await createFxTerminal({
+      const runtime = await createChassisTerminal({
         wasm: globalThis.__fxWasmModule,
         terminal: xtermAdapter(terminal),
-        env: { AI_GATEWAY_API_KEY: localStorage.getItem("FX_API_KEY") || "" },
+        env: { AI_GATEWAY_API_KEY: localStorage.getItem("CHASSIS_API_KEY") || "" },
         configStore,
         promptHistoryStore,
       });

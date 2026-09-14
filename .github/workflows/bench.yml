@@ -57,8 +57,8 @@ jobs:
       - name: Run interactive terminal performance gate
         working-directory: tests/e2e
         env:
-          FX_TUI_PERFORMANCE: "1"
-          FX_TUI_PERFORMANCE_REPORT: ${{ runner.temp }}/tui-performance.json
+          CHASSIS_TUI_PERFORMANCE: "1"
+          CHASSIS_TUI_PERFORMANCE_REPORT: ${{ runner.temp }}/tui-performance.json
         run: bun test tui-performance.test.ts
 
       - name: Upload interactive terminal performance evidence
@@ -69,9 +69,9 @@ jobs:
           path: ${{ runner.temp }}/tui-performance.json
           if-no-files-found: warn
 
-  libfx-ttft:
+  libchassis-ttft:
     if: inputs.signed_run == ''
-    name: libfx Runtime
+    name: libchassis Runtime
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,43 +91,43 @@ jobs:
         with:
           bun-version: "1.4.2"
 
-      - name: Build libfx artifacts
+      - name: Build libchassis artifacts
         run: |
           zig build -Dnapi-surface=core -Doptimize=ReleaseSafe
           zig build -Dwasm-surface=core -Doptimize=ReleaseSmall
 
       - name: Install pinned Pi benchmark target
-        run: npm install --prefix /tmp/libfx-pi @earendil-works/pi-coding-agent@0.84.4
+        run: npm install --prefix /tmp/libchassis-pi @earendil-works/pi-coding-agent@0.84.4
 
       - name: Build external inference fixture
-        run: zig build-exe benchmarks/libfx/fake-inference-server.zig -O ReleaseSafe -femit-bin=${{ runner.temp }}/libfx-fake-inference-server
+        run: zig build-exe benchmarks/libchassis/fake-inference-server.zig -O ReleaseSafe -femit-bin=${{ runner.temp }}/libchassis-fake-inference-server
 
-      - name: Measure libfx and Pi
+      - name: Measure libchassis and Pi
         run: |
-          node benchmarks/libfx/bench-suite.mjs --samples 100 --pi-root /tmp/libfx-pi --out benchmarks/results/libfx
-          node benchmarks/libfx/bench-bridge.mjs --backend native --samples 100 > benchmarks/results/libfx/bridge-node-native.json
-          node --experimental-wasm-jspi benchmarks/libfx/bench-bridge.mjs --backend wasm --samples 100 > benchmarks/results/libfx/bridge-node-wasm.json
-          bun benchmarks/libfx/bench-bridge.mjs --backend native --samples 100 > benchmarks/results/libfx/bridge-bun-native.json
-          bun benchmarks/libfx/bench-bridge.mjs --backend wasm --samples 100 > benchmarks/results/libfx/bridge-bun-wasm.json
-          node benchmarks/libfx/bench-runtime.mjs --backend native --warm-samples 100 --stream-samples 30 > benchmarks/results/libfx/runtime-node-native.json
-          node --experimental-wasm-jspi benchmarks/libfx/bench-runtime.mjs --backend wasm --warm-samples 100 --stream-samples 30 > benchmarks/results/libfx/runtime-node-wasm.json
-          bun benchmarks/libfx/bench-runtime.mjs --backend native --warm-samples 100 --stream-samples 30 > benchmarks/results/libfx/runtime-bun-native.json
-          bun benchmarks/libfx/bench-runtime.mjs --backend wasm --warm-samples 100 --stream-samples 30 > benchmarks/results/libfx/runtime-bun-wasm.json
-          node --expose-gc benchmarks/libfx/bench-capacity.mjs --backend native --count 25 > benchmarks/results/libfx/capacity-node-native.json
-          node --experimental-wasm-jspi --expose-gc benchmarks/libfx/bench-capacity.mjs --backend wasm --count 25 > benchmarks/results/libfx/capacity-node-wasm.json
-          bun benchmarks/libfx/bench-capacity.mjs --backend native --count 25 > benchmarks/results/libfx/capacity-bun-native.json
-          bun benchmarks/libfx/bench-capacity.mjs --backend wasm --count 25 > benchmarks/results/libfx/capacity-bun-wasm.json
-          node benchmarks/libfx/bench-competitive.mjs --server ${{ runner.temp }}/libfx-fake-inference-server --pi-root /tmp/libfx-pi --out benchmarks/results/libfx --samples 100 --warmups 3 --rounds 3
+          node benchmarks/libchassis/bench-suite.mjs --samples 100 --pi-root /tmp/libchassis-pi --out benchmarks/results/libchassis
+          node benchmarks/libchassis/bench-bridge.mjs --backend native --samples 100 > benchmarks/results/libchassis/bridge-node-native.json
+          node --experimental-wasm-jspi benchmarks/libchassis/bench-bridge.mjs --backend wasm --samples 100 > benchmarks/results/libchassis/bridge-node-wasm.json
+          bun benchmarks/libchassis/bench-bridge.mjs --backend native --samples 100 > benchmarks/results/libchassis/bridge-bun-native.json
+          bun benchmarks/libchassis/bench-bridge.mjs --backend wasm --samples 100 > benchmarks/results/libchassis/bridge-bun-wasm.json
+          node benchmarks/libchassis/bench-runtime.mjs --backend native --warm-samples 100 --stream-samples 30 > benchmarks/results/libchassis/runtime-node-native.json
+          node --experimental-wasm-jspi benchmarks/libchassis/bench-runtime.mjs --backend wasm --warm-samples 100 --stream-samples 30 > benchmarks/results/libchassis/runtime-node-wasm.json
+          bun benchmarks/libchassis/bench-runtime.mjs --backend native --warm-samples 100 --stream-samples 30 > benchmarks/results/libchassis/runtime-bun-native.json
+          bun benchmarks/libchassis/bench-runtime.mjs --backend wasm --warm-samples 100 --stream-samples 30 > benchmarks/results/libchassis/runtime-bun-wasm.json
+          node --expose-gc benchmarks/libchassis/bench-capacity.mjs --backend native --count 25 > benchmarks/results/libchassis/capacity-node-native.json
+          node --experimental-wasm-jspi --expose-gc benchmarks/libchassis/bench-capacity.mjs --backend wasm --count 25 > benchmarks/results/libchassis/capacity-node-wasm.json
+          bun benchmarks/libchassis/bench-capacity.mjs --backend native --count 25 > benchmarks/results/libchassis/capacity-bun-native.json
+          bun benchmarks/libchassis/bench-capacity.mjs --backend wasm --count 25 > benchmarks/results/libchassis/capacity-bun-wasm.json
+          node benchmarks/libchassis/bench-competitive.mjs --server ${{ runner.temp }}/libchassis-fake-inference-server --pi-root /tmp/libchassis-pi --out benchmarks/results/libchassis --samples 100 --warmups 3 --rounds 3
 
-      - name: Enforce deterministic libfx contracts
-        run: node benchmarks/libfx/check-results.mjs --dir benchmarks/results/libfx
+      - name: Enforce deterministic libchassis contracts
+        run: node benchmarks/libchassis/check-results.mjs --dir benchmarks/results/libchassis
 
-      - name: Upload raw libfx TTFT samples
+      - name: Upload raw libchassis TTFT samples
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: libfx-ttft-${{ github.sha }}
-          path: benchmarks/results/libfx/*.json
+          name: libchassis-ttft-${{ github.sha }}
+          path: benchmarks/results/libchassis/*.json
           if-no-files-found: error
 
   signed-macos:
@@ -154,11 +154,11 @@ jobs:
             .head_repository.full_name == $repo
           ' "$RUNNER_TEMP/signed-source.json"
           gh run download "$SIGNED_RUN" --repo "$GITHUB_REPOSITORY" \
-            --name fx-macos-aarch64 --name signing-control-macos-arm64 \
+            --name chassis-macos-aarch64 --name signing-control-macos-arm64 \
             --dir "$RUNNER_TEMP/signed-input"
           mkdir -p "$RUNNER_TEMP/signed-control" "$RUNNER_TEMP/signed-candidate"
-          tar -xzf "$RUNNER_TEMP/signed-input/signing-control-macos-arm64/fx-signing-control.tar.gz" -C "$RUNNER_TEMP/signed-control" fx
-          tar -xzf "$RUNNER_TEMP/signed-input/fx-macos-aarch64/fx-macos-aarch64.tar.gz" -C "$RUNNER_TEMP/signed-candidate" fx
+          tar -xzf "$RUNNER_TEMP/signed-input/signing-control-macos-arm64/chassis-signing-control.tar.gz" -C "$RUNNER_TEMP/signed-control" chassis
+          tar -xzf "$RUNNER_TEMP/signed-input/chassis-macos-aarch64/chassis-macos-aarch64.tar.gz" -C "$RUNNER_TEMP/signed-candidate" chassis
 
       - name: Install measurement tools
         env:
@@ -174,15 +174,15 @@ jobs:
       - name: Compare signed startup
         run: |
           python3 -m scripts.compare_signed_macos \
-            --control "$RUNNER_TEMP/signed-control/fx" \
-            --candidate "$RUNNER_TEMP/signed-candidate/fx" \
+            --control "$RUNNER_TEMP/signed-control/chassis" \
+            --candidate "$RUNNER_TEMP/signed-candidate/chassis" \
             --source-sha "$(jq -r .head_sha "$RUNNER_TEMP/signed-source.json")" \
             --output "$RUNNER_TEMP/signed-comparison"
 
       - name: Compare native image-flow memory
         env:
-          FX_SIGNED_COMPARE_DIR: ${{ runner.temp }}/signed-comparison
-          FX_SIGNED_RESOURCE_PROBE: ${{ runner.temp }}/signed-resources
+          CHASSIS_SIGNED_COMPARE_DIR: ${{ runner.temp }}/signed-comparison
+          CHASSIS_SIGNED_RESOURCE_PROBE: ${{ runner.temp }}/signed-resources
         run: bun test benchmarks/signed_macos_memory.test.ts
 
       - name: Retain paired measurements

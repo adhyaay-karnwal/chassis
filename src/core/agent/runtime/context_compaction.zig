@@ -1029,7 +1029,7 @@ test "compaction result retention snapshots uncertain history without changing c
         .tool_result_memory = .{
             .truncated = true,
             .command_output_replay = .{ .available = .{
-                .handle = "fx-command-replay-complete.bin",
+                .handle = "chassis-command-replay-complete.bin",
                 .framed_bytes = 128,
             } },
         },

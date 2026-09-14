@@ -283,7 +283,7 @@ fn composeBrowseRow(
 
 fn composeInfoRow(alloc: Allocator, row_index: u16, width: u16) !std.ArrayList(u8) {
     return switch (row_index) {
-        0 => composeFactRow(alloc, "Profile config", "~/.fx/mcp.json", width),
+        0 => composeFactRow(alloc, "Profile config", "~/.chassis/mcp.json", width),
         1 => composeFactRow(alloc, "Project config", "<workspace>/.mcp.json", width),
         2 => composeTextRow(alloc, "servers: a add · r reload · enter inspect", width, ui_render.dim_style, 2),
         3 => composeTextRow(alloc, "project trust: p approve all · z reset", width, ui_render.dim_style, 2),
@@ -415,7 +415,7 @@ fn composeDetailsRow(
         0 => .{ .label = "Server", .value = server.configured_name },
         1 => .{ .label = "State", .value = serverStateLabel(server.*) },
         2 => .{ .label = "Source", .value = switch (server.source) {
-            .profile => "Profile · ~/.fx/mcp.json",
+            .profile => "Profile · ~/.chassis/mcp.json",
             .workspace => "Project · .mcp.json",
             .acp => "ACP session",
         } },
@@ -973,7 +973,7 @@ test "MCP menu every screen and section renders through the VT" {
         projection,
         width,
         max_inline_rows,
-        &.{ "Profile config", "~/.fx/mcp.json", "Project config", "<workspace>/.mcp.json" },
+        &.{ "Profile config", "~/.chassis/mcp.json", "Project config", "<workspace>/.mcp.json" },
     );
 
     projection.state = .{

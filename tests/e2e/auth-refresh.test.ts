@@ -30,7 +30,7 @@ function writeFxLogin(
   issuer = "https://vercel.com",
   expiresAtMs = Date.now() - 60_000,
 ): void {
-  const fxDir = join(home, ".fx");
+  const fxDir = join(home, ".chassis");
   mkdirSync(fxDir, { recursive: true, mode: 0o700 });
   chmodSync(fxDir, 0o700);
   const authPath = join(fxDir, "auth.json");
@@ -128,7 +128,7 @@ async function waitForFileText(path: string, text: string): Promise<void> {
 }
 
 function sessionIdsFromHome(home: string): string[] {
-  return readdirSync(join(home, ".fx", "sessions"), {
+  return readdirSync(join(home, ".chassis", "sessions"), {
     withFileTypes: true,
   })
     .filter((entry) => entry.isDirectory() && entry.name !== "latest")
@@ -139,8 +139,8 @@ function sessionIdsFromHome(home: string): string[] {
 test(
   "logout cannot be undone by an in-flight login refresh",
   async () => {
-    const home = mkdtempSync(join(tmpdir(), "fx-auth-refresh-logout-race-e2e-"));
-    const contentionPath = join(home, ".fx", "auth-lock-contention");
+    const home = mkdtempSync(join(tmpdir(), "chassis-auth-refresh-logout-race-e2e-"));
+    const contentionPath = join(home, ".chassis", "auth-lock-contention");
     let releaseRefresh = () => {};
     const refreshMayFinish = new Promise<void>((resolve) => {
       releaseRefresh = resolve;
@@ -167,13 +167,13 @@ test(
       HOME: home,
       AI_GATEWAY_API_KEY: undefined,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-      FX_MODEL: FAKE_GATEWAY_MODEL,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+      CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+      CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+      CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
     };
 
     try {
@@ -185,7 +185,7 @@ test(
       const logout = runFx(["logout"], {
         env: {
           ...env,
-          FX_E2E_AUTH_LOCK_CONTENTION: "1",
+          CHASSIS_E2E_AUTH_LOCK_CONTENTION: "1",
         },
         timeoutMs: TIMEOUT,
       });
@@ -201,9 +201,9 @@ test(
         logoutResult.code,
         `stdout: ${logoutResult.stdout}\nstderr: ${logoutResult.stderr}`,
       ).toBe(0);
-      expect(logoutResult.stdout).toBe("Signed out of fx.\n");
+      expect(logoutResult.stdout).toBe("Signed out of chassis.\n");
       expect(tokenRequestCount).toBe(1);
-      expect(existsSync(join(home, ".fx", "auth.json"))).toBe(false);
+      expect(existsSync(join(home, ".chassis", "auth.json"))).toBe(false);
       const revocations = oauth.requests.filter(
         (request) => request.path === "/oauth/revoke",
       );
@@ -223,9 +223,9 @@ test(
 );
 
 test(
-  "fx ask refreshes an expired login then forces one refresh and retry after 401",
+  "chassis ask refreshes an expired login then forces one refresh and retry after 401",
   async () => {
-    const home = mkdtempSync(join(tmpdir(), "fx-auth-refresh-e2e-"));
+    const home = mkdtempSync(join(tmpdir(), "chassis-auth-refresh-e2e-"));
     const oauth = startFakeOAuth(
       [EXPIRED_REFRESH_TOKEN, RETRY_REFRESH_TOKEN],
       "",
@@ -249,13 +249,13 @@ test(
             HOME: home,
             AI_GATEWAY_API_KEY: undefined,
             VERCEL_OIDC_TOKEN: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_SKIP_ONBOARDING: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-            FX_MODEL: FAKE_GATEWAY_MODEL,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_SKIP_ONBOARDING: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
           },
           timeoutMs: TIMEOUT,
         },
@@ -287,7 +287,7 @@ test(
       expect(oauth.requests[3].body).toContain("refresh_token=first-rotated-refresh-token");
 
       const persisted = JSON.parse(
-        readFileSync(join(home, ".fx", "auth.json"), "utf8"),
+        readFileSync(join(home, ".chassis", "auth.json"), "utf8"),
       );
       expect(persisted.access_token).toBe(RETRY_REFRESH_TOKEN);
       expect(persisted.refresh_token).toBe("second-rotated-refresh-token");
@@ -307,19 +307,19 @@ test(
 test(
   "status and doctor report an expired login instead of refreshing it",
   async () => {
-    const home = mkdtempSync(join(tmpdir(), "fx-auth-expired-report-e2e-"));
+    const home = mkdtempSync(join(tmpdir(), "chassis-auth-expired-report-e2e-"));
     const oauth = startFakeOAuth([EXPIRED_REFRESH_TOKEN]);
     writeFxLogin(home, oauth.issuerUrl);
-    const authPath = join(home, ".fx", "auth.json");
+    const authPath = join(home, ".chassis", "auth.json");
     const seededAuthFile = readFileSync(authPath, "utf8");
     const env = {
       HOME: home,
       AI_GATEWAY_API_KEY: undefined,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_E2E_OAUTH_ISSUER_URL: oauth.issuerUrl,
     };
 
     try {
@@ -329,14 +329,14 @@ test(
         `stdout: ${status.stdout}\nstderr: ${status.stderr}`,
       ).toBe(0);
       const statusJson = JSON.parse(status.stdout);
-      expect(statusJson.auth).toBe("fx login");
+      expect(statusJson.auth).toBe("chassis login");
       expect(statusJson.auth_expired).toBe(true);
       expect(statusJson.auth_refreshable).toBe(true);
 
       const doctor = await runFx(["doctor", "--json"], { env, timeoutMs: TIMEOUT });
       expect(doctor.code).toBe(0);
       const doctorJson = JSON.parse(doctor.stdout);
-      expect(doctorJson.auth).toBe("fx login");
+      expect(doctorJson.auth).toBe("chassis login");
       expect(doctorJson.auth_expired).toBe(true);
       const authCheck = doctorJson.checks.find(
         (check: { name: string }) => check.name === "auth",
@@ -358,9 +358,9 @@ test(
 );
 
 test(
-  "fx ask keeps a failed API key selected when login also exists",
+  "chassis ask keeps a failed API key selected when login also exists",
   async () => {
-    const home = mkdtempSync(join(tmpdir(), "fx-auth-source-failure-e2e-"));
+    const home = mkdtempSync(join(tmpdir(), "chassis-auth-source-failure-e2e-"));
     const tracePath = join(home, "trace.log");
     writeFileSync(tracePath, "");
     writeFxLogin(home);
@@ -383,13 +383,13 @@ test(
             HOME: home,
             AI_GATEWAY_API_KEY: SELECTED_API_KEY,
             VERCEL_OIDC_TOKEN: undefined,
-            FX_DISABLE_KEYCHAIN: "1",
-            FX_SKIP_ONBOARDING: "1",
-            FX_AUTO_UPGRADE: "0",
-            FX_TRACE_LOG: tracePath,
-            FX_GATEWAY_BASE_URL: gateway.baseUrl,
-            FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-            FX_MODEL: FAKE_GATEWAY_MODEL,
+            CHASSIS_DISABLE_KEYCHAIN: "1",
+            CHASSIS_SKIP_ONBOARDING: "1",
+            CHASSIS_AUTO_UPGRADE: "0",
+            CHASSIS_TRACE_LOG: tracePath,
+            CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+            CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+            CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
           },
           timeoutMs: TIMEOUT,
         },
@@ -431,7 +431,7 @@ test(
 test(
   "saved API-key 401 discards only the new empty session and preserves resume last",
   async () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "fx-auth-empty-session-e2e-")));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "chassis-auth-empty-session-e2e-")));
     const home = join(root, "home");
     const workspace = join(root, "workspace");
     mkdirSync(home);
@@ -448,12 +448,12 @@ test(
       HOME: home,
       AI_GATEWAY_API_KEY: SELECTED_API_KEY,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_SKIP_ONBOARDING: "1",
-      FX_AUTO_UPGRADE: "0",
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_GATEWAY_CHAT_URL: gateway.chatUrl,
-      FX_MODEL: FAKE_GATEWAY_MODEL,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_SKIP_ONBOARDING: "1",
+      CHASSIS_AUTO_UPGRADE: "0",
+      CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+      CHASSIS_GATEWAY_CHAT_URL: gateway.chatUrl,
+      CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
     };
 
     try {
@@ -478,7 +478,7 @@ test(
       );
       expect(rejected.code).toBe(1);
       expect(rejected.stderr).toBe(
-        "fx ask: AI_GATEWAY_API_KEY authentication failed · HTTP 401\n",
+        "chassis ask: AI_GATEWAY_API_KEY authentication failed · HTTP 401\n",
       );
       const rejectedJson = JSON.parse(rejected.stdout);
       expect(rejectedJson).toMatchObject({
@@ -551,7 +551,7 @@ test(
 test(
   "OAuth sessions keep using their saved issuer when configuration changes",
   async () => {
-    const home = mkdtempSync(join(tmpdir(), "fx-auth-saved-issuer-e2e-"));
+    const home = mkdtempSync(join(tmpdir(), "chassis-auth-saved-issuer-e2e-"));
     const issuerA = startFakeOAuth([ISSUER_A_ACCESS_TOKEN]);
     const issuerB = startFakeOAuth(["issuer-b-access-token"]);
     const gateway = startFakeGateway([]);
@@ -561,10 +561,10 @@ test(
       HOME: home,
       AI_GATEWAY_API_KEY: undefined,
       VERCEL_OIDC_TOKEN: undefined,
-      FX_DISABLE_KEYCHAIN: "1",
-      FX_E2E_OAUTH_ISSUER_URL: issuerB.issuerUrl,
-      FX_GATEWAY_BASE_URL: gateway.baseUrl,
-      FX_MODEL: FAKE_GATEWAY_MODEL,
+      CHASSIS_DISABLE_KEYCHAIN: "1",
+      CHASSIS_E2E_OAUTH_ISSUER_URL: issuerB.issuerUrl,
+      CHASSIS_GATEWAY_BASE_URL: gateway.baseUrl,
+      CHASSIS_MODEL: FAKE_GATEWAY_MODEL,
     };
 
     try {
@@ -579,7 +579,7 @@ test(
       expect(teams.stderr).toBe("");
 
       const persisted = JSON.parse(
-        readFileSync(join(home, ".fx", "auth.json"), "utf8"),
+        readFileSync(join(home, ".chassis", "auth.json"), "utf8"),
       );
       expect(persisted).toMatchObject({
         issuer: issuerA.issuerUrl,
@@ -591,7 +591,7 @@ test(
 
       const logout = await runFx(["logout"], { env, timeoutMs: TIMEOUT });
       expect(logout.code).toBe(0);
-      expect(logout.stdout).toBe("Signed out of fx.\n");
+      expect(logout.stdout).toBe("Signed out of chassis.\n");
       expect(logout.stderr).toBe("");
 
       expect(
@@ -641,7 +641,7 @@ test(
 test(
   "invalid saved OAuth issuers receive no access or refresh token",
   async () => {
-    const home = mkdtempSync(join(tmpdir(), "fx-auth-invalid-issuer-e2e-"));
+    const home = mkdtempSync(join(tmpdir(), "chassis-auth-invalid-issuer-e2e-"));
     const invalidIssuer = startFakeOAuth([], "/tenant");
     writeFxLogin(
       home,
@@ -655,13 +655,13 @@ test(
           HOME: home,
           AI_GATEWAY_API_KEY: undefined,
           VERCEL_OIDC_TOKEN: undefined,
-          FX_DISABLE_KEYCHAIN: "1",
+          CHASSIS_DISABLE_KEYCHAIN: "1",
         },
         timeoutMs: TIMEOUT,
       });
 
       expect(logout.code).toBe(0);
-      expect(logout.stdout).toBe("Signed out of fx.\n");
+      expect(logout.stdout).toBe("Signed out of chassis.\n");
       expect(logout.stderr).toBe("");
       expect(invalidIssuer.requests).toEqual([]);
       expect(logout.stdout).not.toContain("expired-access-token");

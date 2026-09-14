@@ -2,14 +2,14 @@
 import { strict as assert } from "node:assert";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createFxAgent } from "../node.js";
+import { createChassisAgent } from "../node.js";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const addon = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/lib/libfx.node"));
+const addon = resolve(process.argv[2] || resolve(scriptDir, "../../zig-out/lib/libchassis.node"));
 let timeoutId;
 let fetchCalls = 0;
 let catalogCalls = 0;
-const agent = await createFxAgent({
+const agent = await createChassisAgent({
   nativeAddon: addon,
   backend: "native",
   fetch(_url, init) {

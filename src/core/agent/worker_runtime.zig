@@ -6205,7 +6205,7 @@ test "typed lifecycle worker events duplicate and free every payload variant" {
         .{ .terminal = .{
             .id = .{ .turn_id = 1, .call_id = "final" },
             .outcome = .{ .kind = .completed, .summary = "Listed files" },
-            .command_artifact_handle = "fx-command-final.log",
+            .command_artifact_handle = "chassis-command-final.log",
         } },
         .{ .turn_finished = .{ .turn_id = 1, .outcome = .completed } },
     };
@@ -6450,7 +6450,7 @@ test "dupeWorkerEvent owns a complete refreshed credential publication" {
     const alloc = std.testing.allocator;
     const source: WorkerEvent = .{ .credential_refreshed = .{
         .token = @constCast("fresh-token"),
-        .source = .fx_login,
+        .source = .chassis_login,
         .team_id = @constCast("team_123"),
         .refresh_after_ms = 100,
     } };
@@ -7030,7 +7030,7 @@ test "question batch snapshot answer and cancellation" {
 test "question batch source distinguishes route recovery from agent questions" {
     const alloc = std.testing.allocator;
     const options = [_]types.QuestionOption{.{ .label = "Try again later", .description = null }};
-    const entries = [_]types.QuestionBatchEntry{.{ .question = "Route failed. What should fx do?", .options = &options }};
+    const entries = [_]types.QuestionBatchEntry{.{ .question = "Route failed. What should chassis do?", .options = &options }};
 
     var route_runtime = WorkerRuntime{};
     defer route_runtime.deinit(alloc);

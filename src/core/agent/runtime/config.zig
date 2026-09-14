@@ -36,7 +36,7 @@ pub const Config = struct {
     advertised_functions: []const model_tool_schema.FunctionSchema = &.{},
     initial_dynamic_tools: []const stream_provider.DynamicFunctionTool = &.{},
     provider_capabilities: provider_set.Bundle.Capabilities = .{
-        .fx_search = true,
+        .chassis_search = true,
         .vision_fallback = true,
     },
     custom_tool_guidance: []const u8 = "",

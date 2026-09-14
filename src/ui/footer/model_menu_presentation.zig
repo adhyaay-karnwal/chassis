@@ -401,8 +401,8 @@ fn loadedCatalogStatusText(state: model_cache_runtime.ModelMenuCatalogState) ?[]
         const reason = state.public_only_reason orelse return "Using the public model catalog.";
         return switch (reason) {
             .no_credential => "Using the public model catalog; sign in or use an API key for team-private models.",
-            .fx_login_team_required => "Choose a Vercel team to load its private models.",
-            .fx_login_refresh_required => "Vercel sign-in must refresh before team-private models can load.",
+            .chassis_login_team_required => "Choose a Vercel team to load its private models.",
+            .chassis_login_refresh_required => "Vercel sign-in must refresh before team-private models can load.",
             .credential_refresh_required => "The selected sign-in must refresh before authenticated models can load.",
             .credential_refresh_failed => "Vercel sign-in refresh failed; using the public model catalog.",
             .authenticated_credential_rejected => "Your Gateway credential was rejected; using the public model catalog.",
@@ -413,7 +413,7 @@ fn loadedCatalogStatusText(state: model_cache_runtime.ModelMenuCatalogState) ?[]
     if (state.access_level == .authenticated) {
         const source = state.source orelse return "Using an authenticated AI Gateway catalog.";
         return switch (source) {
-            .fx_login => "Gateway catalog: authenticated with fx login.",
+            .chassis_login => "Gateway catalog: authenticated with chassis login.",
             .ai_gateway_api_key => "Note: Gateway catalog is authenticated with an API key",
             .vercel_oidc_token => "Gateway catalog: authenticated with the Vercel session.",
             .stored_key => "Gateway catalog: authenticated with the stored API key.",
@@ -679,8 +679,8 @@ test "model menu places catalog note after an item gap and preserves the heading
 
 test "model menu status follows provenance and retryable failure precedence" {
     try std.testing.expectEqualStrings(
-        "Gateway catalog: authenticated with fx login.",
-        loadedCatalogStatusText(.{ .access_level = .authenticated, .source = .fx_login }).?,
+        "Gateway catalog: authenticated with chassis login.",
+        loadedCatalogStatusText(.{ .access_level = .authenticated, .source = .chassis_login }).?,
     );
 
     const cases = [_]struct {
@@ -688,8 +688,8 @@ test "model menu status follows provenance and retryable failure precedence" {
         expected: []const u8,
     }{
         .{ .state = .{ .public_only_reason = .no_credential, .private_models_hidden = true }, .expected = "Using the public model catalog; sign in or use an API key for team-private models." },
-        .{ .state = .{ .public_only_reason = .fx_login_team_required, .private_models_hidden = true }, .expected = "Choose a Vercel team to load its private models." },
-        .{ .state = .{ .public_only_reason = .fx_login_refresh_required, .private_models_hidden = true }, .expected = "Vercel sign-in must refresh before team-private models can load." },
+        .{ .state = .{ .public_only_reason = .chassis_login_team_required, .private_models_hidden = true }, .expected = "Choose a Vercel team to load its private models." },
+        .{ .state = .{ .public_only_reason = .chassis_login_refresh_required, .private_models_hidden = true }, .expected = "Vercel sign-in must refresh before team-private models can load." },
         .{ .state = .{ .public_only_reason = .credential_refresh_failed, .private_models_hidden = true }, .expected = "Vercel sign-in refresh failed; using the public model catalog." },
         .{ .state = .{ .public_only_reason = .authenticated_credential_rejected, .private_models_hidden = true }, .expected = "Your Gateway credential was rejected; using the public model catalog." },
         .{ .state = .{ .failure = .{ .category = .transport, .retryable = true } }, .expected = "Could not reach AI Gateway; retry /model." },
