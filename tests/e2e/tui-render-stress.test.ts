@@ -99,7 +99,7 @@ describe.skipIf(SKIP)("tui: render stress", () => {
 
         const firstPrompt = `visible_user_prompt_${run}`;
         await session.sendText(firstPrompt);
-        await session.waitForText("chassis needs access to Vercel AI Gateway", 5_000);
+        await session.waitForText("chassis needs a model provider", 5_000);
 
         const tailToken = `tail_${run}_visibl`;
         await session.sendKeys(`-l '${longInput(run)}'`);

@@ -39,7 +39,7 @@ const NO_GATEWAY_AUTH = {
   VERCEL_OIDC_TOKEN: undefined,
 };
 const MISSING_AUTH_MESSAGE =
-  "chassis needs access to Vercel AI Gateway. Run chassis login to sign in, chassis setup to use an API key, or set AI_GATEWAY_API_KEY.";
+  "chassis needs a model provider. Run chassis login to sign in (Vercel AI Gateway, Codex, or Grok), chassis setup to use an API key, or set AI_GATEWAY_API_KEY.";
 const MODERN_MCP_FIXTURE = join(
   import.meta.dirname,
   "fixtures",
@@ -330,9 +330,9 @@ describe("cli: help", () => {
       expect(stdout).not.toContain("\x1b[");
       expect(stdout).not.toContain("\x1b]2;");
       expect(stdout).toStartWith(
-        `𝒇x v${sourceVersion()}\nFast, native coding agent for the terminal.\n`,
+        `chassis v${sourceVersion()}\nFast, native coding agent for the terminal.\n`,
       );
-      expect(stdout.match(/𝒇x/g) ?? []).toHaveLength(1);
+      expect(stdout.split("\n")[0]!.match(/chassis/g) ?? []).toHaveLength(1);
       expect(stdout).toContain("chassis starts an interactive session by default.");
       expect(stdout).toContain("Commands:\n");
       expect(stdout).toContain("Run one noninteractive request");

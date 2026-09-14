@@ -43,7 +43,7 @@ describe("web_search permission progress", () => {
       ]);
 
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain("chassis needs access to Vercel AI Gateway. Run chassis login to sign in, chassis setup to use an API key, or set AI_GATEWAY_API_KEY.");
+      expect(result.stderr).toContain("chassis needs a model provider. Run chassis login to sign in (Vercel AI Gateway, Codex, or Grok), chassis setup to use an API key, or set AI_GATEWAY_API_KEY.");
       expectNoSearchProgress(result.stderr);
     },
     TIMEOUT,

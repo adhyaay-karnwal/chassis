@@ -4292,7 +4292,7 @@ exec "$CHASSIS_MCP_FIXTURE_RUNTIME" "$CHASSIS_MCP_FIXTURE_PATH"
 
         await tui.waitForText(`Complete URL: ${targetUrl}`, 20_000);
         await tui.sendText("1");
-        await tui.waitForText("Continue manually, retry the browser, or cancel?", 20_000);
+        await tui.waitForText("Continue manually, retry, or cancel?", 20_000);
         const trace = readFileSync(traceLog, "utf8");
         expect(trace).toContain(
           "url opener unsuccessful term=exited exit_code=1",

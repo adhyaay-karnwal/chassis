@@ -493,7 +493,7 @@ describe.skipIf(!tmuxAvailable())("tui: compaction activity", () => {
     let passed = false;
     try {
       const terminal = await f.launch(true);
-      const authMessage = "chassis needs access to Vercel AI Gateway";
+      const authMessage = "chassis needs a model provider";
       async function authNotices(label: string) {
         await terminal.sendKeys("C-o");
         await terminal.waitForText("full detail", 5000);
