@@ -299,7 +299,7 @@ async function installedWorkerMain() {
   }
 
   if (config.mode === "fault-bad-api") {
-    const badAddon = { libfxApiVersion: 2, createCore() { assert.fail("bad API factory must not be called"); } };
+    const badAddon = { libchassisApiVersion: 2, createCore() { assert.fail("bad API factory must not be called"); } };
     const info = await esm.getBackendInfo({ backend: "native", nativeAddon: badAddon });
     assert.equal(info.backend, "unavailable");
     assert.equal(info.attempts[0].reason.code, "LIBFX_NATIVE_API_MISMATCH");
