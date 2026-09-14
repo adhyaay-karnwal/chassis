@@ -6158,7 +6158,7 @@ test.skipIf(!tmuxAvailable())(
       const currentPicker = stripAnsi(await active.capturePane());
       expect(currentPicker).toContain("Sessions 1");
       expect(currentPicker).toContain("[Current workspace]");
-      expect(currentPicker).toContain("𝒇x");
+      expect(currentPicker).toContain("chassis");
       expect(currentPicker).toContain("Save the workspace A transcript.");
       expect(currentPicker).not.toContain("Save the workspace B transcript.");
 

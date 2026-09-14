@@ -330,9 +330,9 @@ describe("cli: help", () => {
       expect(stdout).not.toContain("\x1b[");
       expect(stdout).not.toContain("\x1b]2;");
       expect(stdout).toStartWith(
-        `𝒇x v${sourceVersion()}\nFast, native coding agent for the terminal.\n`,
+        `chassis v${sourceVersion()}\nFast, native coding agent for the terminal.\n`,
       );
-      expect(stdout.match(/𝒇x/g) ?? []).toHaveLength(1);
+      expect(stdout.split("\n")[0]!.match(/chassis/g) ?? []).toHaveLength(1);
       expect(stdout).toContain("chassis starts an interactive session by default.");
       expect(stdout).toContain("Commands:\n");
       expect(stdout).toContain("Run one noninteractive request");

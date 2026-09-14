@@ -29,7 +29,7 @@ const TRANSIENT_ACTIVITY_CAPTURE_DIR = "/private/tmp/chassis-render-bug-20260510
 const READ_ONLY_TOOLS_CAPTURE_TARBALL = join(
   import.meta.dirname,
   "fixtures",
-  "chassis-render-bug-20260510-075848.tar.gz",
+  "fx-render-bug-20260510-075848.tar.gz",
 );
 
 let session: TmuxSession | null = null;
@@ -284,7 +284,7 @@ describe("tui: render record/replay", () => {
       const extractDir = mkdtempSync(join(tmpdir(), "chassis-render-read-only-tools-"));
       workDirs.push(extractDir);
       execFileSync("tar", ["-xzf", READ_ONLY_TOOLS_CAPTURE_TARBALL, "-C", extractDir]);
-      const captureDir = join(extractDir, "chassis-render-bug-20260510-075848");
+      const captureDir = join(extractDir, "fx-render-bug-20260510-075848");
       const tapePath = join(captureDir, "bug.fxtape");
       const workDir = mkdtempSync(join(tmpdir(), "chassis-render-read-only-tools-replay-"));
       workDirs.push(workDir);
